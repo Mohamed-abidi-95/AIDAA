@@ -19,8 +19,10 @@ import { RoleRoute } from './components/RoleRoute';
 // Authentication pages
 import { LoginPage } from './pages/LoginPage';
 import { SetPasswordPage } from './pages/SetPasswordPage';
+import { RoleSelectionPage } from './pages/RoleSelectionPage';
 
 // Dashboard pages
+import { ChildDashboard } from './pages/ChildDashboard';
 import { ParentDashboard } from './pages/ParentDashboard';
 import { AdminPanel } from './pages/AdminPanel';
 import { ProfessionalPage } from './pages/ProfessionalPage';
@@ -47,6 +49,11 @@ export const App = (): JSX.Element => {
         {/* First-time users access this after login returns mustSetPassword */}
         <Route path="/set-password" element={<SetPasswordPage />} />
 
+        {/* Role Selection Page Route */}
+        {/* Path: /role-selection */}
+        {/* Parents access this after login to choose between parent/child mode */}
+        <Route path="/role-selection" element={<RoleSelectionPage />} />
+
         {/* ================================================================ */}
         {/* PROTECTED ROUTES - REQUIRE AUTHENTICATION */}
         {/* ================================================================ */}
@@ -60,6 +67,12 @@ export const App = (): JSX.Element => {
           {/* ============================================================ */}
           {/* Redirect root path based on user's role */}
           <Route path="/" element={<Navigate to="/parent/dashboard" replace />} />
+
+          {/* ============================================================ */}
+          {/* CHILD ROUTES - /child */}
+          {/* ============================================================ */}
+          {/* Accessible by: anyone authenticated (parents viewing child mode) */}
+          <Route path="child" element={<ChildDashboard />} />
 
           {/* ============================================================ */}
           {/* ADMIN ROUTES - /admin/dashboard */}

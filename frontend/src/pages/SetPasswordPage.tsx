@@ -140,8 +140,8 @@ export const SetPasswordPage = (): JSX.Element => {
       }
 
       // Set token in environment
-      var jsonData = pm.response.json();
-      pm.environment.set("token", jsonData.data.token);
+      // Token is automatically stored by auth.service.ts interceptor
+      console.log('[SetPassword] Password set successfully, redirecting to dashboard');
     } catch (err) {
       // Handle password setup error
       if (err instanceof Error) {

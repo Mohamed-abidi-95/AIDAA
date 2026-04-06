@@ -26,7 +26,10 @@ const getAll = async (req, res) => {
       }
     });
 
-    const content = await contentModel.getAll(filters);
+    let content = await contentModel.getAll(filters);
+
+    // Format content based on type for new interface
+    content = content.map(item => contentModel.formatContent(item));
 
     res.status(200).json({
       success: true,
@@ -137,11 +140,23 @@ const create = async (req, res) => {
 // Update content (admin only)
 // ============================================================================
 // PUT /content/:id
-// Body: { title, type, category, age_group, level, url, description }
 const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, type, category, age_group, level, url, description } = req.body;
+    const {
+      title,
+      type,
+      category,
+      category_color,
+      emoji,
+      duration,
+      steps,
+      minutes,
+      emoji_color,
+      age_group,
+      level,
+      description,
+    } = req.body;
 
     // Validate required fields
     if (!title || !type) {
@@ -160,14 +175,19 @@ const update = async (req, res) => {
       });
     }
 
-    await contentModel.update(
+    await contentModel.updateWithAllFields(
       id,
       title,
       type,
       category,
+      category_color,
+      emoji,
+      duration,
+      steps,
+      minutes,
+      emoji_color,
       age_group,
       level,
-      url,
       description
     );
 
@@ -179,9 +199,14 @@ const update = async (req, res) => {
         title,
         type,
         category,
+        category_color,
+        emoji,
+        duration,
+        steps,
+        minutes,
+        emoji_color,
         age_group,
         level,
-        url,
         description,
       },
     });
@@ -227,6 +252,103 @@ const deleteContent = async (req, res) => {
     });
   }
 };
+// ============================================================================
+// UPLOAD CONTENT FILE (VIDEO, AUDIO, IMAGE)
+// ============================================================================
+// POST /content/upload
+// Admin only - Upload media file for content
+const uploadContent = async (req, res) => {
+  try {
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    const {
+      title,
+      type,
+      category,
+      category_color,
+      emoji,
+      duration,
+      steps,
+      minutes,
+      emoji_color,
+      age_group,
+      level,
+      description,
+    } = req.body;
+
+    // Validate required fields
+    if (!title || !type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and type are required',
+      });
+    }
+
+    // Validate type enum
+    if (!['video', 'activity', 'audio'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type must be "video", "audio", or "activity"',
+      });
+    }
+
+    // Build file URL
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    // Create content with all fields including new ones
+    const contentId = await contentModel.createWithAllFields(
+      title,
+      type,
+      category,
+      category_color,
+      emoji,
+      duration,
+      steps,
+      minutes,
+      emoji_color,
+      age_group,
+      level,
+      fileUrl,
+      description
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Content uploaded successfully',
+      data: {
+        id: contentId,
+        title,
+        type,
+        category,
+        category_color,
+        emoji,
+        duration,
+        steps,
+        minutes,
+        emoji_color,
+        age_group,
+        level,
+        url: fileUrl,
+        description,
+        filename: req.file.filename,
+        size: req.file.size,
+      },
+    });
+  } catch (error) {
+    console.error('Upload content error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload content',
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   getAll,
@@ -234,4 +356,5 @@ module.exports = {
   create,
   update,
   deleteContent,
+  uploadContent,
 };

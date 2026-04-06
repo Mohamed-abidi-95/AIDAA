@@ -78,19 +78,19 @@ export const LoginPage = (): JSX.Element => {
       console.log('[Login] Waiting for state update...');
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Redirect based on role
-      if (user.role === 'admin') {
-        console.log('[Login] Redirecting to /admin/dashboard');
+      // Redirect to role selection page for parents
+      if (user.role === 'parent') {
+        console.log('[Login] Parent login, redirecting to role selection');
+        navigate('/role-selection');
+      } else if (user.role === 'admin') {
+        console.log('[Login] Admin login, redirecting to admin dashboard');
         navigate('/admin/dashboard');
-      } else if (user.role === 'parent') {
-        console.log('[Login] Redirecting to /parent/dashboard');
-        navigate('/parent/dashboard');
       } else if (user.role === 'professional') {
-        console.log('[Login] Redirecting to /professional/dashboard');
+        console.log('[Login] Professional login, redirecting to professional dashboard');
         navigate('/professional/dashboard');
       } else {
         console.warn('[Login] Unknown role:', user.role);
-        navigate('/parent/dashboard');
+        navigate('/role-selection');
       }
     } catch (err) {
       console.error('[Login] Error:', err);

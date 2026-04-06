@@ -1,0 +1,548 @@
+/* ============================================================================
+   DASHBOARD ENHANCED STYLES
+   ============================================================================ */
+
+/* Existing base styles preserved */
+.dashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 32px;
+  color: white;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  border: 2px solid white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+/* ============================================================================
+   TABS
+   ============================================================================ */
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tab.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+}
+
+/* ============================================================================
+   SELECTOR
+   ============================================================================ */
+
+.child-selector {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.child-selector label {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.child-selector select {
+  padding: 10px 15px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background: white;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+/* ============================================================================
+   STATS
+   ============================================================================ */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #667eea;
+}
+
+/* ============================================================================
+   ACTIVITIES
+   ============================================================================ */
+
+.recent-activities,
+.activities-list,
+.activities-view {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  color: #333;
+}
+
+.recent-activities h3,
+.activities-view h2 {
+  color: #667eea;
+  margin-top: 0;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-weight: bold;
+  margin: 0;
+}
+
+.activity-time {
+  color: #999;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.activity-stats {
+  display: flex;
+  gap: 10px;
+}
+
+.badge {
+  background: #667eea;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.activity-card {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  border-left: 4px solid #667eea;
+}
+
+/* ============================================================================
+   NOTES
+   ============================================================================ */
+
+.notes-view,
+.notes-list {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  color: #333;
+}
+
+.notes-view h2 {
+  color: #667eea;
+  margin-top: 0;
+}
+
+.note-card {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  border-left: 4px solid #667eea;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.note-header h3 {
+  margin: 0;
+  color: #667eea;
+}
+
+.note-header small {
+  color: #999;
+}
+
+.note-content {
+  color: #333;
+  line-height: 1.6;
+}
+
+.add-note-form {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 30px;
+}
+
+.add-note-form textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.add-note-form button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.add-note-form button:hover {
+  background: #5568d3;
+}
+
+/* ============================================================================
+   UPLOAD FORM
+   ============================================================================ */
+
+.upload-section {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  color: #333;
+}
+
+.upload-form {
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #333;
+}
+
+.form-group input[type="text"],
+.form-group input[type="file"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.upload-form > button {
+  background: #667eea;
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.upload-form > button:hover {
+  background: #5568d3;
+}
+
+.upload-form > button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   CONTENT MANAGEMENT
+   ============================================================================ */
+
+.content-management {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  color: #333;
+}
+
+.content-management h2 {
+  color: #667eea;
+}
+
+.content-list {
+  display: grid;
+  gap: 15px;
+}
+
+.content-item {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 5px;
+  border-left: 4px solid #667eea;
+}
+
+.item-icon {
+  font-size: 40px;
+}
+
+.item-details h3 {
+  margin: 0 0 5px 0;
+  color: #667eea;
+}
+
+.item-details p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.item-details small {
+  color: #999;
+}
+
+/* ============================================================================
+   USERS MANAGEMENT
+   ============================================================================ */
+
+.users-management {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  color: #333;
+}
+
+.users-management h2 {
+  color: #667eea;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.users-table thead {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.users-table th {
+  padding: 12px;
+  text-align: left;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.users-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.users-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+/* ============================================================================
+   PATIENT INFO
+   ============================================================================ */
+
+.patient-info {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  color: #333;
+}
+
+.patient-info h2 {
+  color: #667eea;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.info-item {
+  padding: 15px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 5px;
+}
+
+.info-item label {
+  color: #667eea;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.info-item span {
+  color: #333;
+  font-size: 18px;
+}
+
+/* ============================================================================
+   EMPTY STATE
+   ============================================================================ */
+
+.empty-state {
+  background: white;
+  border-radius: 10px;
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .dashboard-header h1 {
+    font-size: 24px;
+  }
+
+  .dashboard-content {
+    padding: 15px;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    width: 100%;
+  }
+
+  .child-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .child-selector select {
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .activity-stats {
+    flex-direction: column;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

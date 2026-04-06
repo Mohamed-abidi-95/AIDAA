@@ -7,6 +7,7 @@ const express = require('express');
 const contentController = require('../controllers/content.controller');
 const auth = require('../middlewares/auth');
 const roleCheck = require('../middlewares/roleCheck');
+const upload = require('../middlewares/upload');
 
 const router = express.Router();
 
@@ -27,6 +28,13 @@ router.get('/:id', contentController.getById);
 // All routes below require authentication
 // ============================================================================
 router.use(auth);
+
+// ============================================================================
+// POST /content/upload
+// ============================================================================
+// Upload content file (video, audio, image)
+// Admin only
+router.post('/upload', roleCheck('admin'), upload.single('file'), contentController.uploadContent);
 
 // ============================================================================
 // POST /content

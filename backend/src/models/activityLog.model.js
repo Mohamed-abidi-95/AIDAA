@@ -20,12 +20,14 @@ const getByChildId = async (childId) => {
 };
 
 // ============================================================================
-// Create new activity log
+// Create new activity log WITH SCORE AND DURATION
 // ============================================================================
-const create = async (childId, contentId, status = 'started') => {
+// Parameters: childId, contentId, score, duration_seconds, action
+const create = async (childId, contentId, score = 0, duration_seconds = 0, action = 'content_accessed') => {
   const results = await query(
-    'INSERT INTO activity_logs (child_id, content_id, status) VALUES (?, ?, ?)',
-    [childId, contentId, status]
+    `INSERT INTO activity_logs (child_id, content_id, score, duration_seconds, action) 
+     VALUES (?, ?, ?, ?, ?)`,
+    [childId, contentId, score, duration_seconds, action]
   );
   return results.insertId;
 };
@@ -42,6 +44,17 @@ const getById = async (logId) => {
 };
 
 // ============================================================================
+// Update activity log with score and duration
+// ============================================================================
+const update = async (logId, score, duration_seconds) => {
+  const results = await query(
+    'UPDATE activity_logs SET score = ?, duration_seconds = ?, date = NOW() WHERE id = ?',
+    [score, duration_seconds, logId]
+  );
+  return results.affectedRows > 0;
+};
+
+// ============================================================================
 // Update activity log status (e.g., started -> completed)
 // ============================================================================
 const updateStatus = async (logId, status) => {
@@ -52,9 +65,40 @@ const updateStatus = async (logId, status) => {
   return results.affectedRows > 0;
 };
 
+// ============================================================================
+// Get summary statistics for a child
+// ============================================================================
+const getStats = async (childId) => {
+  return await query(
+    `SELECT 
+       COUNT(*) as total_activities,
+       SUM(score) as total_score,
+       AVG(score) as avg_score,
+       SUM(duration_seconds) as total_time_seconds,
+       MAX(date) as last_activity
+     FROM activity_logs 
+     WHERE child_id = ?`,
+    [childId]
+  );
+};
+
+// ============================================================================
+// DELETE ACTIVITY LOG
+// ============================================================================
+const deleteLog = async (logId) => {
+  const results = await query(
+    'DELETE FROM activity_logs WHERE id = ?',
+    [logId]
+  );
+  return results.affectedRows > 0;
+};
+
 module.exports = {
   getByChildId,
   create,
   getById,
+  update,
   updateStatus,
+  getStats,
+  deleteLog,
 };

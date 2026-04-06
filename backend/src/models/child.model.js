@@ -59,9 +59,20 @@ const deleteChild = async (childId) => {
   return results.affectedRows > 0;
 };
 
+// ============================================================================
+// Get all children
+// ============================================================================
+const getAll = async () => {
+  return await query(
+    'SELECT * FROM children ORDER BY name ASC',
+    []
+  );
+};
+
 module.exports = {
   getByParentId,
   getById,
+  getAll,
   create,
   update,
   deleteChild,

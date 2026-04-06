@@ -34,7 +34,7 @@ const createParent = async (req, res) => {
     }
 
     // Create parent with NULL password
-    const userId = await userModel.createUser(name, email, null, 'parent');
+    const userId = await userModel.createUser(name, email, 'parent');
 
     res.status(201).json({
       success: true,
@@ -95,14 +95,19 @@ const createProfessional = async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcryptjs.hash(password, saltRounds);
 
-    // Create professional
-    const userId = await userModel.createUser(name, email, hashedPassword, 'professional');
+    // Create professional with password already set
+    const newUser = await userModel.createUserWithPassword({
+      name,
+      email,
+      hashedPassword,
+      role: 'professional',
+    });
 
     res.status(201).json({
       success: true,
       message: 'Professional created successfully',
       data: {
-        id: userId,
+        id: newUser.id,
         name,
         email,
         role: 'professional',

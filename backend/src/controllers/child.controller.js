@@ -31,6 +31,29 @@ const getMyChildren = async (req, res) => {
 };
 
 // ============================================================================
+// Get all children (professional/admin)
+// ============================================================================
+// GET /child/all
+const getAllChildren = async (req, res) => {
+  try {
+    const children = await childModel.getAll();
+
+    res.status(200).json({
+      success: true,
+      message: 'All children retrieved successfully',
+      data: children,
+    });
+  } catch (error) {
+    console.error('Get all children error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get children',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================================
 // Get child by ID
 // ============================================================================
 // GET /child/:id
@@ -197,6 +220,7 @@ const deleteChild = async (req, res) => {
 
 module.exports = {
   getMyChildren,
+  getAllChildren,
   getChild,
   createChild,
   updateChild,

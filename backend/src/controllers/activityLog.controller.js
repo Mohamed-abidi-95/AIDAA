@@ -52,10 +52,17 @@ const getByChildId = async (req, res) => {
 // Create new activity log
 // ============================================================================
 // POST /activity-log
-// Body: { childId, contentId, status }
+// Body: { childId, contentId, status?, score?, duration_seconds?, action? }
 const create = async (req, res) => {
   try {
-    const { childId, contentId, status = 'started' } = req.body;
+    const {
+      childId,
+      contentId,
+      status = 'started',
+      score = 0,
+      duration_seconds = 0,
+      action,
+    } = req.body;
 
     // Validate input
     if (!childId || !contentId) {
@@ -90,12 +97,26 @@ const create = async (req, res) => {
       });
     }
 
-    const logId = await activityLogModel.create(childId, contentId, status);
+    const resolvedAction = action || (status === 'completed' ? 'activity_completed' : 'activity_started');
+    const logId = await activityLogModel.create(childId, contentId, score, duration_seconds, resolvedAction);
+
+    // Keep status consistent when caller explicitly completes in one call
+    if (status === 'completed') {
+      await activityLogModel.updateStatus(logId, 'completed');
+    }
 
     res.status(201).json({
       success: true,
       message: 'Activity log created successfully',
-      data: { id: logId, child_id: childId, content_id: contentId, status },
+      data: {
+        id: logId,
+        child_id: childId,
+        content_id: contentId,
+        status,
+        score,
+        duration_seconds,
+        action: resolvedAction,
+      },
     });
   } catch (error) {
     console.error('Create activity log error:', error);
@@ -160,8 +181,43 @@ const updateStatus = async (req, res) => {
   }
 };
 
+// ============================================================================
+// DELETE ACTIVITY LOG (ADMIN ONLY)
+// ============================================================================
+// DELETE /api/activity-log/:id
+const deleteLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get activity log
+    const log = await activityLogModel.getById(id);
+    if (!log) {
+      return res.status(404).json({
+        success: false,
+        message: 'Activity log not found',
+      });
+    }
+
+    // Delete activity log
+    await activityLogModel.deleteLog(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Activity log deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete activity log error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete activity log',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getByChildId,
   create,
   updateStatus,
+  deleteLog,
 };

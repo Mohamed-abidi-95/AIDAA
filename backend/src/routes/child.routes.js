@@ -22,6 +22,12 @@ router.use(auth);
 router.get('/mychildren', roleCheck('parent'), childController.getMyChildren);
 
 // ============================================================================
+// GET /child/all
+// ============================================================================
+// Get all children for professionals/admins
+router.get('/all', roleCheck('professional', 'admin'), childController.getAllChildren);
+
+// ============================================================================
 // GET /child/:id
 // ============================================================================
 // Get specific child by ID

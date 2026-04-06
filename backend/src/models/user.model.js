@@ -177,22 +177,29 @@ const updateUser = async (id, data) => {
 // ============================================================================
 // GET ALL USERS
 // ============================================================================
-// Function: getAllUsers()
-// Purpose: Retrieve all users from database
-// Parameters: none
+// Function: getAllUsers(filters = {})
+// Purpose: Retrieve all users from database with optional filters
+// Parameters:
+//   - filters (object) - optional filters for role and is_active
+//     Example: { role: 'admin', is_active: true }
 // Returns: Promise<array> - array of user objects
 // Usage: Admin dashboard, user management, statistics
-const getAllUsers = async () => {
-  // Execute SELECT query to get all users
-  // Note: Does not select password field for security (avoid exposing hashes)
-  const results = await query(
-    // SQL query selecting all non-sensitive user fields
-    'SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC',
-    // No parameters needed
-    []
-  );
-  // Return array of user objects (empty array if no users)
-  return results;
+const getAllUsers = async (filters = {}) => {
+  let sql = 'SELECT id, name, email, role, is_active, created_at FROM users WHERE 1=1';
+  const params = [];
+
+  if (filters.role) {
+    sql += ' AND role = ?';
+    params.push(filters.role);
+  }
+
+  if (filters.is_active !== undefined) {
+    sql += ' AND is_active = ?';
+    params.push(filters.is_active);
+  }
+
+  sql += ' ORDER BY created_at DESC';
+  return await query(sql, params);
 };
 
 // ============================================================================
@@ -219,6 +226,27 @@ const setActiveStatus = async (id, is_active) => {
 };
 
 // ============================================================================
+// DELETE USER (SOFT DELETE)
+// ============================================================================
+// Function: deleteUser(id)
+// Purpose: Soft delete user by setting is_active = 0
+// Parameters:
+//   - id (number) - user's ID
+// Returns: Promise<boolean> - true if update successful
+// Usage: Deactivate user account (data remains but account is inactive)
+const deleteUser = async (id) => {
+  // Execute UPDATE query to set is_active = 0 (soft delete)
+  const results = await query(
+    // SQL prepared statement setting is_active to 0
+    'UPDATE users SET is_active = 0 WHERE id = ?',
+    // Parameter array: [id]
+    [id]
+  );
+  // Return true if at least one row was updated, false otherwise
+  return results.affectedRows > 0;
+};
+
+// ============================================================================
 // EXPORT MODULE
 // ============================================================================
 // Export all user model functions
@@ -239,4 +267,6 @@ module.exports = {
   getAllUsers,
   // Enable/disable user account
   setActiveStatus,
+  // Delete user (soft delete)
+  deleteUser,
 };

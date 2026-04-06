@@ -6,6 +6,7 @@
 const express = require('express');
 const activityLogController = require('../controllers/activityLog.controller');
 const auth = require('../middlewares/auth');
+const roleCheck = require('../middlewares/roleCheck');
 
 const router = express.Router();
 
@@ -31,5 +32,11 @@ router.post('/', activityLogController.create);
 // ============================================================================
 // Update activity log status
 router.put('/:id', activityLogController.updateStatus);
+
+// ============================================================================
+// DELETE /activity-log/:id (ADMIN ONLY)
+// ============================================================================
+// Delete activity log
+router.delete('/:id', roleCheck('admin'), activityLogController.deleteLog);
 
 module.exports = router;

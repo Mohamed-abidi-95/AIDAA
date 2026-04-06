@@ -336,9 +336,137 @@ const getAllUsers = async (req, res) => {
 // EXPORT MODULE
 // ============================================================================
 // Export all user controller functions
+
+// ============================================================================
+// UPDATE USER (ADMIN ONLY)
+// ============================================================================
+// PUT /api/users/:id
+// Body: { name, email, role, is_active }
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, role, is_active } = req.body;
+
+    // Validate input
+    if (!name || !email || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and role are required',
+      });
+    }
+
+    // Validate role
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Role must be one of: ${VALID_ROLES.join(', ')}`,
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await userModel.findById(id);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Check if email already exists (if changed)
+    if (email.toLowerCase() !== existingUser.email.toLowerCase()) {
+      const duplicateEmail = await userModel.findByEmail(email.toLowerCase());
+      if (duplicateEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists in the system',
+        });
+      }
+    }
+
+    // Update user
+    const userId = parseInt(id, 10);
+    const updateData = {
+      name: name.trim(),
+      email: email.toLowerCase(),
+      role,
+      is_active: is_active !== undefined ? is_active : 1,
+    };
+    await userModel.updateUser(userId, updateData);
+
+    console.log('[user.controller] User updated successfully:', userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      data: {
+        id: userId,
+        name: updateData.name,
+        email: updateData.email,
+        role: updateData.role,
+        is_active: updateData.is_active,
+      },
+    });
+  } catch (error) {
+    console.error('[user.controller] Error in updateUser:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+// ============================================================================
+// DELETE USER (ADMIN ONLY)
+// ============================================================================
+// DELETE /api/users/:id
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting the user making the request
+    if (req.user.id === parseInt(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete your own account',
+      });
+    }
+
+    // Check if user exists
+    const user = await userModel.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Soft delete: set is_active = 0
+    await userModel.deleteUser(id);
+
+    console.log('[user.controller] User deleted successfully:', id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    console.error('[user.controller] Error in deleteUser:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 module.exports = {
   // Create new user endpoint
   createUser,
   // Get all users endpoint
   getAllUsers,
+  // Update user endpoint
+  updateUser,
+  // Delete user endpoint
+  deleteUser,
 };

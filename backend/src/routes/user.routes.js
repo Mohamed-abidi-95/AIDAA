@@ -82,6 +82,52 @@ router.get(
 );
 
 // ============================================================================
+// PUT /api/users/:id
+// ============================================================================
+// Update user information
+// Access: Admin only
+//
+// Request body:
+// {
+//   "name": "Updated Name",
+//   "email": "updated@example.com",
+//   "role": "parent",
+//   "is_active": 1
+// }
+//
+// Response (200 on success):
+// {
+//   "success": true,
+//   "message": "User updated successfully",
+//   "data": {...updated user object...}
+// }
+router.put(
+  // Route path: /users/:id (admin can update any user by ID)
+  '/:id',
+  // Route handler - calls updateUser controller
+  userController.updateUser
+);
+
+// ============================================================================
+// DELETE /api/users/:id
+// ============================================================================
+// Delete (deactivate) user account
+// Access: Admin only
+// Note: This is a soft delete (sets is_active = 0)
+//
+// Response (200 on success):
+// {
+//   "success": true,
+//   "message": "User deleted successfully"
+// }
+router.delete(
+  // Route path: /users/:id (admin can delete any user by ID)
+  '/:id',
+  // Route handler - calls deleteUser controller
+  userController.deleteUser
+);
+
+// ============================================================================
 // EXPORT MODULE
 // ============================================================================
 // Export router to be mounted on app
