@@ -5,7 +5,7 @@ require('dotenv').config();
 async function fixAdminPassword() {
   console.log('\n=== Fixing Admin Password ===\n');
   console.log('Step 1: Generating hash...');
-
+  
   try {
     // Generate correct hash for admin123 with bcryptjs
     const password = 'admin123';

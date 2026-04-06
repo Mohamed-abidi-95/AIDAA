@@ -26,6 +26,7 @@ import { ChildDashboard } from './pages/ChildDashboard';
 import { ParentDashboard } from './pages/ParentDashboard';
 import { AdminPanel } from './pages/AdminPanel';
 import { ProfessionalPage } from './pages/ProfessionalPage';
+import { ProgressDashboard } from './pages/ProgressDashboard';
 
 // ============================================================================
 // APP COMPONENT
@@ -73,6 +74,12 @@ export const App = (): JSX.Element => {
           {/* ============================================================ */}
           {/* Accessible by: anyone authenticated (parents viewing child mode) */}
           <Route path="child" element={<ChildDashboard />} />
+
+          {/* ============================================================ */}
+          {/* PROGRESS DASHBOARD - /progress */}
+          {/* ============================================================ */}
+          {/* Analytics and progress tracking dashboard */}
+          <Route path="progress" element={<ProgressDashboard />} />
 
           {/* ============================================================ */}
           {/* ADMIN ROUTES - /admin/dashboard */}

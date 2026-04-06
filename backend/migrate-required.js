@@ -19,8 +19,7 @@ async function hasIndex(connection, table, indexName) {
 
 async function hasTable(connection, table) {
   const [rows] = await connection.query(
-    `
-SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? LIMIT 1`,
+    `SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? LIMIT 1`,
     [process.env.DB_DATABASE || 'aidaa_db', table]
   );
   return rows.length > 0;

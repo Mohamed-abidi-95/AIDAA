@@ -232,7 +232,7 @@ export const SoundRecognitionGame = ({ onGameEnd }: GameProps): JSX.Element => {
   const [score, setScore] = useState<number>(0);
   const [currentSound, setCurrentSound] = useState<string>('');
   const [options, setOptions] = useState<SoundOption[]>([]);
-   const [gameEnded, setGameEnded] = useState<boolean>(false);
+  const [gameEnded, setGameEnded] = useState<boolean>(false);
 
   const soundOptions: SoundOption[] = [
     { name: 'dog', emoji: '🐶', sound: 'woof' },

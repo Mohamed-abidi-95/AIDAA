@@ -34,51 +34,29 @@ const storage = multer.diskStorage({
 });
 
 // ============================================================================
-// FILE FILTER - ACCEPT COMMON MEDIA TYPES (NORMAL USAGE)
+// FILE FILTER - ACCEPT ONLY SPECIFIC TYPES
 // ============================================================================
 const fileFilter = (req, file, cb) => {
-  // Allowed mime types (common browsers/codecs)
+  // Allowed file types
   const allowedMimes = [
     'video/mp4',
     'video/webm',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/x-matroska',
     'audio/mpeg',
-    'audio/mp3',
-    'audio/mp4',
-    'audio/x-m4a',
     'audio/wav',
-    'audio/x-wav',
     'audio/webm',
-    'audio/ogg',
     'image/jpeg',
     'image/png',
-    'image/gif',
-    'image/webp'
+    'image/gif'
   ];
 
-  const allowedExtensions = [
-    '.mp4', '.webm', '.mov', '.avi', '.mkv',
-    '.mp3', '.wav', '.m4a', '.ogg',
-    '.jpg', '.jpeg', '.png', '.gif', '.webp'
-  ];
-
+  const allowedExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.jpg', '.jpeg', '.png', '.gif'];
+  
   const ext = path.extname(file.originalname).toLowerCase();
-  const mime = (file.mimetype || '').toLowerCase();
-
-  const isAcceptedByMime =
-    allowedMimes.includes(mime) ||
-    mime.startsWith('video/') ||
-    mime.startsWith('audio/') ||
-    mime.startsWith('image/');
-
-  const isAcceptedByExtension = allowedExtensions.includes(ext);
-
-  if (isAcceptedByMime || isAcceptedByExtension) {
+  
+  if (allowedMimes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('File type not allowed. Please upload a video, audio, or image file.'), false);
+    cb(new Error(`File type not allowed. Supported: mp4, webm, mp3, wav, jpg, png, gif`), false);
   }
 };
 
@@ -88,8 +66,9 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  // No hard file size cap here for normal usage.
-  // If needed later, enforce a business limit at reverse proxy level.
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB max
+  }
 });
 
 // ============================================================================

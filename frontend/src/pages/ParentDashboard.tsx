@@ -6,6 +6,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/DashboardEnhanced.css';
+import '../styles/ProgressDashboard.css';
+
+// Chart.js library (must be loaded in index.html)
+declare global {
+  interface Window {
+    Chart: any;
+  }
+}
 
 // ============================================================================
 // INTERFACES
@@ -34,13 +42,111 @@ interface Note {
   date: string;
 }
 
+interface SkillProgress {
+  label: string;
+  value: number;
+  color: string;
+}
+
 export const ParentDashboard = (): JSX.Element => {
   const { logout } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [view, setView] = useState('summary'); // 'summary', 'activities', 'notes', 'messages'
+  const [view, setView] = useState('summary'); // 'summary', 'activities', 'notes', 'messages', 'analytics'
+  const [chartsInitialized, setChartsInitialized] = useState(false);
+
+  // Sample skills data
+  const skills: SkillProgress[] = [
+    { label: 'Emotion recognition', value: 82, color: '#6366f1' },
+    { label: 'Language & vocab', value: 74, color: '#0d9488' },
+    { label: 'Social interaction', value: 68, color: '#d97706' },
+    { label: 'Fine motor skills', value: 71, color: '#2563eb' },
+    { label: 'Sensory tolerance', value: 60, color: '#16a34a' },
+    { label: 'Memory & focus', value: 78, color: '#ea580c' },
+  ];
+
+  const typeColors: Record<string, string> = {
+    Emotions: '#6366f1',
+    Language: '#0d9488',
+    Social: '#d97706',
+    Motor: '#2563eb',
+    Sensory: '#16a34a',
+    Cognition: '#ea580c',
+    Creativity: '#e11d48',
+  };
+
+  // Initialize charts when analytics tab is selected
+  useEffect(() => {
+    if (view === 'analytics' && !chartsInitialized && window.Chart) {
+      initializeCharts();
+      setChartsInitialized(true);
+    }
+  }, [view, chartsInitialized]);
+
+  const initializeCharts = () => {
+    const gridOpts = { color: 'rgba(100,116,139,.08)', borderColor: 'rgba(100,116,139,.12)' };
+    const fontOpts = { family: 'var(--font-sans,sans-serif)', size: 11, color: '#64748b' };
+
+    const lineCtx = document.getElementById('lineChart') as HTMLCanvasElement;
+    if (lineCtx) {
+      new window.Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: ['Mar 8', 'Mar 11', 'Mar 14', 'Mar 17', 'Mar 20', 'Mar 23', 'Mar 26', 'Mar 29', 'Apr 1', 'Apr 3', 'Apr 5'],
+          datasets: [
+            {
+              label: 'Time',
+              data: [12, 18, 22, 15, 25, 28, 20, 30, 24, 18, 26],
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99,102,241,.08)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 3,
+              pointBackgroundColor: '#6366f1',
+              borderWidth: 2,
+            },
+            {
+              label: 'Goal',
+              data: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+              borderColor: '#0d9488',
+              borderDash: [4, 4],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: gridOpts, ticks: { ...fontOpts, maxRotation: 0 } },
+            y: { grid: gridOpts, ticks: { ...fontOpts }, min: 0, max: 40 },
+          },
+        },
+      });
+    }
+
+    const donutCtx = document.getElementById('donutChart') as HTMLCanvasElement;
+    if (donutCtx) {
+      new window.Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Emotions', 'Language', 'Social', 'Motor', 'Sensory', 'Cognition', 'Creativity'],
+          datasets: [{
+            data: [26, 21, 18, 14, 10, 7, 4],
+            backgroundColor: ['#6366f1', '#0d9488', '#d97706', '#2563eb', '#16a34a', '#ea580c', '#e11d48'],
+            borderWidth: 2,
+            borderColor: '#ffffff',
+          }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '64%', plugins: { legend: { display: false } } },
+      });
+    }
+  };
 
   // Fetch children on mount
   useEffect(() => {
@@ -149,6 +255,12 @@ export const ParentDashboard = (): JSX.Element => {
                 🎮 Activities
               </button>
               <button
+                className={view === 'analytics' ? 'tab active' : 'tab'}
+                onClick={() => setView('analytics')}
+              >
+                📈 Analytics
+              </button>
+              <button
                 className={view === 'notes' ? 'tab active' : 'tab'}
                 onClick={() => setView('notes')}
               >
@@ -217,6 +329,71 @@ export const ParentDashboard = (): JSX.Element => {
                       <p>Score: {activity.score} | Duration: {Math.round(activity.duration_seconds / 60)} minutes</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Analytics View */}
+            {view === 'analytics' && (
+              <div className="section">
+                {/* KPI Grid */}
+                <div className="kpi-grid">
+                  <div className="kpi">
+                    <div className="kpi-icon" style={{ background: 'var(--purple-light)' }}>🎮</div>
+                    <div className="kpi-val">47</div>
+                    <div className="kpi-label">Sessions played</div>
+                    <div className="kpi-change up">↑ 12% vs last month</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-icon" style={{ background: 'var(--teal-light)' }}>⏱</div>
+                    <div className="kpi-val">8.4 h</div>
+                    <div className="kpi-label">Total time</div>
+                    <div className="kpi-change up">↑ 6% vs last month</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-icon" style={{ background: 'var(--amber-light)' }}>⭐</div>
+                    <div className="kpi-val">78</div>
+                    <div className="kpi-label">Avg score / 100</div>
+                    <div className="kpi-change up">↑ 5 pts vs last month</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-icon" style={{ background: 'var(--rose-light)' }}>🔥</div>
+                    <div className="kpi-val">14</div>
+                    <div className="kpi-label">Day streak</div>
+                    <div className="kpi-change up">Personal best!</div>
+                  </div>
+                </div>
+
+                {/* Charts */}
+                <div className="charts-row" style={{ marginTop: '20px' }}>
+                  <div className="chart-card">
+                    <h3>Daily session time (minutes)</h3>
+                    <div className="chart-wrap" style={{ height: '180px' }}>
+                      <canvas id="lineChart"></canvas>
+                    </div>
+                  </div>
+                  <div className="chart-card">
+                    <h3>Activity type breakdown</h3>
+                    <div className="chart-wrap" style={{ height: '180px' }}>
+                      <canvas id="donutChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills Progress */}
+                <div className="chart-card" style={{ marginTop: '20px' }}>
+                  <h3>Skill progress</h3>
+                  <div className="progress-list">
+                    {skills.map((skill, idx) => (
+                      <div key={idx} className="prog-row">
+                        <div className="prog-label">{skill.label}</div>
+                        <div className="prog-bar-bg">
+                          <div className="prog-bar" style={{ width: `${skill.value}%`, background: skill.color }}></div>
+                        </div>
+                        <div className="prog-val">{skill.value}%</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
