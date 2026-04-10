@@ -5,20 +5,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --adm-green:       #00D166;
-  --adm-green-dark:  #00A84D;
-  --adm-green-deep:  #007A38;
-  --adm-green-light: #D4FDE9;
-  --adm-green-mid:   #7EEDB4;
-  --adm-sidebar-bg:  #013D1C;
+  --adm-green:       #E07820;
+  --adm-green-dark:  #C45E0A;
+  --adm-green-deep:  #9E4000;
+  --adm-green-light: #FEF3E7;
+  --adm-green-mid:   #F5A94E;
+  --adm-sidebar-bg:  #3D1500;
   --adm-sidebar-w:   260px;
   --adm-white:       #FFFFFF;
-  --adm-off-white:   #EDFFF6;
-  --adm-border:      #BBEFCF;
-  --adm-text:        #0A1F10;
-  --adm-text-light:  #3D8A60;
+  --adm-off-white:   #FFFBF5;
+  --adm-border:      #F5D5B0;
+  --adm-text:        #1A0D00;
+  --adm-text-light:  #8C6040;
   --adm-radius:      14px;
-  --adm-shadow:      0 4px 24px rgba(0,168,77,.12);
+  --adm-shadow:      0 4px 24px rgba(224,120,32,.12);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +28,7 @@
   display: flex;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, sans-serif;
-  background: #EAFFF5;
+  background: #FFF7ED;
 }
 
 /* ══════════════════════════════════════════════════
@@ -118,7 +118,7 @@
 }
 
 .adm-nav__item.active {
-  background: linear-gradient(90deg, rgba(0,209,102,.28), rgba(0,209,102,.12));
+  background: linear-gradient(90deg, rgba(224,120,32,.28), rgba(224,120,32,.12));
   color: #fff;
   border-left: 3px solid var(--adm-green);
 }
@@ -294,7 +294,7 @@
   transition: box-shadow .2s, transform .2s;
 }
 
-.adm-kpi:hover { box-shadow: 0 8px 28px rgba(0,168,77,.16); transform: translateY(-2px); }
+.adm-kpi:hover { box-shadow: 0 8px 28px rgba(224,120,32,.16); transform: translateY(-2px); }
 .adm-kpi--warn { background: linear-gradient(135deg, #fffbeb, #fef9c3); border-color: #fde68a; cursor: pointer; }
 
 .adm-kpi__icon {
@@ -408,7 +408,7 @@
   outline: none;
   border-color: var(--adm-green);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(0,209,102,.14);
+  box-shadow: 0 0 0 4px rgba(224,120,32,.14);
 }
 
 .adm-form-group textarea { resize: vertical; min-height: 90px; }
@@ -449,9 +449,9 @@
 .adm-btn--primary {
   background: linear-gradient(135deg, var(--adm-green-dark), var(--adm-green));
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0,209,102,.35);
+  box-shadow: 0 4px 14px rgba(224,120,32,.35);
 }
-.adm-btn--primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,209,102,.5); }
+.adm-btn--primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(224,120,32,.5); }
 
 .adm-btn--secondary {
   background: var(--adm-white);
@@ -506,7 +506,7 @@
 }
 
 .adm-table tbody tr:last-child td { border-bottom: none; }
-.adm-table tbody tr:hover { background: rgba(0,209,102,.03); }
+.adm-table tbody tr:hover { background: rgba(224,120,32,.03); }
 
 .adm-table td input,
 .adm-table td select {
@@ -566,7 +566,7 @@
   background: var(--adm-white);
   transition: box-shadow .2s;
 }
-.adm-reg-card:hover { box-shadow: 0 4px 16px rgba(0,168,77,.15); }
+.adm-reg-card:hover { box-shadow: 0 4px 16px rgba(224,120,32,.15); }
 
 .adm-reg-avatar {
   width: 46px; height: 46px;
@@ -603,7 +603,7 @@
   cursor: pointer; font-family: inherit;
   background: linear-gradient(135deg, var(--adm-green-dark), var(--adm-green));
   color: #fff;
-  box-shadow: 0 3px 10px rgba(0,209,102,.35);
+  box-shadow: 0 3px 10px rgba(224,120,32,.35);
   transition: all .2s;
 }
 .adm-approve-btn:hover:not(:disabled) { transform: translateY(-1px); }
@@ -723,12 +723,12 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 12px rgba(0,168,77,.09);
+  box-shadow: 0 2px 12px rgba(224,120,32,.09);
   transition: box-shadow .2s, transform .2s;
 }
 
 .admin-content-card:hover {
-  box-shadow: 0 6px 24px rgba(0,168,77,.18);
+  box-shadow: 0 6px 24px rgba(224,120,32,.18);
   transform: translateY(-2px);
 }
 
@@ -836,12 +836,12 @@
 
 .admin-content-card__btn--edit {
   background: linear-gradient(135deg, var(--adm-green-dark), var(--adm-green));
-  box-shadow: 0 3px 10px rgba(0,209,102,.28);
+  box-shadow: 0 3px 10px rgba(224,120,32,.28);
 }
 
 .admin-content-card__btn--delete {
   background: linear-gradient(135deg, var(--adm-green-deep), var(--adm-green-dark));
-  box-shadow: 0 3px 10px rgba(0,120,56,.28);
+  box-shadow: 0 3px 10px rgba(158,64,0,.28);
 }
 
 

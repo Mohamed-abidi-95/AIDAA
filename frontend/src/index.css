@@ -3,6 +3,8 @@
 /* ========================================================================== */
 /* Global CSS reset and default styles for the entire application */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 /* ========================================================================== */
 /* RESET AND DEFAULTS */
 /* ========================================================================== */
@@ -21,11 +23,12 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
-    'Helvetica Neue', sans-serif;
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont,
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.6;
   color: #333;
   background-color: #f5f7fa;
 }
@@ -42,12 +45,34 @@ button {
 }
 
 a {
-  color: #667eea;
+  color: #E07820;
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+  color: #C45E0A;
+}
+
+/* ========================================================================== */
+/* MICRO-INTERACTIONS — Applied globally to all clickable cards & buttons     */
+/* ========================================================================== */
+
+[role="button"],
+button {
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+}
+
+.card-interactive,
+.clickable-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-interactive:hover,
+.clickable-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 /* ========================================================================== */
@@ -79,7 +104,7 @@ a:hover {
 /* Ensure proper focus indicators for keyboard navigation */
 
 *:focus-visible {
-  outline: 2px solid #667eea;
+  outline: 2px solid #E07820;
   outline-offset: 2px;
 }
 

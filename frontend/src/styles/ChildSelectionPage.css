@@ -6,26 +6,26 @@
 
 /* ── Palette ── */
 :root {
-  --cs-green:       #00A651;
-  --cs-green-dark:  #007A3A;
-  --cs-green-deep:  #00572A;
-  --cs-green-light: #E6F7EE;
-  --cs-green-mid:   #C2EAD4;
+  --cs-green:       #E07820;
+  --cs-green-dark:  #C45E0A;
+  --cs-green-deep:  #9E4000;
+  --cs-green-light: #FEF3E7;
+  --cs-green-mid:   #F5A94E;
   --cs-white:       #FFFFFF;
-  --cs-off-white:   #F4FAF7;
-  --cs-text-dark:   #0F2318;
-  --cs-text-light:  #7A9485;
-  --cs-border:      #D1E8DB;
+  --cs-off-white:   #FFFBF5;
+  --cs-text-dark:   #1A0D00;
+  --cs-text-light:  #8C6840;
+  --cs-border:      #F5D5B0;
 }
 
-/* ── Full-page green gradient (same as role-selection) ── */
+/* ── Full-page gradient ── */
 .cs-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 40px 20px 60px;
-  background: linear-gradient(160deg, var(--cs-green-deep) 0%, var(--cs-green-dark) 50%, var(--cs-green) 100%);
+  background: linear-gradient(160deg, #9E4000 0%, #C45E0A 50%, #E07820 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   position: relative;
   overflow: hidden;
@@ -200,7 +200,7 @@
 
 .cs-card--selected {
   border-color: var(--cs-green);
-  box-shadow: 0 24px 60px rgba(0, 166, 81, 0.28);
+  box-shadow: 0 24px 60px rgba(224,120,32, 0.28);
   transform: translateY(-8px);
 }
 
@@ -214,7 +214,7 @@
   justify-content: center;
   font-size: 42px;
   margin: 0 auto 18px;
-  box-shadow: 0 6px 20px rgba(0, 166, 81, 0.3);
+  box-shadow: 0 6px 20px rgba(224,120,32, 0.3);
 }
 
 /* ── Child info ── */
@@ -252,7 +252,7 @@
   font-family: inherit;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-  box-shadow: 0 4px 18px rgba(0, 166, 81, 0.3);
+  box-shadow: 0 4px 18px rgba(224,120,32, 0.3);
   letter-spacing: 0.2px;
   display: flex;
   align-items: center;
@@ -261,7 +261,7 @@
 }
 .cs-select-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 166, 81, 0.42);
+  box-shadow: 0 8px 24px rgba(224,120,32, 0.42);
   background: linear-gradient(135deg, var(--cs-green-deep) 0%, var(--cs-green-dark) 100%);
 }
 .cs-card--selected .cs-select-btn {

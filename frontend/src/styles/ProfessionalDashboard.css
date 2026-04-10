@@ -1,24 +1,24 @@
 /* ============================================================ */
-/* PROFESSIONAL DASHBOARD — Pharmacy Green Design              */
+/* PROFESSIONAL DASHBOARD — Forest Green (role identity)       */
 /* Prefix: prof-                                               */
 /* ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --prof-green:        #00A651;
-  --prof-green-dark:   #007A3A;
-  --prof-green-deep:   #00572A;
-  --prof-green-light:  #E6F7EE;
-  --prof-green-mid:    #C2EAD4;
-  --prof-sidebar-bg:   #013D1C;
+  --prof-green:        #22C55E;
+  --prof-green-dark:   #15803D;
+  --prof-green-deep:   #0F3D1F;
+  --prof-green-light:  #EAF7EE;
+  --prof-green-mid:    #86EFAC;
+  --prof-sidebar-bg:   #0F3D1F;
   --prof-sidebar-w:    280px;
   --prof-white:        #FFFFFF;
-  --prof-off-white:    #F4FAF7;
-  --prof-text-dark:    #0F2318;
-  --prof-text-light:   #7A9485;
-  --prof-border:       #D1E8DB;
-  --prof-shadow:       0 4px 24px rgba(0,122,58,.12);
+  --prof-off-white:    #F7FDF9;
+  --prof-text-dark:    #0F3D1F;
+  --prof-text-light:   #4B7A5C;
+  --prof-border:       #E2F0E8;
+  --prof-shadow:       0 2px 12px rgba(34,197,94,.08);
 }
 
 * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
   display: flex;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #EAFFF5;
+  background: #F7FDF9;
 }
 
 /* ══════════════════════════════════════════════════
@@ -125,14 +125,12 @@
 .prof-nav__item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.9); }
 
 .prof-nav__item.active {
-  background: linear-gradient(90deg, rgba(0,166,81,.3), rgba(0,166,81,.12));
+  background: rgba(34,197,94,0.12);
   color: #fff;
   border-left: 3px solid var(--prof-green);
   font-weight: 600;
 }
-
-push to my repo
-https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
+/* Nav badge */
 .prof-nav__badge {
   margin-left: auto;
   background: var(--prof-green);
@@ -172,7 +170,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 }
 
 .prof-search::placeholder { color: rgba(255,255,255,.38); }
-.prof-search:focus { border-color: rgba(0,166,81,.6); background: rgba(255,255,255,.13); }
+.prof-search:focus { border-color: rgba(34,197,94,.6); background: rgba(255,255,255,.13); }
 
 /* Patient item */
 .prof-patient-item {
@@ -331,7 +329,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
   flex: 1;
   padding: 26px 30px;
   overflow-y: auto;
-  background: #EAFFF5;
+  background: #F7FDF9;
 }
 
 /* ── KPIs ── */
@@ -345,28 +343,28 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 .prof-kpi {
   background: var(--prof-white);
   border: 1px solid var(--prof-border);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 14px;
   box-shadow: var(--prof-shadow);
-  transition: transform .2s, box-shadow .2s;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
 
-.prof-kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,122,58,.16); }
+.prof-kpi:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.1); }
 
 .prof-kpi__icon {
-  width: 44px; height: 44px;
-  border-radius: 11px;
-  background: var(--prof-green-light);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #EAF7EE;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
 }
 
-.prof-kpi__val { font-size: 26px; font-weight: 800; color: var(--prof-text-dark); display: block; margin-bottom: 2px; line-height: 1; }
-.prof-kpi__lbl { font-size: 11.5px; color: var(--prof-text-light); font-weight: 500; }
+.prof-kpi__val { font-size: 28px; font-weight: 700; color: #15803D; display: block; margin-bottom: 2px; line-height: 1; }
+.prof-kpi__lbl { font-size: 11px; color: #4B7A5C; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; }
 
 /* ── Section card ── */
 .prof-section {
@@ -406,7 +404,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 .prof-empty p { font-size: 14px; font-weight: 500; }
 
 .prof-empty-state {
-  background: rgba(0,166,81,.07);
+  background: rgba(34,197,94,.05);
   border: 1px dashed var(--prof-green-mid);
   border-radius: 16px;
   padding: 40px 28px;
@@ -441,11 +439,11 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 }
 
 .prof-patient-card__avatar {
-  width: 72px; height: 72px;
+  width: 56px; height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--prof-green-dark), var(--prof-green));
+  background: #22C55E;
   color: #fff;
-  font-size: 28px; font-weight: 800;
+  font-size: 22px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
@@ -453,9 +451,9 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 .prof-patient-card__details { flex: 1; }
 
 .prof-patient-card__details h3 {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--prof-text-dark);
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F3D1F;
   margin: 0 0 16px;
 }
 
@@ -466,23 +464,23 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 }
 
 .prof-patient-card__item {
-  background: var(--prof-off-white);
-  border: 1px solid var(--prof-border);
+  background: #F7FDF9;
+  border: 1px solid #E2F0E8;
   border-radius: 10px;
   padding: 12px 14px;
 }
 
 .prof-patient-card__item label {
   display: block;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--prof-text-light);
+  color: #4B7A5C;
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 1px;
   margin-bottom: 5px;
 }
 
-.prof-patient-card__item span { font-size: 16px; font-weight: 700; color: var(--prof-text-dark); }
+.prof-patient-card__item span { font-size: 16px; font-weight: 600; color: #0F3D1F; }
 
 /* ── Table ── */
 .prof-table-wrap {
@@ -509,14 +507,14 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 
 .prof-table td {
   padding: 13px 16px;
-  border-bottom: 1px solid #f0f7f3;
+  border-bottom: 1px solid #E2F0E8;
   font-size: 13.5px;
   color: var(--prof-text-dark);
   vertical-align: middle;
 }
 
 .prof-table tbody tr:last-child td { border-bottom: none; }
-.prof-table tbody tr:hover { background: rgba(0,166,81,.03); }
+.prof-table tbody tr:hover { background: rgba(34,197,94,.03); }
 
 /* Score badge */
 .prof-score-badge {
@@ -552,7 +550,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
   outline: none;
   border-color: var(--prof-green);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(0,166,81,.12);
+  box-shadow: 0 0 0 4px rgba(34,197,94,.1);
 }
 
 /* ── Buttons ── */
@@ -574,12 +572,12 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 .prof-btn--primary {
   background: linear-gradient(135deg, var(--prof-green-dark), var(--prof-green));
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0,166,81,.35);
+  box-shadow: 0 4px 14px rgba(34,197,94,.3);
 }
 
 .prof-btn--primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0,166,81,.5);
+  box-shadow: 0 6px 20px rgba(34,197,94,.45);
 }
 
 .prof-btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
@@ -596,7 +594,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
   transition: box-shadow .2s;
 }
 
-.prof-note-card:hover { box-shadow: 0 4px 16px rgba(0,122,58,.1); }
+.prof-note-card:hover { box-shadow: 0 4px 16px rgba(21,128,61,.1); }
 
 .prof-note-card__header {
   display: flex;
@@ -607,7 +605,7 @@ https://github.com/Mohamed-abidi-95/AIDAA.git/* Nav badge */
 
 .prof-note-card__author { font-size: 13px; font-weight: 700; color: var(--prof-green-dark); }
 .prof-note-card__date   { font-size: 11.5px; color: var(--prof-text-light); }
-.prof-note-card__content { font-size: 13.5px; color: #4B7A62; line-height: 1.65; margin: 0; }
+.prof-note-card__content { font-size: 13.5px; color: #2D5A3D; line-height: 1.65; margin: 0; }
 
 /* ── Coming soon ── */
 .prof-coming-soon {

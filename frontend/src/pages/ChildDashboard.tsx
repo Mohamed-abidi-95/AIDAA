@@ -248,43 +248,44 @@ export const ChildDashboard = (): JSX.Element => {
 
   // ── Tab button style ──────────────────────────────────────────────────────
   const tabStyle = (tab: string): React.CSSProperties => ({
-    flex: 1, padding: '11px 4px', border: 'none', cursor: 'pointer',
-    borderRadius: 10, fontWeight: 700, fontSize: 12, transition: 'all 0.2s',
-    background: activeTab === tab ? catCfg.color : '#fff',
-    color: activeTab === tab ? '#fff' : '#64748b',
-    boxShadow: activeTab === tab ? `0 4px 14px ${catCfg.color}44` : 'none',
+    flex: 1, padding: '11px 4px', cursor: 'pointer',
+    borderRadius: 999, fontWeight: 700, fontSize: 12, transition: 'all 0.2s',
+    background: activeTab === tab ? '#E07820' : '#fff',
+    color: activeTab === tab ? '#fff' : '#6B7280',
+    border: activeTab === tab ? 'none' : '1px solid #F0E6D8',
+    boxShadow: activeTab === tab ? '0 4px 14px rgba(224,120,32,0.3)' : 'none',
   });
 
   // ============================================================================
   // RENDER
   // ============================================================================
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#eef6fb 0%,#e8f4f8 60%,#ede9f6 100%)', fontFamily: "'Nunito','Quicksand','Segoe UI',sans-serif", paddingBottom: 48 }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #FFF7EE 0%, #ffffff 40%)', fontFamily: "'Inter','Nunito','Quicksand','Segoe UI',sans-serif", paddingBottom: 48 }}>
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <header style={{ background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+      <header style={{ background: '#fff', borderBottom: '2px solid #FEF3E7', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 50, height: 50, borderRadius: '50%', background: `linear-gradient(135deg,${catCfg.color},${catCfg.color}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, boxShadow: `0 4px 14px ${catCfg.color}44` }}>
+          <div style={{ width: 50, height: 50, borderRadius: '50%', background: `linear-gradient(135deg,${catCfg.color},${catCfg.color}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: '3px solid #E07820' }}>
             {catCfg.emoji}
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: '#1e3a5f' }}>Bonjour {childName} 👋</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#C45E0A' }}>Bonjour {childName} 👋</h1>
             <span style={{ background: `${catCfg.color}18`, color: catCfg.color, borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
               {catCfg.emoji} {catCfg.label}
             </span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ background: '#fff7ed', borderRadius: 20, padding: '7px 14px', fontWeight: 700, color: '#f97316', fontSize: 13 }}>⭐ {stats.total_points} pts</div>
-          <div style={{ background: '#f0f9ff', borderRadius: 20, padding: '7px 14px', fontWeight: 700, color: '#0284c7', fontSize: 13 }}>🏅 {badges.length} badges</div>
+          <div style={{ background: '#FEF3E7', borderRadius: 999, padding: '7px 14px', fontWeight: 700, color: '#C45E0A', fontSize: 13, border: '1px solid #F5A94E' }}>⭐ {stats.total_points} pts</div>
+          <div style={{ background: '#EEF2FF', borderRadius: 999, padding: '7px 14px', fontWeight: 700, color: '#4338CA', fontSize: 13, border: '1px solid #C7D2FE' }}>🏅 {badges.length} badges</div>
           <button onClick={() => navigate('/child-selection')} style={{ padding: '8px 14px', background: '#f1f5f9', border: 'none', borderRadius: 18, fontWeight: 700, fontSize: 12, cursor: 'pointer', color: '#1e3a5f' }}>← Retour</button>
-          <button onClick={logout} style={{ padding: '8px 14px', background: 'linear-gradient(90deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 18, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Déconnexion</button>
+          <button onClick={logout} style={{ padding: '8px 20px', background: '#E07820', color: '#fff', border: 'none', borderRadius: 20, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Déconnexion</button>
         </div>
       </header>
 
       {/* ── TABS ───────────────────────────────────────────────────────────── */}
       <div style={{ padding: '18px 28px 0' }}>
-        <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', borderRadius: 14, padding: 5, maxWidth: 640 }}>
+        <div style={{ display: 'flex', gap: 8, background: '#FFF7EE', borderRadius: 999, padding: 5, maxWidth: 640 }}>
           {([['library','📚','Bibliothèque'],['sequences','📋','Séquences'],['aac','💬','AAC'],['games','🎮','Jeux']] as const).map(([tab, icon, label]) => (
             <button key={tab} style={tabStyle(tab)} onClick={() => setActiveTab(tab)}>{icon} {label}</button>
           ))}
@@ -311,20 +312,20 @@ export const ChildDashboard = (): JSX.Element => {
                       📺 Vidéos <span style={{ fontSize: 12, background: '#f1f5f9', borderRadius: 20, padding: '2px 10px', color: '#64748b', fontWeight: 600 }}>{videos.length}</span>
                     </h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 16 }}>
-                      {videos.map((v) => {
+                       {videos.map((v) => {
                         const vUrl = buildMediaUrl(v.url);
                         return (
-                          <div key={v.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', transition: 'transform .2s,box-shadow .2s', cursor: 'pointer' }}
-                            onMouseEnter={(e) => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; d.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
-                            onMouseLeave={(e) => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.boxShadow = '0 2px 10px rgba(0,0,0,0.07)'; }}
+                          <div key={v.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', border: '1px solid #F0E6D8', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'transform .2s ease,box-shadow .2s ease', cursor: 'pointer' }}
+                            onMouseEnter={(e) => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-2px)'; d.style.boxShadow = '0 6px 20px rgba(224,120,32,0.25)'; }}
+                            onMouseLeave={(e) => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
                           >
-                            <div style={{ height: 130, background: 'linear-gradient(135deg,#e0f7fa,#b2ebf2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 50, overflow: 'hidden' }}>
+                            <div style={{ height: 140, background: 'linear-gradient(135deg,#FEF3E7,#F5D5B0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 50, overflow: 'hidden', borderRadius: '12px 12px 0 0' }}>
                               {vUrl ? <video src={vUrl} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{v.emoji || '📹'}</span>}
                             </div>
                             <div style={{ padding: '12px 14px 14px' }}>
-                              <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 13, color: '#1e3a5f', lineHeight: 1.3 }}>{v.title}</p>
-                              <p style={{ margin: '0 0 10px', fontSize: 11, color: '#64748b' }}>🎯 {v.category} • ⏱ {v.duration}</p>
-                              <button onClick={() => { const u = buildMediaUrl(v.url); if (u) window.open(u,'_blank','noopener,noreferrer'); logActivity(v.id,'video_watched'); }} style={{ width: '100%', padding: '9px 0', borderRadius: 9, border: 'none', background: 'linear-gradient(90deg,#38b2ac,#2dd4bf)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                              <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 14, color: '#1C1917', lineHeight: 1.3 }}>{v.title}</p>
+                              <p style={{ margin: '0 0 10px', fontSize: 11, color: '#A0520A' }}>🎯 {v.category} • ⏱ {v.duration}</p>
+                              <button onClick={() => { const u = buildMediaUrl(v.url); if (u) window.open(u,'_blank','noopener,noreferrer'); logActivity(v.id,'video_watched'); }} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(90deg, #C45E0A, #E07820)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'opacity 0.15s ease' }}>
                                 {vUrl ? '▶ Regarder' : '⏳ Indisponible'}
                               </button>
                             </div>
@@ -352,7 +353,7 @@ export const ChildDashboard = (): JSX.Element => {
                             <p style={{ margin: '0 0 3px', fontWeight: 700, fontSize: 14, color: '#1e3a5f' }}>{a.title}</p>
                             <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{a.steps} étapes • {a.minutes} min</p>
                           </div>
-                          <button onClick={() => logActivity(a.id, 'activity_started')} style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(90deg,#38b2ac,#2dd4bf)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          <button onClick={() => logActivity(a.id, 'activity_started')} style={{ padding: '9px 18px', borderRadius: 9, border: 'none', background: 'linear-gradient(90deg, #C45E0A, #E07820)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'opacity 0.15s ease' }}>
                             Commencer
                           </button>
                         </div>
