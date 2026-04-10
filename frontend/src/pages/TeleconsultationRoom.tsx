@@ -83,8 +83,8 @@ export const TeleconsultationRoom = (): JSX.Element => {
         {session && (
           <div style={{
             position: 'absolute', top: 18, left: 18, zIndex: 10,
-            background: 'rgba(15,61,31,0.9)',
-            border: '1px solid #22C55E',
+          background: 'rgba(158,64,0,0.9)',
+          border: '1px solid #E07820',
             borderRadius: 10,
             padding: '8px 16px',
             color: '#fff',
@@ -94,7 +94,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
             alignItems: 'center',
             gap: 8,
           }}>
-            <span style={{ background: '#22C55E', borderRadius: '50%', width: 8, height: 8, display: 'inline-block' }} />
+            <span style={{ background: '#E07820', borderRadius: '50%', width: 8, height: 8, display: 'inline-block' }} />
             {session.patientName} · Session #{sessionId}
           </div>
         )}
@@ -200,16 +200,16 @@ export const TeleconsultationRoom = (): JSX.Element => {
           <div style={{ padding: '18px 16px', borderBottom: '1px solid #2D2D2D' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <div style={{
-                width: 44, height: 44, borderRadius: '50%',
-                background: '#22C55E',
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#C45E0A,#E07820)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, color: '#fff', fontSize: 18, flexShrink: 0,
               }}>
                 {session.patientName.charAt(0)}
               </div>
               <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{session.patientName}</div>
-                <div style={{ color: '#4B7A5C', fontSize: 12 }}>
+              color: '#fff', fontWeight: 700, fontSize: 14 }}>{session.patientName}</div>
+              <div style={{ color: '#8C6840', fontSize: 12 }}>
                   {session.patientAge} ans · {session.participantCategory}
                 </div>
               </div>
@@ -227,11 +227,11 @@ export const TeleconsultationRoom = (): JSX.Element => {
                   padding: '8px 10px',
                 }}>
                   <div style={{
-                    fontSize: 10,
-                    color: '#4B7A5C',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.8px',
-                    marginBottom: 3,
+              fontSize: 10,
+                  color: '#8C6840',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.8px',
+                  marginBottom: 3,
                   }}>
                     {label}
                   </div>
@@ -246,9 +246,9 @@ export const TeleconsultationRoom = (): JSX.Element => {
                 background: '#2D2D2D',
                 borderRadius: 8,
                 padding: '10px 12px',
-                borderLeft: '3px solid #22C55E',
-              }}>
-                <div style={{ fontSize: 10, color: '#4B7A5C', letterSpacing: '0.8px', marginBottom: 4 }}>NOTES</div>
+              borderLeft: '3px solid #E07820',
+            }}>
+              <div style={{ fontSize: 10, color: '#8C6840', marginBottom: 3, letterSpacing: '0.5px' }}>NOTES</div>
                 <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
                   {session.notes}
                 </p>
@@ -295,8 +295,8 @@ export const TeleconsultationRoom = (): JSX.Element => {
           }}>
             {messages.length === 0 ? (
               <p style={{
-                color: '#4B7A5C', fontSize: 12,
-                textAlign: 'center', marginTop: 20,
+            color: '#8C6840', fontSize: 12,
+              textAlign: 'center', marginTop: 20,
               }}>
                 Aucun message pour le moment
               </p>
@@ -306,9 +306,9 @@ export const TeleconsultationRoom = (): JSX.Element => {
                   background: '#2D2D2D',
                   borderRadius: 10,
                   padding: '8px 12px',
-                  borderLeft: '3px solid #22C55E',
+                  borderLeft: '3px solid #E07820',
                 }}>
-                  <div style={{ fontSize: 10, color: '#4B7A5C', marginBottom: 3 }}>
+                  <div style={{ fontSize: 10, color: '#8C6840', marginBottom: 3 }}>
                     {m.from} · {m.time}
                   </div>
                   <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.4 }}>{m.text}</div>
@@ -344,9 +344,9 @@ export const TeleconsultationRoom = (): JSX.Element => {
             <button
               onClick={sendMessage}
               style={{
-                width: 38, height: 38,
-                borderRadius: 8,
-                background: '#22C55E',
+              width: 38, height: 38,
+              borderRadius: 8,
+              background: '#E07820',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
@@ -363,4 +363,13 @@ export const TeleconsultationRoom = (): JSX.Element => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
 

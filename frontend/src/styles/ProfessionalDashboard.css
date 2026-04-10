@@ -1,24 +1,24 @@
 /* ============================================================ */
-/* PROFESSIONAL DASHBOARD — Forest Green (role identity)       */
+/* PROFESSIONAL DASHBOARD — Warm Orange (unified palette)     */
 /* Prefix: prof-                                               */
 /* ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --prof-green:        #22C55E;
-  --prof-green-dark:   #15803D;
-  --prof-green-deep:   #0F3D1F;
-  --prof-green-light:  #EAF7EE;
-  --prof-green-mid:    #86EFAC;
-  --prof-sidebar-bg:   #0F3D1F;
+  --prof-green:        #E07820;
+  --prof-green-dark:   #C45E0A;
+  --prof-green-deep:   #9E4000;
+  --prof-green-light:  #FEF3E7;
+  --prof-green-mid:    #F5A94E;
+  --prof-sidebar-bg:   #2C1A0E;
   --prof-sidebar-w:    280px;
   --prof-white:        #FFFFFF;
-  --prof-off-white:    #F7FDF9;
-  --prof-text-dark:    #0F3D1F;
-  --prof-text-light:   #4B7A5C;
-  --prof-border:       #E2F0E8;
-  --prof-shadow:       0 2px 12px rgba(34,197,94,.08);
+  --prof-off-white:    #FFFBF5;
+  --prof-text-dark:    #1A0D00;
+  --prof-text-light:   #8C6840;
+  --prof-border:       #F0E6D8;
+  --prof-shadow:       0 2px 12px rgba(224,120,32,.08);
 }
 
 * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
   display: flex;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #F7FDF9;
+  background: #FFFBF5;
 }
 
 /* ══════════════════════════════════════════════════
@@ -125,7 +125,7 @@
 .prof-nav__item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.9); }
 
 .prof-nav__item.active {
-  background: rgba(34,197,94,0.12);
+  background: rgba(224,120,32,0.15);
   color: #fff;
   border-left: 3px solid var(--prof-green);
   font-weight: 600;
@@ -170,7 +170,7 @@
 }
 
 .prof-search::placeholder { color: rgba(255,255,255,.38); }
-.prof-search:focus { border-color: rgba(34,197,94,.6); background: rgba(255,255,255,.13); }
+.prof-search:focus { border-color: rgba(224,120,32,.6); background: rgba(255,255,255,.13); }
 
 /* Patient item */
 .prof-patient-item {
@@ -329,7 +329,7 @@
   flex: 1;
   padding: 26px 30px;
   overflow-y: auto;
-  background: #F7FDF9;
+  background: #FFFBF5;
 }
 
 /* ── KPIs ── */
@@ -356,15 +356,15 @@
 
 .prof-kpi__icon {
   width: 40px; height: 40px;
-  border-radius: 50%;
-  background: #EAF7EE;
+  border-radius: 12px;
+  background: #FEF3E7;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
 }
 
-.prof-kpi__val { font-size: 28px; font-weight: 700; color: #15803D; display: block; margin-bottom: 2px; line-height: 1; }
-.prof-kpi__lbl { font-size: 11px; color: #4B7A5C; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; }
+.prof-kpi__val { font-size: 28px; font-weight: 700; color: #C45E0A; display: block; margin-bottom: 2px; line-height: 1; }
+.prof-kpi__lbl { font-size: 11px; color: #A0520A; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; }
 
 /* ── Section card ── */
 .prof-section {
@@ -404,7 +404,7 @@
 .prof-empty p { font-size: 14px; font-weight: 500; }
 
 .prof-empty-state {
-  background: rgba(34,197,94,.05);
+  background: rgba(224,120,32,.05);
   border: 1px dashed var(--prof-green-mid);
   border-radius: 16px;
   padding: 40px 28px;
@@ -441,7 +441,7 @@
 .prof-patient-card__avatar {
   width: 56px; height: 56px;
   border-radius: 50%;
-  background: #22C55E;
+  background: linear-gradient(135deg, var(--prof-green-dark), var(--prof-green));
   color: #fff;
   font-size: 22px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -453,7 +453,7 @@
 .prof-patient-card__details h3 {
   font-size: 22px;
   font-weight: 700;
-  color: #0F3D1F;
+  color: var(--prof-text-dark);
   margin: 0 0 16px;
 }
 
@@ -464,8 +464,8 @@
 }
 
 .prof-patient-card__item {
-  background: #F7FDF9;
-  border: 1px solid #E2F0E8;
+  background: var(--prof-off-white);
+  border: 1px solid var(--prof-border);
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -474,13 +474,13 @@
   display: block;
   font-size: 10px;
   font-weight: 700;
-  color: #4B7A5C;
+  color: var(--prof-text-light);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 5px;
 }
 
-.prof-patient-card__item span { font-size: 16px; font-weight: 600; color: #0F3D1F; }
+.prof-patient-card__item span { font-size: 16px; font-weight: 600; color: var(--prof-text-dark); }
 
 /* ── Table ── */
 .prof-table-wrap {
@@ -507,14 +507,14 @@
 
 .prof-table td {
   padding: 13px 16px;
-  border-bottom: 1px solid #E2F0E8;
+  border-bottom: 1px solid var(--prof-border);
   font-size: 13.5px;
   color: var(--prof-text-dark);
   vertical-align: middle;
 }
 
 .prof-table tbody tr:last-child td { border-bottom: none; }
-.prof-table tbody tr:hover { background: rgba(34,197,94,.03); }
+.prof-table tbody tr:hover { background: rgba(224,120,32,.03); }
 
 /* Score badge */
 .prof-score-badge {
@@ -550,7 +550,7 @@
   outline: none;
   border-color: var(--prof-green);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(34,197,94,.1);
+  box-shadow: 0 0 0 4px rgba(224,120,32,.12);
 }
 
 /* ── Buttons ── */
@@ -572,12 +572,12 @@
 .prof-btn--primary {
   background: linear-gradient(135deg, var(--prof-green-dark), var(--prof-green));
   color: #fff;
-  box-shadow: 0 4px 14px rgba(34,197,94,.3);
+  box-shadow: 0 4px 14px rgba(224,120,32,.35);
 }
 
 .prof-btn--primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(34,197,94,.45);
+  box-shadow: 0 6px 20px rgba(224,120,32,.5);
 }
 
 .prof-btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
@@ -594,7 +594,7 @@
   transition: box-shadow .2s;
 }
 
-.prof-note-card:hover { box-shadow: 0 4px 16px rgba(21,128,61,.1); }
+.prof-note-card:hover { box-shadow: 0 4px 16px rgba(196,94,10,.1); }
 
 .prof-note-card__header {
   display: flex;
@@ -605,7 +605,7 @@
 
 .prof-note-card__author { font-size: 13px; font-weight: 700; color: var(--prof-green-dark); }
 .prof-note-card__date   { font-size: 11.5px; color: var(--prof-text-light); }
-.prof-note-card__content { font-size: 13.5px; color: #2D5A3D; line-height: 1.65; margin: 0; }
+.prof-note-card__content { font-size: 13.5px; color: #7A4E20; line-height: 1.65; margin: 0; }
 
 /* ── Coming soon ── */
 .prof-coming-soon {

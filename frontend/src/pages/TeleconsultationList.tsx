@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { icon: '📨', label: 'Mes invitations', path: '/professional/dashboard' },
   { icon: '🎥', label: 'Téléconsultation',path: '/professionnel/teleconsultation', active: true },
 ];
-
 // ============================================================================
 export const TeleconsultationList = (): JSX.Element => {
   const navigate = useNavigate();
@@ -105,15 +104,15 @@ export const TeleconsultationList = (): JSX.Element => {
             /* ── Empty state ── */
             <div style={{ textAlign: 'center', padding: '80px 20px' }}>
               <div style={{
-                width: 64, height: 64, borderRadius: '50%',
-                background: '#EAF7EE',
+              width: 64, height: 64, borderRadius: '50%',
+              background: '#FEF3E7',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 28, margin: '0 auto 16px',
               }}>🎥</div>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#0F3D1F', marginBottom: 8 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#1A0D00', marginBottom: 8 }}>
                 Aucune téléconsultation planifiée
               </p>
-              <p style={{ fontSize: 13, color: '#4B7A5C', marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: '#8C6840', marginBottom: 24 }}>
                 Planifiez votre première session avec un patient.
               </p>
               <button
@@ -165,17 +164,17 @@ export const TeleconsultationList = (): JSX.Element => {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <div style={{
                                   width: 34, height: 34, borderRadius: '50%',
-                                  background: '#22C55E', color: '#fff',
+                                  background: 'linear-gradient(135deg,#C45E0A,#E07820)', color: '#fff',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   fontWeight: 700, fontSize: 14, flexShrink: 0,
                                 }}>
                                   {session.patientName.charAt(0)}
                                 </div>
                                 <div>
-                                  <strong style={{ display: 'block', fontSize: 14, color: '#0F3D1F' }}>
+                                  <strong style={{ display: 'block', fontSize: 14, color: '#1A0D00' }}>
                                     {session.patientName}
                                   </strong>
-                                  <small style={{ color: '#4B7A5C', fontSize: 11 }}>
+                                  <small style={{ color: '#8C6840', fontSize: 11 }}>
                                     {session.patientAge} ans · {session.participantCategory}
                                   </small>
                                 </div>
@@ -223,9 +222,9 @@ export const TeleconsultationList = (): JSX.Element => {
                                 style={{
                                   padding: '7px 16px',
                                   borderRadius: 8,
-                                  border: `1.5px solid ${session.status === 'ongoing' ? '#22C55E' : '#E2F0E8'}`,
-                                  background: session.status === 'ongoing' ? '#EAF7EE' : '#fff',
-                                  color: '#15803D',
+                                  border: `1.5px solid ${session.status === 'ongoing' ? '#E07820' : '#F0E6D8'}`,
+                                  background: session.status === 'ongoing' ? '#FEF3E7' : '#fff',
+                                  color: '#C45E0A',
                                   fontSize: 12,
                                   fontWeight: 600,
                                   cursor: 'pointer',
@@ -253,4 +252,10 @@ export const TeleconsultationList = (): JSX.Element => {
     </div>
   );
 };
+
+
+
+
+
+
 

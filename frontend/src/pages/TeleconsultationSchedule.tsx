@@ -28,7 +28,7 @@ const FIELD_LABEL: React.CSSProperties = {
   display: 'block',
   fontSize: 11,
   fontWeight: 700,
-  color: '#4B7A5C',
+  color: '#8C6840',
   textTransform: 'uppercase',
   letterSpacing: '0.9px',
   marginBottom: 7,
@@ -37,11 +37,11 @@ const FIELD_LABEL: React.CSSProperties = {
 const INPUT_STYLE: React.CSSProperties = {
   width: '100%',
   padding: '11px 14px',
-  border: '1.5px solid #E2F0E8',
+  border: '1.5px solid #F0E6D8',
   borderRadius: 10,
   fontSize: 14,
   fontFamily: 'inherit',
-  color: '#0F3D1F',
+  color: '#1A0D00',
   background: '#fff',
   outline: 'none',
   transition: 'border-color 0.2s',
@@ -99,7 +99,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, #EAF7EE 0%, #F7FDF9 50%, #ffffff 100%)',
+      background: 'linear-gradient(160deg, #9E4000 0%, #C45E0A 50%, #E07820 100%)',
       fontFamily: "'Inter','Segoe UI',sans-serif",
       display: 'flex',
       alignItems: 'center',
@@ -109,8 +109,8 @@ export const TeleconsultationSchedule = (): JSX.Element => {
       <div style={{
         background: '#fff',
         borderRadius: 16,
-        boxShadow: '0 4px 28px rgba(34,197,94,.12)',
-        border: '1px solid #E2F0E8',
+        boxShadow: '0 4px 28px rgba(224,120,32,.18)',
+        border: '1px solid #F0E6D8',
         width: '100%',
         maxWidth: 520,
         overflow: 'hidden',
@@ -118,7 +118,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
 
         {/* ── Card header ── */}
         <div style={{
-          background: 'linear-gradient(135deg, #0F3D1F 0%, #15803D 60%, #22C55E 100%)',
+          background: 'linear-gradient(135deg, #9E4000 0%, #C45E0A 60%, #E07820 100%)',
           padding: '26px 28px 24px',
           color: '#fff',
         }}>
@@ -155,12 +155,12 @@ export const TeleconsultationSchedule = (): JSX.Element => {
           {/* Success banner */}
           {success && (
             <div style={{
-              background: '#EAF7EE',
-              border: '1px solid #86EFAC',
+              background: '#FEF3E7',
+              border: '1px solid #F5A94E',
               borderRadius: 10,
               padding: '12px 16px',
               marginBottom: 20,
-              color: '#15803D',
+              color: '#C45E0A',
               fontWeight: 600,
               fontSize: 14,
               display: 'flex',
@@ -276,11 +276,11 @@ export const TeleconsultationSchedule = (): JSX.Element => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#4B7A5C',
-                cursor: 'pointer',
-                fontSize: 13,
-                textDecoration: 'underline',
-                fontFamily: 'inherit',
+              color: '#8C6840',
+              cursor: 'pointer',
+              fontSize: 13,
+              textDecoration: 'underline',
+              fontFamily: 'inherit',
               }}
             >
               Annuler
@@ -291,4 +291,10 @@ export const TeleconsultationSchedule = (): JSX.Element => {
     </div>
   );
 };
+
+
+
+
+
+
 
