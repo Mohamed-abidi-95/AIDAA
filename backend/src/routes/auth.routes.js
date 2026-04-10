@@ -5,6 +5,7 @@
 // Routes:
 //   POST /login          - User login with email + password
 //   POST /set-password   - First-time password setup for new accounts
+//   POST /signup         - Parent self-signup
 
 // Import Express Router for creating route module
 const express = require('express');
@@ -37,6 +38,11 @@ router.post(
   // Route handler - calls login controller
   authController.login
 );
+
+router.post('/signup', authController.signup);
+router.post('/signup-professional', authController.signupProfessional);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 // ============================================================================
 // POST /api/auth/set-password

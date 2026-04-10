@@ -29,10 +29,10 @@ const getById = async (childId) => {
 // ============================================================================
 // Create new child
 // ============================================================================
-const create = async (parentId, name, age) => {
+const create = async (parentId, name, age, participantCategory = 'enfant') => {
   const results = await query(
-    'INSERT INTO children (parent_id, name, age) VALUES (?, ?, ?)',
-    [parentId, name, age]
+    'INSERT INTO children (parent_id, name, age, participant_category) VALUES (?, ?, ?, ?)',
+    [parentId, name, age, participantCategory]
   );
   return results.insertId;
 };
@@ -40,10 +40,10 @@ const create = async (parentId, name, age) => {
 // ============================================================================
 // Update child information
 // ============================================================================
-const update = async (childId, name, age) => {
+const update = async (childId, name, age, participantCategory = 'enfant') => {
   const results = await query(
-    'UPDATE children SET name = ?, age = ? WHERE id = ?',
-    [name, age, childId]
+    'UPDATE children SET name = ?, age = ?, participant_category = ? WHERE id = ?',
+    [name, age, participantCategory, childId]
   );
   return results.affectedRows > 0;
 };

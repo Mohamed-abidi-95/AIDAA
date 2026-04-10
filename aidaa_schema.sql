@@ -35,6 +35,7 @@ CREATE TABLE children (
   parent_id INT NOT NULL,
   name VARCHAR(100) NOT NULL,
   age INT,
+  participant_category ENUM('enfant','jeune','adulte') NOT NULL DEFAULT 'enfant',
   FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

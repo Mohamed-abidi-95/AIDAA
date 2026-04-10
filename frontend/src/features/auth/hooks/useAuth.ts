@@ -5,14 +5,14 @@
 // Initializes from localStorage to persist auth across page refreshes
 
 import { useState, useEffect } from 'react';
-import type { User, LoginResponse } from '../types';
+import type { User, LoginResponse, SignupRequest, SignupResponse } from '../../../types';
 import * as authService from '../services/auth.service';
 
 // ============================================================================
 // USE AUTH HOOK INTERFACE
 // ============================================================================
 // Type definition for what useAuth returns
-interface UseAuthReturn {
+export interface AuthHookResult {
   // Currently authenticated user (null if not logged in)
   user: User | null;
   // JWT token for API requests (null if not logged in)
@@ -23,6 +23,8 @@ interface UseAuthReturn {
   login: (email: string, password: string) => Promise<LoginResponse>;
   // Set password for first-time users
   setPassword: (userId: number, password: string) => Promise<User>;
+  // Signup for new parent users
+  signup: (payload: SignupRequest) => Promise<SignupResponse>;
   // Logout function
   logout: () => void;
   // Loading state (true while login/setPassword is in progress)
@@ -33,7 +35,7 @@ interface UseAuthReturn {
 // USE AUTH HOOK
 // ============================================================================
 // Main hook for authentication throughout the app
-export const useAuth = (): UseAuthReturn => {
+export const useAuth = (): AuthHookResult => {
   // State to store currently authenticated user
   const [user, setUser] = useState<User | null>(null);
 
@@ -75,27 +77,35 @@ export const useAuth = (): UseAuthReturn => {
       const response = await authService.login(email, password);
       console.log('[useAuth] authService.login returned:', response);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = response as any;
+
       // If first-time login (no password set), don't update state yet
-      // User will set password first
-      if (response.mustSetPassword) {
+      if (r.mustSetPassword) {
         console.log('[useAuth] First-time login detected');
         return response;
       }
 
+      // If pending admin approval
+      if (r.pendingApproval) {
+        console.log('[useAuth] Pending approval detected');
+        return response;
+      }
+
       // For successful login with existing password:
-      // Extract token and user from response
-      if ('data' in response && response.data.token && response.data.user) {
+      const loginData = r.data;
+      if (loginData && loginData.token && loginData.user) {
         console.log('[useAuth] Login successful, updating state:', {
-          token: response.data.token.substring(0, 20) + '...',
-          user: response.data.user,
+          token: loginData.token.substring(0, 20) + '...',
+          user: loginData.user,
         });
-        
+
         // Update token state
-        setToken(response.data.token);
+        setToken(loginData.token);
 
         // Update user state
-        setUser(response.data.user);
-        
+        setUser(loginData.user);
+
         console.log('[useAuth] State updated, returning response');
       } else {
         console.warn('[useAuth] Login response missing data:', response);
@@ -143,19 +153,38 @@ export const useAuth = (): UseAuthReturn => {
     }
   };
 
+  const handleSignup = async (payload: SignupRequest): Promise<SignupResponse> => {
+    setIsLoading(true);
+    try {
+      const response = await authService.signup(payload);
+      // If pending approval — no token/user, just return
+      if (response.pendingApproval) return response;
+      // Normal signup: set token and user
+      if (response.data?.token && response.data?.user) {
+        setToken(response.data.token!);
+        setUser(response.data.user!);
+      }
+      return response;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ========================================================================
   // LOGOUT FUNCTION
   // ========================================================================
   // Clears auth state and localStorage
   const handleLogout = (): void => {
     // Call auth service logout to clear localStorage
-    authService.logout();
+    authService.logout(false);
 
     // Clear user state
     setUser(null);
 
     // Clear token state
     setToken(null);
+
+    window.location.assign('/login');
   };
 
   // ========================================================================
@@ -168,7 +197,9 @@ export const useAuth = (): UseAuthReturn => {
     isAuthenticated: !!token && !!user,
     login: handleLogin,
     setPassword: handleSetPassword,
+    signup: handleSignup,
     logout: handleLogout,
     isLoading,
   };
 };
+

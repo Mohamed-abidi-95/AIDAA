@@ -4,7 +4,7 @@
 // Route guard that redirects unauthenticated users to login page
 
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../features/auth/hooks/useAuth';
 
 // ============================================================================
 // PROTECTED ROUTE COMPONENT
@@ -57,3 +57,5 @@ export const ProtectedRoute = (): JSX.Element => {
   // Outlet represents the matched child route component
   return <Outlet />;
 };
+
+

@@ -47,4 +47,24 @@ router.post('/create-professional', adminController.createProfessional);
 // Toggle user active/inactive status
 router.put('/toggle-active/:id', adminController.toggleUserActive);
 
+// ============================================================================
+// GET /admin/notification-count
+// ============================================================================
+router.get('/notification-count', adminController.getNotificationCount);
+
+// ============================================================================
+// GET /admin/pending-registrations
+// ============================================================================
+router.get('/pending-registrations', adminController.getPendingRegistrations);
+
+// ============================================================================
+// POST /admin/approve-registration/:id
+// ============================================================================
+router.post('/approve-registration/:id', adminController.approveRegistration);
+
+// ============================================================================
+// POST /admin/reject-registration/:id
+// ============================================================================
+router.post('/reject-registration/:id', adminController.rejectRegistration);
+
 module.exports = router;

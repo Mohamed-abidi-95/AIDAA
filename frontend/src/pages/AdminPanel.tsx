@@ -1,935 +1,581 @@
 // ============================================================================
-// ADMIN PANEL PAGE
+// ADMIN PANEL — Redesigned with sidebar + pharmacy green theme
 // ============================================================================
-// Dashboard for admin users to manage system
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { ContentItem, ContentFormData, User } from '../types/content.types';
-import { ContentCard } from '../components/ContentCard';
-import { EditContentModal } from '../components/EditContentModal';
-import { DeleteContentModal } from '../components/DeleteContentModal';
-import '../styles/DashboardEnhanced.css';
-import '../styles/AdminPanelPremium.css';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import api from '../lib/api';
+import { ContentItem, ContentFormData, User } from '../features/content/types/content.types';
+import { ContentCard } from '../features/admin/components/ContentCard';
+import { EditContentModal } from '../features/admin/components/EditContentModal';
+import { DeleteContentModal } from '../features/admin/components/DeleteContentModal';
+import '../styles/AdminPanel.css';
 
-// ...existing code...
-
+// ── Types ──────────────────────────────────────────────────────────────────
+type ViewType = 'content' | 'upload' | 'users' | 'registrations';
 type UserRole = 'admin' | 'parent' | 'professional';
 
-interface UserFormState {
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-}
+interface UserFormState { name: string; email: string; password: string; role: UserRole; }
+interface ApiResult<T> { success: boolean; data: T; message?: string; }
+interface Toast { id: number; type: 'success' | 'error'; msg: string; }
 
+// ── Toast hook ─────────────────────────────────────────────────────────────
+let toastId = 0;
+const useToast = () => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    const id = ++toastId;
+    setToasts(p => [...p, { id, type, msg }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  }, []);
+  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
+  return { toasts, add, remove };
+};
+
+// ── Nav items config ───────────────────────────────────────────────────────
+const NAV = [
+  { id: 'content',       icon: '📚', label: 'Bibliothèque' },
+  { id: 'upload',        icon: '⬆️',  label: 'Importer contenu' },
+  { id: 'users',         icon: '👥',  label: 'Utilisateurs' },
+  { id: 'registrations', icon: '🔔',  label: 'Demandes' },
+] as const;
+
+const ROLE_ICONS: Record<string, string> = { admin: '🛡️', parent: '👨‍👩‍👧', professional: '🩺' };
+
+// ── Component ──────────────────────────────────────────────────────────────
 export const AdminPanel = (): JSX.Element => {
-  const { logout } = useAuth();
-  const [view, setView] = useState('content'); // 'content', 'upload', 'users'
-  const [content, setContent] = useState<ContentItem[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [userActionLoading, setUserActionLoading] = useState(false);
+  const { logout, user } = useAuth();
+  const { toasts, add: toast, remove: removeToast } = useToast();
 
-  const [createUserForm, setCreateUserForm] = useState<UserFormState>({
-    name: '',
-    email: '',
-    password: '',
-    role: 'parent',
-  });
+  const [view, setView]         = useState<ViewType>('content');
+  const [content, setContent]   = useState<ContentItem[]>([]);
+  const [users, setUsers]       = useState<User[]>([]);
+  const [pending, setPending]   = useState<User[]>([]);
+  const [notifCount, setNotifCount] = useState(0);
+  const [loading, setLoading]   = useState(false);
+  const [actLoading, setActLoading] = useState(false);
 
-  const [editingUserId, setEditingUserId] = useState<number | null>(null);
-  const [editingUserForm, setEditingUserForm] = useState<Omit<UserFormState, 'password'> | null>(null);
+  const [createForm, setCreateForm] = useState<UserFormState>({ name: '', email: '', password: '', role: 'parent' });
+  const [editId, setEditId]         = useState<number | null>(null);
+  const [editForm, setEditForm]     = useState<Omit<UserFormState, 'password'> | null>(null);
 
-  // Modal states
-  const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [editingContent,    setEditingContent]    = useState<ContentItem | null>(null);
   const [deletingContentId, setDeletingContentId] = useState<number | null>(null);
-  const [deletingContentTitle, setDeletingContentTitle] = useState<string>('');
+  const [deletingTitle,     setDeletingTitle]     = useState('');
 
-  // Upload form state
   const [uploadForm, setUploadForm] = useState<ContentFormData>({
-    title: '',
-    type: 'video',
-    description: '',
-    category: '',
-    categoryColor: '#f97316',
-    emoji: '📹',
-    duration: '',
-    steps: 5,
-    minutes: 15,
-    emojiColor: '#d1fae5',
-    ageGroup: '4-6',
-    level: '1',
-    file: null
+    title: '', type: 'video', description: '', category: '',
+    categoryColor: '#f97316', emoji: '📹', duration: '',
+    steps: 5, minutes: 15, emojiColor: '#d1fae5',
+    ageGroup: '4-6', level: '1', file: null,
   });
 
-  const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('aidaa_token');
-    return { Authorization: `Bearer ${token}` };
+  // ── Data fetchers ──────────────────────────────────────────────────────
+  const fetchContent = async () => {
+    const { data } = await api.get<ApiResult<ContentItem[]>>('/api/content');
+    if (data.success) setContent(data.data);
   };
 
   const fetchUsers = async () => {
-    const res = await fetch('http://localhost:5000/api/users', {
-      headers: getAuthHeaders(),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to fetch users');
-    }
-    setUsers(data.data);
+    const { data } = await api.get<ApiResult<User[]>>('/api/users');
+    if (data.success) setUsers(data.data);
   };
 
-  // Fetch content
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('http://localhost:5000/api/content');
-        const data = await res.json();
-        console.log('[AdminPanel] Fetched content:', data);
-        if (data.success) setContent(data.data);
-      } catch (err) {
-        console.error('Error fetching content:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchContent();
-  }, []);
+  const fetchPending = async () => {
+    try {
+      const { data } = await api.get<ApiResult<User[]>>('/api/admin/pending-registrations');
+      if (data.success) { setPending(data.data); setNotifCount(data.data.length); }
+    } catch { /* silent */ }
+  };
 
-  // Fetch users
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setLoading(true);
-        await fetchUsers();
-      } catch (err) {
-        console.error('Error fetching users:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadUsers();
-  }, []);
+  useEffect(() => { setLoading(true); Promise.all([fetchContent(), fetchUsers()]).finally(() => setLoading(false)); }, []);
+  useEffect(() => { fetchPending(); const t = setInterval(fetchPending, 30000); return () => clearInterval(t); }, []);
 
-  const handleCreateUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setCreateUserForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  // ── Handlers ──────────────────────────────────────────────────────────
+  const handleApprove = async (id: number) => {
+    try { setActLoading(true); await api.post(`/api/admin/approve-registration/${id}`); await Promise.all([fetchPending(), fetchUsers()]); toast('Inscription acceptée ✓'); }
+    catch { toast('Erreur lors de l\'acceptation', 'error'); }
+    finally { setActLoading(false); }
+  };
+
+  const handleReject = async (id: number) => {
+    try { setActLoading(true); await api.post(`/api/admin/reject-registration/${id}`); await fetchPending(); toast('Demande refusée'); }
+    catch { toast('Erreur lors du refus', 'error'); }
+    finally { setActLoading(false); }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!createUserForm.name.trim() || !createUserForm.email.trim() || !createUserForm.password.trim()) {
-      alert('Name, email and password are required');
-      return;
-    }
-
+    if (!createForm.name.trim() || !createForm.email.trim() || !createForm.password.trim()) { toast('Tous les champs sont requis', 'error'); return; }
     try {
-      setUserActionLoading(true);
-
-      const res = await fetch('http://localhost:5000/api/users', {
-        method: 'POST',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: createUserForm.name.trim(),
-          email: createUserForm.email.trim().toLowerCase(),
-          password: createUserForm.password,
-          role: createUserForm.role,
-        }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Failed to create user');
-        return;
-      }
-
-      setCreateUserForm({ name: '', email: '', password: '', role: 'parent' });
+      setActLoading(true);
+      const { data } = await api.post<ApiResult<User>>('/api/users', { name: createForm.name.trim(), email: createForm.email.trim().toLowerCase(), password: createForm.password, role: createForm.role });
+      if (!data.success) { toast(data.message || 'Erreur création', 'error'); return; }
+      setCreateForm({ name: '', email: '', password: '', role: 'parent' });
       await fetchUsers();
-      alert('User created successfully');
-    } catch (err) {
-      console.error('Error creating user:', err);
-      alert('Error creating user');
-    } finally {
-      setUserActionLoading(false);
-    }
+      toast('Utilisateur créé avec succès ✓');
+    } catch { toast('Erreur lors de la création', 'error'); }
+    finally { setActLoading(false); }
   };
 
-  const handleEditUserStart = (user: User) => {
-    setEditingUserId(user.id);
-    setEditingUserForm({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
-  };
-
-  const handleEditUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditingUserForm((prev) => {
-      if (!prev) return prev;
-      return { ...prev, [name]: value as UserRole };
-    });
-  };
-
-  const handleEditUserSave = async (user: User) => {
-    if (!editingUserForm) return;
-
-    if (!editingUserForm.name.trim() || !editingUserForm.email.trim()) {
-      alert('Name and email are required');
-      return;
-    }
-
+  const handleEditSaveUser = async (u: User) => {
+    if (!editForm) return;
     try {
-      setUserActionLoading(true);
-
-      const res = await fetch(`http://localhost:5000/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: editingUserForm.name.trim(),
-          email: editingUserForm.email.trim().toLowerCase(),
-          role: editingUserForm.role,
-          is_active: user.is_active,
-        }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Failed to update user');
-        return;
-      }
-
-      setEditingUserId(null);
-      setEditingUserForm(null);
+      setActLoading(true);
+      const { data } = await api.put<ApiResult<User>>(`/api/users/${u.id}`, { name: editForm.name.trim(), email: editForm.email.trim().toLowerCase(), role: editForm.role, is_active: u.is_active });
+      if (!data.success) { toast(data.message || 'Erreur mise à jour', 'error'); return; }
+      setEditId(null); setEditForm(null);
       await fetchUsers();
-      alert('User updated successfully');
-    } catch (err) {
-      console.error('Error updating user:', err);
-      alert('Error updating user');
-    } finally {
-      setUserActionLoading(false);
-    }
+      toast('Utilisateur mis à jour ✓');
+    } catch { toast('Erreur lors de la mise à jour', 'error'); }
+    finally { setActLoading(false); }
   };
 
-  const handleUserDelete = async (user: User) => {
-    const confirmed = window.confirm(`Retirer l'utilisateur ${user.name} ?`);
-    if (!confirmed) return;
-
+  const handleDeleteUser = async (u: User) => {
+    if (!window.confirm(`Supprimer définitivement ${u.name} ? Cette action est irréversible.`)) return;
     try {
-      setUserActionLoading(true);
-
-      const res = await fetch(`http://localhost:5000/api/users/${user.id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Failed to remove user');
-        return;
-      }
-
-      await fetchUsers();
-      alert('User removed successfully');
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      alert('Error removing user');
-    } finally {
-      setUserActionLoading(false);
-    }
+      setActLoading(true);
+      const { data } = await api.delete<ApiResult<null>>(`/api/users/${u.id}`);
+      if (!data.success) { toast(data.message || 'Erreur', 'error'); return; }
+      await fetchUsers(); toast(`${u.name} supprimé définitivement`);
+    } catch { toast('Erreur suppression', 'error'); }
+    finally { setActLoading(false); }
   };
 
-  const handleUserReactivate = async (user: User) => {
-    try {
-      setUserActionLoading(true);
-
-      const res = await fetch(`http://localhost:5000/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          is_active: 1,
-        }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Failed to reactivate user');
-        return;
-      }
-
-      await fetchUsers();
-      alert('User reactivated successfully');
-    } catch (err) {
-      console.error('Error reactivating user:', err);
-      alert('Error reactivating user');
-    } finally {
-      setUserActionLoading(false);
-    }
-  };
 
   const handleUploadChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-
-    // Convert number fields to numbers
-    let finalValue: any = value;
-    if (type === 'number') {
-      finalValue = value ? parseInt(value) : undefined;
-    }
-
-    setUploadForm(prev => ({ ...prev, [name]: finalValue }));
+    const { name, value, type } = e.target as HTMLInputElement;
+    setUploadForm(p => ({ ...p, [name]: type === 'number' ? (value ? parseInt(value) : undefined) : value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadForm(prev => ({ ...prev, file: e.target.files![0] }));
-    }
-  };
-
-  // ========================================================================
-  // EDIT HANDLERS
-  // ========================================================================
-  const handleEdit = (contentItem: ContentItem) => {
-    setEditingContent(contentItem);
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadForm.file || !uploadForm.title) { toast('Fichier et titre requis', 'error'); return; }
+    try {
+      setLoading(true);
+      const fd = new FormData();
+      fd.append('file', uploadForm.file); fd.append('title', uploadForm.title); fd.append('type', uploadForm.type);
+      fd.append('description', uploadForm.description || ''); fd.append('category', uploadForm.category || '');
+      fd.append('category_color', uploadForm.categoryColor || '#f97316'); fd.append('emoji', uploadForm.emoji || '');
+      fd.append('age_group', uploadForm.ageGroup || '4-6'); fd.append('level', uploadForm.level?.toString() || '1');
+      if (uploadForm.type === 'video' && uploadForm.duration) fd.append('duration', uploadForm.duration);
+      if (uploadForm.type === 'activity') { fd.append('steps', (uploadForm.steps || 5).toString()); fd.append('minutes', (uploadForm.minutes || 15).toString()); fd.append('emoji_color', uploadForm.emojiColor || '#d1fae5'); }
+      const { data } = await api.post<ApiResult<ContentItem>>('/api/content/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (data.success) { toast('Contenu uploadé avec succès ✓'); setUploadForm({ title: '', type: 'video', description: '', category: '', categoryColor: '#f97316', emoji: '📹', duration: '', steps: 5, minutes: 15, emojiColor: '#d1fae5', ageGroup: '4-6', level: '1', file: null }); await fetchContent(); }
+      else toast(data.message || 'Erreur upload', 'error');
+    } catch (err) { toast(err instanceof Error ? err.message : 'Erreur upload', 'error'); }
+    finally { setLoading(false); }
   };
 
   const handleEditSave = async (contentId: number, formData: ContentFormData) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('aidaa_token');
-
-      const res = await fetch(`http://localhost:5000/api/content/${contentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          type: formData.type,
-          category: formData.category,
-          category_color: formData.categoryColor,
-          emoji: formData.emoji,
-          duration: formData.duration,
-          steps: formData.steps,
-          minutes: formData.minutes,
-          emoji_color: formData.emojiColor,
-          description: formData.description,
-          age_group: formData.ageGroup,
-          level: formData.level,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        alert('Content updated successfully!');
-        setEditingContent(null);
-
-        // Refresh content list
-        const listRes = await fetch('http://localhost:5000/api/content');
-        const listData = await listRes.json();
-        if (listData.success) setContent(listData.data);
-      } else {
-        alert('Update failed: ' + data.message);
-      }
-    } catch (err) {
-      console.error('Error updating content:', err);
-      alert('Error updating content');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ========================================================================
-  // DELETE HANDLERS
-  // ========================================================================
-  const handleDeleteClick = (contentItem: ContentItem) => {
-    setDeletingContentId(contentItem.id);
-    setDeletingContentTitle(contentItem.title);
+      const { data } = await api.put<ApiResult<ContentItem>>(`/api/content/${contentId}`, { title: formData.title, type: formData.type, category: formData.category, category_color: formData.categoryColor, emoji: formData.emoji, duration: formData.duration, steps: formData.steps, minutes: formData.minutes, emoji_color: formData.emojiColor, description: formData.description, age_group: formData.ageGroup, level: formData.level });
+      if (data.success) { toast('Contenu mis à jour ✓'); setEditingContent(null); await fetchContent(); }
+      else toast('Erreur mise à jour: ' + data.message, 'error');
+    } catch { toast('Erreur mise à jour', 'error'); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deletingContentId) return;
-
     try {
       setLoading(true);
-      const token = localStorage.getItem('aidaa_token');
-
-      console.log('[AdminPanel] Deleting content ID:', deletingContentId);
-      console.log('[AdminPanel] Token:', token ? 'present' : 'missing');
-
-      const res = await fetch(`http://localhost:5000/api/content/${deletingContentId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      console.log('[AdminPanel] Delete response status:', res.status);
-
-      const data = await res.json();
-      console.log('[AdminPanel] Delete response:', data);
-
-      if (data.success) {
-        alert('Content deleted successfully!');
-        setDeletingContentId(null);
-        setDeletingContentTitle('');
-
-        // Refresh content list
-        const listRes = await fetch('http://localhost:5000/api/content');
-        const listData = await listRes.json();
-        if (listData.success) setContent(listData.data);
-      } else {
-        alert('Delete failed: ' + data.message);
-      }
-    } catch (err) {
-      console.error('Error deleting content:', err);
-      alert('Error deleting content');
-    } finally {
-      setLoading(false);
-    }
+      const { data } = await api.delete<ApiResult<null>>(`/api/content/${deletingContentId}`);
+      if (data.success) { toast('Contenu supprimé'); setDeletingContentId(null); setDeletingTitle(''); await fetchContent(); }
+      else toast('Erreur suppression: ' + data.message, 'error');
+    } catch { toast('Erreur suppression', 'error'); }
+    finally { setLoading(false); }
   };
 
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uploadForm.file || !uploadForm.title) {
-      alert('Please select a file and enter a title');
-      return;
-    }
+  const activeUsers = users.filter(u => !!u.is_active).length;
+  const adminInitial = user?.name?.charAt(0).toUpperCase() || 'A';
 
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('aidaa_token');
-      const formData = new FormData();
-      formData.append('file', uploadForm.file);
-      formData.append('title', uploadForm.title);
-      formData.append('type', uploadForm.type);
-      formData.append('description', uploadForm.description || '');
-      formData.append('category', uploadForm.category || '');
-      formData.append('category_color', uploadForm.categoryColor || '#f97316');
-      formData.append('emoji', uploadForm.emoji || '');
-      formData.append('age_group', uploadForm.ageGroup || '4-6');
-      formData.append('level', uploadForm.level?.toString() || '1');
-
-      // Add type-specific fields
-      if (uploadForm.type === 'video' && uploadForm.duration) {
-        formData.append('duration', uploadForm.duration);
-      }
-
-      if (uploadForm.type === 'activity') {
-        formData.append('steps', (uploadForm.steps || 5).toString());
-        formData.append('minutes', (uploadForm.minutes || 15).toString());
-        formData.append('emoji_color', uploadForm.emojiColor || '#d1fae5');
-      }
-
-      const res = await fetch('http://localhost:5000/api/content/upload', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        alert('Content uploaded successfully!');
-        setUploadForm({
-          title: '',
-          type: 'video',
-          description: '',
-          category: '',
-          categoryColor: '#f97316',
-          emoji: '📹',
-          duration: '',
-          steps: 5,
-          minutes: 15,
-          emojiColor: '#d1fae5',
-          ageGroup: '4-6',
-          level: '1',
-          file: null
-        });
-        // Refresh content list
-        const listRes = await fetch('http://localhost:5000/api/content');
-        const listData = await listRes.json();
-        if (listData.success) setContent(listData.data);
-      } else {
-        alert(`Upload failed (${res.status}): ${data.message || 'Unknown server error'}`);
-      }
-    } catch (err) {
-      console.error('Error uploading:', err);
-      if (err instanceof Error) {
-        alert(`Error uploading content: ${err.message}`);
-      } else {
-        alert('Error uploading content');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="dashboard-container admin-premium">
-      <div className="dashboard-header admin-premium__header">
-        <div>
-          <p className="admin-premium__eyebrow">Administration</p>
-          <h1>🛡️ Admin Dashboard</h1>
-        </div>
-        <button onClick={logout} className="logout-button admin-premium__logout">Logout</button>
-      </div>
+    <div className="adm-layout">
 
-      <div className="dashboard-content admin-premium__content">
-        <div className="admin-premium__kpis">
-          <div className="admin-premium__kpi-card">
-            <span>📚</span>
-            <div>
-              <strong>{content.length}</strong>
-              <small>Contenus</small>
-            </div>
-          </div>
-          <div className="admin-premium__kpi-card">
-            <span>👥</span>
-            <div>
-              <strong>{users.length}</strong>
-              <small>Utilisateurs</small>
-            </div>
-          </div>
-          <div className="admin-premium__kpi-card">
-            <span>✅</span>
-            <div>
-              <strong>{users.filter((u) => !!u.is_active).length}</strong>
-              <small>Actifs</small>
-            </div>
+      {/* ── SIDEBAR ── */}
+      <aside className="adm-sidebar">
+        {/* Brand */}
+        <div className="adm-sidebar__brand">
+          <div className="adm-sidebar__logo">✚</div>
+          <div className="adm-sidebar__brand-text">
+            <h2>AIDAA</h2>
+            <span>Administration</span>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="tabs admin-premium__tabs">
-          <button
-            className={view === 'content' ? 'tab active admin-premium__tab' : 'tab admin-premium__tab'}
-            onClick={() => setView('content')}
-          >
-            📚 Content List
-          </button>
-          <button
-            className={view === 'upload' ? 'tab active admin-premium__tab' : 'tab admin-premium__tab'}
-            onClick={() => setView('upload')}
-          >
-            ⬆️ Upload Content
-          </button>
-          <button
-            className={view === 'users' ? 'tab active admin-premium__tab' : 'tab admin-premium__tab'}
-            onClick={() => setView('users')}
-          >
-            👥 Users
-          </button>
-        </div>
-
-        {/* Content List View */}
-        {view === 'content' && (
-          <div className="content-management admin-premium__section">
-            <h2>All Content ({content.length} items)</h2>
-            <div className="content-list admin-premium__content-grid">
-              {content.length > 0 ? (
-                content.map(item => {
-                  console.log('[ContentList] Mapping item:', item);
-                  return (
-                    <ContentCard
-                      key={item.id}
-                      content={item}
-                      onEdit={handleEdit}
-                      onDelete={handleDeleteClick}
-                    />
-                  );
-                })
-              ) : (
-                <p>No content uploaded yet.</p>
+        {/* Navigation */}
+        <nav className="adm-sidebar__nav">
+          <div className="adm-nav__label">Menu</div>
+          {NAV.map(n => (
+            <button
+              key={n.id}
+              className={`adm-nav__item ${view === n.id ? 'active' : ''}`}
+              onClick={() => setView(n.id as ViewType)}
+            >
+              <span className="nav-icon">{n.icon}</span>
+              {n.label}
+              {n.id === 'registrations' && notifCount > 0 && (
+                <span className="adm-nav__badge">{notifCount}</span>
               )}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="adm-sidebar__footer">
+          <div className="adm-sidebar__user">
+            <div className="adm-sidebar__avatar">{adminInitial}</div>
+            <div className="adm-sidebar__user-info">
+              <div className="adm-sidebar__user-name">{user?.name || 'Admin'}</div>
+              <div className="adm-sidebar__user-role">Administrateur</div>
             </div>
           </div>
-        )}
+          <button className="adm-logout-btn" onClick={logout}>
+            <span>🚪</span> Se déconnecter
+          </button>
+        </div>
+      </aside>
 
-        {/* Upload View */}
-        {view === 'upload' && (
-          <div className="upload-section admin-premium__section">
-            <h2>Upload New Content</h2>
-            <form onSubmit={handleUploadSubmit} className="upload-form admin-premium__form">
-              <div className="form-group">
-                <label>File (Video/Audio/Image)*</label>
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  accept="video/*,audio/*,image/*"
-                  required
-                />
-              </div>
+      {/* ── MAIN ── */}
+      <main className="adm-main">
 
-              <div className="form-group">
-                <label>Title*</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={uploadForm.title}
-                  onChange={handleUploadChange}
-                  placeholder="Content title"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Type*</label>
-                <select
-                  name="type"
-                  value={uploadForm.type}
-                  onChange={handleUploadChange}
-                >
-                  <option value="video">Video</option>
-                  <option value="audio">Audio</option>
-                  <option value="activity">Activity</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Category</label>
-                <input
-                  type="text"
-                  name="category"
-                  value={uploadForm.category}
-                  onChange={handleUploadChange}
-                  placeholder="e.g., Language, Motor Skills"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Category Color</label>
-                <input
-                  type="color"
-                  name="categoryColor"
-                  value={uploadForm.categoryColor || '#f97316'}
-                  onChange={handleUploadChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Emoji (e.g., 🎬, 🎵, 🎮)</label>
-                <input
-                  type="text"
-                  name="emoji"
-                  value={uploadForm.emoji || ''}
-                  onChange={handleUploadChange}
-                  placeholder="Select emoji"
-                  maxLength={2}
-                />
-              </div>
-
-              {/* Conditional fields for Videos */}
-              {uploadForm.type === 'video' && (
-                <div className="form-group">
-                  <label>Duration (e.g., 3 min, 5 min)</label>
-                  <input
-                    type="text"
-                    name="duration"
-                    value={uploadForm.duration || ''}
-                    onChange={handleUploadChange}
-                    placeholder="e.g., 5 min"
-                  />
-                </div>
-              )}
-
-              {/* Conditional fields for Activities */}
-              {uploadForm.type === 'activity' && (
-                <>
-                  <div className="form-group">
-                    <label>Emoji Color</label>
-                    <input
-                      type="color"
-                      name="emojiColor"
-                      value={uploadForm.emojiColor || '#d1fae5'}
-                      onChange={handleUploadChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Number of Steps</label>
-                    <input
-                      type="number"
-                      name="steps"
-                      value={uploadForm.steps || 5}
-                      onChange={handleUploadChange}
-                      min="1"
-                      max="20"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Duration (minutes)</label>
-                    <input
-                      type="number"
-                      name="minutes"
-                      value={uploadForm.minutes || 15}
-                      onChange={handleUploadChange}
-                      min="1"
-                      max="120"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="form-group">
-                <label>Age Group</label>
-                <select
-                  name="ageGroup"
-                  value={uploadForm.ageGroup}
-                  onChange={handleUploadChange}
-                >
-                  <option value="3-5">3-5 years</option>
-                  <option value="4-6">4-6 years</option>
-                  <option value="5-8">5-8 years</option>
-                  <option value="6-8">6-8 years</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Difficulty Level</label>
-                <select
-                  name="level"
-                  value={uploadForm.level}
-                  onChange={handleUploadChange}
-                >
-                  <option value="1">1 - Easy</option>
-                  <option value="2">2 - Medium</option>
-                  <option value="3">3 - Hard</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  name="description"
-                  value={uploadForm.description}
-                  onChange={handleUploadChange}
-                  placeholder="Content description"
-                  rows={4}
-                />
-              </div>
-
-              <button className="admin-premium__primary-btn" type="submit" disabled={loading}>
-                {loading ? 'Uploading...' : 'Upload Content'}
-              </button>
-            </form>
+        {/* Topbar */}
+        <header className="adm-topbar">
+          <div className="adm-topbar__left">
+            <div className="adm-topbar__breadcrumb">Administration / {NAV.find(n => n.id === view)?.label}</div>
+            <h1>{NAV.find(n => n.id === view)?.icon} {NAV.find(n => n.id === view)?.label}</h1>
           </div>
-        )}
+          <div className="adm-topbar__right">
+            <button
+              className={`adm-notif-btn ${notifCount > 0 ? 'adm-notif-btn--active' : ''}`}
+              onClick={() => setView('registrations')}
+              title="Demandes en attente"
+            >
+              🔔
+              {notifCount > 0 && <span className="adm-notif-dot">{notifCount}</span>}
+            </button>
+          </div>
+        </header>
 
-        {/* Users View */}
-        {view === 'users' && (
-          <div className="users-management admin-premium__section">
-            <h2>User Management</h2>
+        {/* Content */}
+        <div className="adm-content">
 
-            <form onSubmit={handleCreateUser} className="upload-form admin-premium__form" style={{ marginBottom: 20 }}>
-              <h3>Create User</h3>
-              <div className="form-group">
-                <label>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={createUserForm.name}
-                  onChange={handleCreateUserChange}
-                  placeholder="Full name"
-                  required
-                />
+          {/* KPIs */}
+          <div className="adm-kpis">
+            <div className="adm-kpi">
+              <div className="adm-kpi__icon">📚</div>
+              <div>
+                <span className="adm-kpi__val">{content.length}</span>
+                <span className="adm-kpi__lbl">Contenus</span>
               </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={createUserForm.email}
-                  onChange={handleCreateUserChange}
-                  placeholder="email@example.com"
-                  required
-                />
+            </div>
+            <div className="adm-kpi">
+              <div className="adm-kpi__icon">👥</div>
+              <div>
+                <span className="adm-kpi__val">{users.length}</span>
+                <span className="adm-kpi__lbl">Utilisateurs</span>
               </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={createUserForm.password}
-                  onChange={handleCreateUserChange}
-                  placeholder="At least 6 characters"
-                  minLength={6}
-                  required
-                />
+            </div>
+            <div className="adm-kpi">
+              <div className="adm-kpi__icon">✅</div>
+              <div>
+                <span className="adm-kpi__val">{activeUsers}</span>
+                <span className="adm-kpi__lbl">Actifs</span>
               </div>
-              <div className="form-group">
-                <label>Role</label>
-                <select
-                  name="role"
-                  value={createUserForm.role}
-                  onChange={handleCreateUserChange}
-                >
-                  <option value="parent">parent</option>
-                  <option value="professional">professional</option>
-                  <option value="admin">admin</option>
-                </select>
+            </div>
+            <div className="adm-kpi adm-kpi--warn" onClick={() => setView('registrations')}>
+              <div className="adm-kpi__icon">⏳</div>
+              <div>
+                <span className="adm-kpi__val">{notifCount}</span>
+                <span className="adm-kpi__lbl">En attente</span>
               </div>
-              <button className="admin-premium__primary-btn" type="submit" disabled={userActionLoading}>
-                {userActionLoading ? 'Creating...' : 'Create User'}
-              </button>
-            </form>
+            </div>
+          </div>
 
-            <div className="users-list admin-premium__table-wrap">
-              {users.length > 0 ? (
-                <table className="users-table admin-premium__table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr key={u.id}>
-                        <td>
-                          {editingUserId === u.id && editingUserForm ? (
-                            <input
-                              type="text"
-                              name="name"
-                              value={editingUserForm.name}
-                              onChange={handleEditUserChange}
-                            />
-                          ) : (
-                            u.name
-                          )}
-                        </td>
-                        <td>
-                          {editingUserId === u.id && editingUserForm ? (
-                            <input
-                              type="email"
-                              name="email"
-                              value={editingUserForm.email}
-                              onChange={handleEditUserChange}
-                            />
-                          ) : (
-                            u.email
-                          )}
-                        </td>
-                        <td>
-                          {editingUserId === u.id && editingUserForm ? (
-                            <select
-                              name="role"
-                              value={editingUserForm.role}
-                              onChange={handleEditUserChange}
-                            >
-                              <option value="parent">parent</option>
-                              <option value="professional">professional</option>
-                              <option value="admin">admin</option>
-                            </select>
-                          ) : (
-                            u.role
-                          )}
-                        </td>
-                        <td>{u.is_active ? '✅ Active' : '❌ Inactive'}</td>
-                        <td style={{ display: 'flex', gap: 8 }}>
-                          {editingUserId === u.id ? (
-                            <>
-                              <button
-                                className="admin-premium__small-btn admin-premium__small-btn--primary"
-                                type="button"
-                                onClick={() => handleEditUserSave(u)}
-                                disabled={userActionLoading}
-                              >
-                                Save
-                              </button>
-                              <button
-                                className="admin-premium__small-btn"
-                                type="button"
-                                onClick={() => {
-                                  setEditingUserId(null);
-                                  setEditingUserForm(null);
-                                }}
-                                disabled={userActionLoading}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className="admin-premium__small-btn admin-premium__small-btn--primary"
-                                type="button"
-                                onClick={() => handleEditUserStart(u)}
-                                disabled={userActionLoading}
-                              >
-                                Modifier
-                              </button>
-                              {u.is_active ? (
-                                <button
-                                  className="admin-premium__small-btn admin-premium__small-btn--danger"
-                                  type="button"
-                                  onClick={() => handleUserDelete(u)}
-                                  disabled={userActionLoading}
-                                >
-                                  Retirer
-                                </button>
-                              ) : (
-                                <button
-                                  className="admin-premium__small-btn admin-premium__small-btn--success"
-                                  type="button"
-                                  onClick={() => handleUserReactivate(u)}
-                                  disabled={userActionLoading}
-                                >
-                                  Reactiver
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </td>
-                      </tr>
+          {/* ── VIEW: CONTENT ── */}
+          {view === 'content' && (
+            <div className="adm-section">
+              <div className="adm-section__head">
+                <h2>Bibliothèque de contenus</h2>
+                <span className="adm-section__count">{content.length} éléments</span>
+              </div>
+              <div className="adm-section__body">
+                {loading ? (
+                  <div className="adm-empty"><div className="adm-empty__icon">⏳</div><p>Chargement…</p></div>
+                ) : content.length === 0 ? (
+                  <div className="adm-empty"><div className="adm-empty__icon">📭</div><p>Aucun contenu uploadé.</p></div>
+                ) : (
+                  <div className="adm-content-grid">
+                    {content.map(item => (
+                      <ContentCard key={item.id} content={item} onEdit={setEditingContent} onDelete={c => { setDeletingContentId(c.id); setDeletingTitle(c.title); }} />
                     ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No users found.</p>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* ── VIEW: UPLOAD ── */}
+          {view === 'upload' && (
+            <div className="adm-section">
+              <div className="adm-section__head"><h2>Importer un contenu</h2></div>
+              <div className="adm-section__body">
+                <form onSubmit={handleUploadSubmit} className="adm-form">
+                  {/* Type tabs */}
+                  <div className="adm-type-tabs">
+                    {(['video', 'audio', 'activity'] as const).map(t => (
+                      <button key={t} type="button"
+                        className={`adm-type-tab ${uploadForm.type === t ? 'active' : ''}`}
+                        onClick={() => setUploadForm(p => ({ ...p, type: t }))}
+                      >
+                        {t === 'video' ? '🎬 Vidéo' : t === 'audio' ? '🎵 Audio' : '🎮 Activité'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="adm-form__grid">
+                    <div className="adm-form-group" style={{ gridColumn: '1/-1' }}>
+                      <label>Fichier * <span style={{ color: '#7A9485', fontWeight: 400 }}>(vidéo, audio, image)</span></label>
+                      <input type="file" onChange={e => { if (e.target.files?.[0]) setUploadForm(p => ({ ...p, file: e.target.files![0] })); }} accept="video/*,audio/*,image/*" required />
+                    </div>
+                    <div className="adm-form-group" style={{ gridColumn: '1/-1' }}>
+                      <label>Titre *</label>
+                      <input type="text" name="title" value={uploadForm.title} onChange={handleUploadChange} placeholder="Titre du contenu" required />
+                    </div>
+                    <div className="adm-form-group">
+                      <label>Catégorie</label>
+                      <input type="text" name="category" value={uploadForm.category} onChange={handleUploadChange} placeholder="ex: Langage, Motricité" />
+                    </div>
+                    <div className="adm-form-group">
+                      <label>Emoji</label>
+                      <input type="text" name="emoji" value={uploadForm.emoji || ''} onChange={handleUploadChange} placeholder="🎬" maxLength={2} />
+                    </div>
+                    <div className="adm-form-group">
+                      <label>Couleur catégorie</label>
+                      <input type="color" name="categoryColor" value={uploadForm.categoryColor || '#f97316'} onChange={handleUploadChange} />
+                    </div>
+                    <div className="adm-form-group">
+                      <label>Groupe d'âge</label>
+                      <select name="ageGroup" value={uploadForm.ageGroup} onChange={handleUploadChange}>
+                        <option value="3-5">3-5 ans</option>
+                        <option value="4-6">4-6 ans</option>
+                        <option value="5-8">5-8 ans</option>
+                        <option value="6-8">6-8 ans</option>
+                      </select>
+                    </div>
+                    <div className="adm-form-group">
+                      <label>Niveau de difficulté</label>
+                      <select name="level" value={uploadForm.level} onChange={handleUploadChange}>
+                        <option value="1">1 — Facile</option>
+                        <option value="2">2 — Moyen</option>
+                        <option value="3">3 — Difficile</option>
+                      </select>
+                    </div>
+                    {uploadForm.type === 'video' && (
+                      <div className="adm-form-group">
+                        <label>Durée</label>
+                        <input type="text" name="duration" value={uploadForm.duration || ''} onChange={handleUploadChange} placeholder="ex: 5 min" />
+                      </div>
+                    )}
+                    {uploadForm.type === 'activity' && (<>
+                      <div className="adm-form-group">
+                        <label>Nombre d'étapes</label>
+                        <input type="number" name="steps" value={uploadForm.steps || 5} onChange={handleUploadChange} min="1" max="20" />
+                      </div>
+                      <div className="adm-form-group">
+                        <label>Durée (minutes)</label>
+                        <input type="number" name="minutes" value={uploadForm.minutes || 15} onChange={handleUploadChange} min="1" max="120" />
+                      </div>
+                      <div className="adm-form-group">
+                        <label>Couleur emoji</label>
+                        <input type="color" name="emojiColor" value={uploadForm.emojiColor || '#d1fae5'} onChange={handleUploadChange} />
+                      </div>
+                    </>)}
+                    <div className="adm-form-group" style={{ gridColumn: '1/-1' }}>
+                      <label>Description</label>
+                      <textarea name="description" value={uploadForm.description} onChange={handleUploadChange} placeholder="Description du contenu…" rows={3} />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="adm-btn adm-btn--primary" disabled={loading}>
+                    {loading ? '⏳ Upload en cours…' : '⬆️ Importer le contenu'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ── VIEW: USERS ── */}
+          {view === 'users' && (
+            <>
+              {/* Create form */}
+              <div className="adm-section" style={{ marginBottom: 20 }}>
+                <div className="adm-section__head"><h2>➕ Créer un utilisateur</h2></div>
+                <div className="adm-section__body">
+                  <form onSubmit={handleCreateUser} className="adm-form">
+                    <div className="adm-form__grid">
+                      <div className="adm-form-group">
+                        <label>Nom complet *</label>
+                        <input type="text" name="name" value={createForm.name} onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))} placeholder="Prénom Nom" required />
+                      </div>
+                      <div className="adm-form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" value={createForm.email} onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))} placeholder="email@exemple.com" required />
+                      </div>
+                      <div className="adm-form-group">
+                        <label>Mot de passe *</label>
+                        <input type="password" name="password" value={createForm.password} onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))} placeholder="Min. 6 caractères" minLength={6} required />
+                      </div>
+                      <div className="adm-form-group">
+                        <label>Rôle</label>
+                        <select name="role" value={createForm.role} onChange={e => setCreateForm(p => ({ ...p, role: e.target.value as UserRole }))}>
+                          <option value="parent">👨‍👩‍👧 Parent</option>
+                          <option value="professional">🩺 Professionnel</option>
+                          <option value="admin">🛡️ Admin</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button type="submit" className="adm-btn adm-btn--primary" disabled={actLoading}>
+                      {actLoading ? 'Création…' : '✓ Créer l\'utilisateur'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Users table */}
+              <div className="adm-section">
+                <div className="adm-section__head">
+                  <h2>Liste des utilisateurs</h2>
+                  <span className="adm-section__count">{users.length} utilisateurs</span>
+                </div>
+                <div className="adm-section__body" style={{ padding: 0 }}>
+                  {users.length === 0 ? (
+                    <div className="adm-empty"><div className="adm-empty__icon">👤</div><p>Aucun utilisateur</p></div>
+                  ) : (
+                    <div className="adm-table-wrap">
+                      <table className="adm-table">
+                        <thead>
+                          <tr>
+                            <th>Utilisateur</th>
+                            <th>Email</th>
+                            <th>Rôle</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map(u => (
+                            <tr key={u.id}>
+                              <td>
+                                {editId === u.id && editForm ? (
+                                  <input type="text" name="name" value={editForm.name} onChange={e => setEditForm(p => p ? { ...p, name: e.target.value } : p)} />
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #007A3A, #00A651)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                                      {u.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span style={{ fontWeight: 600 }}>{u.name}</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                {editId === u.id && editForm ? (
+                                  <input type="email" name="email" value={editForm.email} onChange={e => setEditForm(p => p ? { ...p, email: e.target.value } : p)} />
+                                ) : u.email}
+                              </td>
+                              <td>
+                                {editId === u.id && editForm ? (
+                                  <select name="role" value={editForm.role} onChange={e => setEditForm(p => p ? { ...p, role: e.target.value as UserRole } : p)}>
+                                    <option value="parent">Parent</option>
+                                    <option value="professional">Professionnel</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                ) : (
+                                  <span className={`adm-role-badge adm-role-badge--${u.role}`}>
+                                    {ROLE_ICONS[u.role]} {u.role}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <div className="adm-td-actions">
+                                  {editId === u.id ? (<>
+                                    <button className="adm-btn adm-btn--primary adm-btn--sm" type="button" onClick={() => handleEditSaveUser(u)} disabled={actLoading}>Sauvegarder</button>
+                                    <button className="adm-btn adm-btn--secondary adm-btn--sm" type="button" onClick={() => { setEditId(null); setEditForm(null); }}>Annuler</button>
+                                  </>) : (<>
+                                    <button className="adm-btn adm-btn--secondary adm-btn--sm" type="button" onClick={() => { setEditId(u.id); setEditForm({ name: u.name, email: u.email, role: u.role }); }} disabled={actLoading}>✏️ Modifier</button>
+                                    <button className="adm-btn adm-btn--danger adm-btn--sm" type="button" onClick={() => handleDeleteUser(u)} disabled={actLoading}>🗑️ Supprimer</button>
+                                  </>)}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── VIEW: REGISTRATIONS ── */}
+          {view === 'registrations' && (
+            <div className="adm-section">
+              <div className="adm-section__head">
+                <h2>🔔 Demandes d'inscription</h2>
+                <span className="adm-section__count">{pending.length} en attente</span>
+              </div>
+              <div className="adm-section__body">
+                {pending.length === 0 ? (
+                  <div className="adm-empty">
+                    <div className="adm-empty__icon">✅</div>
+                    <p>Aucune demande en attente</p>
+                  </div>
+                ) : (
+                  <div className="adm-reg-list">
+                    {pending.map(reg => (
+                      <div key={reg.id} className="adm-reg-card">
+                        <div className="adm-reg-avatar">{reg.name.charAt(0).toUpperCase()}</div>
+                        <div className="adm-reg-info">
+                          <strong>{reg.name}</strong>
+                          <span>{reg.email}</span>
+                          <span className="adm-reg-date">
+                            {reg.created_at ? new Date(reg.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                        <span className="adm-reg-badge">👨‍👩‍👧 Parent</span>
+                        <div className="adm-reg-actions">
+                          <button className="adm-approve-btn" onClick={() => handleApprove(reg.id)} disabled={actLoading}>✓ Accepter</button>
+                          <button className="adm-reject-btn" onClick={() => handleReject(reg.id)} disabled={actLoading}>✕ Refuser</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* ── MODALS ── */}
+      <EditContentModal content={editingContent} isOpen={!!editingContent} onClose={() => setEditingContent(null)} onSave={handleEditSave} isLoading={loading} />
+      <DeleteContentModal contentId={deletingContentId} contentTitle={deletingTitle} isOpen={!!deletingContentId} onClose={() => { setDeletingContentId(null); setDeletingTitle(''); }} onConfirm={handleDeleteConfirm} isLoading={loading} />
+
+      {/* ── TOASTS ── */}
+      <div className="adm-toast-wrap">
+        {toasts.map(t => (
+          <div key={t.id} className={`adm-toast adm-toast--${t.type}`}>
+            <span className="adm-toast__icon">{t.type === 'success' ? '✅' : '❌'}</span>
+            <span className="adm-toast__msg">{t.msg}</span>
+            <button className="adm-toast__close" onClick={() => removeToast(t.id)}>×</button>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Edit Modal */}
-      <EditContentModal
-        content={editingContent}
-        isOpen={!!editingContent}
-        onClose={() => setEditingContent(null)}
-        onSave={handleEditSave}
-        isLoading={loading}
-      />
-
-      {/* Delete Modal */}
-      <DeleteContentModal
-        contentId={deletingContentId}
-        contentTitle={deletingContentTitle}
-        isOpen={!!deletingContentId}
-        onClose={() => {
-          setDeletingContentId(null);
-          setDeletingContentTitle('');
-        }}
-        onConfirm={handleDeleteConfirm}
-        isLoading={loading}
-      />
     </div>
   );
 };

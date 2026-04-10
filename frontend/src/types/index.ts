@@ -25,6 +25,12 @@ export interface User {
   email: string;
   // User's role in the system
   role: UserRole;
+  // Account status (pending / approved / rejected)
+  status?: 'pending' | 'approved' | 'rejected';
+  // Account active flag
+  is_active?: number;
+  // ISO date string of when the user was created
+  created_at?: string;
 }
 
 // ============================================================================
@@ -122,27 +128,21 @@ export interface Teleconsultation {
 // AUTH RESPONSE TYPES
 // ============================================================================
 
-// Response for first-time login (password needs to be set)
-export interface FirstTimeLoginResponse {
-  success: true;
-  mustSetPassword: true;
-  userId: number;
-  message: string;
-}
-
-// Response for successful login with password already set
-export interface SuccessfulLoginResponse {
-  success: true;
-  mustSetPassword?: false;
-  data: {
+// Unified login response — covers all cases:
+//   1. First-time login  → mustSetPassword=true, userId set
+//   2. Pending approval  → pendingApproval=true
+//   3. Normal success    → data.token + data.user set
+export interface LoginResponse {
+  success: boolean;
+  mustSetPassword?: boolean;
+  pendingApproval?: boolean;
+  userId?: number;
+  message?: string;
+  data?: {
     token: string;
     user: User;
   };
-  message: string;
 }
-
-// Combined login response type
-export type LoginResponse = FirstTimeLoginResponse | SuccessfulLoginResponse;
 
 // ============================================================================
 // GENERIC API RESPONSE TYPE
@@ -166,6 +166,23 @@ export interface SetPasswordRequest {
   userId: number;
   // New password to set
   password: string;
+}
+
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface SignupResponse {
+  success: boolean;
+  pendingApproval?: boolean;
+  message: string;
+  data?: {
+    token?: string;
+    user?: User;
+    pendingApproval?: boolean;
+  };
 }
 
 // ============================================================================

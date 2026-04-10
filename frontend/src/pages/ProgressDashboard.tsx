@@ -4,7 +4,7 @@
 // Modern child progress dashboard with KPIs, charts, and activity tracking
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import '../styles/ProgressDashboard.css';
 
 // Chart.js library (must be loaded in index.html)

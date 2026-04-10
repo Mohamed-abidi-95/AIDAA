@@ -83,7 +83,7 @@ api.interceptors.response.use(
       // and NOT calling the login endpoint
       const isLoginEndpoint = error.config?.url?.includes('/api/auth/login');
       const isSetPasswordEndpoint = error.config?.url?.includes('/api/auth/set-password');
-      
+
       if (!isLoginEndpoint && !isSetPasswordEndpoint) {
         // Clear authentication data from localStorage
         localStorage.removeItem('aidaa_token');
@@ -104,3 +104,4 @@ api.interceptors.response.use(
 
 // Export the configured axios instance for use throughout the app
 export default api;
+

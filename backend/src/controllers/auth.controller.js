@@ -96,6 +96,20 @@ const login = async (req, res) => {
     // ====================================================================
     // Admin can deactivate accounts (is_active = 0)
     if (!user.is_active) {
+      // Check if pending approval
+      if (user.status === 'pending') {
+        return res.status(403).json({
+          success: false,
+          pendingApproval: true,
+          message: 'Your account is pending admin approval.',
+        });
+      }
+      if (user.status === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: 'Your registration was rejected. Contact an administrator.',
+        });
+      }
       // Return 403 (Forbidden) - account is disabled
       return res.status(403).json({
         // Standard response format
@@ -365,12 +379,262 @@ const setPassword = async (req, res) => {
 };
 
 // ============================================================================
-// EXPORT MODULE
+// SIGNUP CONTROLLER
+// ============================================================================
+// Endpoint: POST /api/auth/signup
+// Purpose: Create a new parent account with password
+const signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    const existing = await userModel.findByEmail(email.trim().toLowerCase());
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Email already in use' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 12);
+    const createdUser = await userModel.createUserWithPassword({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      hashedPassword,
+      role: 'parent',
+    });
+
+    // Parents go through approval — don't issue token yet
+    if (createdUser.status === 'pending') {
+      return res.status(201).json({
+        success: true,
+        pendingApproval: true,
+        message: 'Inscription enregistrée. En attente de validation par l\'administrateur.',
+        data: {
+          user: {
+            id: createdUser.id,
+            name: createdUser.name,
+            email: createdUser.email,
+            role: createdUser.role,
+            status: createdUser.status,
+          },
+        },
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: createdUser.id,
+        name: createdUser.name,
+        email: createdUser.email,
+        role: createdUser.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Signup successful',
+      data: {
+        token,
+        user: {
+          id: createdUser.id,
+          name: createdUser.name,
+          email: createdUser.email,
+          role: createdUser.role,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Signup failed',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================================
+// SIGNUP PROFESSIONAL CONTROLLER
+// ============================================================================
+// Endpoint: POST /api/auth/signup-professional
+// Purpose: Create a new professional account with password, pending admin approval
+const signupProfessional = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Le nom est requis.' });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: "L'adresse e-mail est requise." });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Le mot de passe est requis.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    }
+
+    const existing = await userModel.findByEmail(email.trim().toLowerCase());
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Cette adresse e-mail est déjà utilisée.' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 12);
+    const createdUser = await userModel.createUserWithPassword({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      hashedPassword,
+      role: 'professional',
+      forcePending: true,
+    });
+
+    // Professionals self-registering go through admin approval
+    return res.status(201).json({
+      success: true,
+      pendingApproval: true,
+      message: "Inscription enregistrée. En attente de validation par l'administrateur.",
+      data: {
+        user: {
+          id: createdUser.id,
+          name: createdUser.name,
+          email: createdUser.email,
+          role: createdUser.role,
+          status: createdUser.status,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Signup professional error:', error);
+    res.status(500).json({ success: false, message: "Inscription échouée.", error: error.message });
+  }
+};
+
+// ============================================================================
+// FORGOT PASSWORD CONTROLLER
+// ============================================================================
+// Endpoint: POST /api/auth/forgot-password
+// Génère un token unique, le sauvegarde en BDD et envoie un email avec le lien
+const crypto = require('crypto');
+const { sendResetEmail } = require('../config/mailer');
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: "L'adresse e-mail est requise." });
+    }
+
+    const user = await userModel.findByEmail(email.trim().toLowerCase());
+
+    // Réponse générique même si l'email n'existe pas (sécurité)
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'Si cette adresse est associée à un compte, un e-mail de réinitialisation a été envoyé.',
+      });
+    }
+
+    // Générer un token sécurisé de 32 octets (hex = 64 chars)
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // +1 heure
+
+    // Sauvegarder le token en BDD
+    await userModel.setResetToken(user.id, token, expiresAt);
+
+    // Construire le lien de réinitialisation
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+    // Envoyer l'email et récupérer le previewUrl (mode Ethereal)
+    const { previewUrl } = await sendResetEmail(user.email, user.name, resetLink);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Un e-mail de réinitialisation a été envoyé à votre adresse.',
+      // En mode démo (Ethereal), on retourne le lien de prévisualisation
+      ...(previewUrl && { previewUrl, demoMode: true }),
+    });
+  } catch (error) {
+    console.error('[auth.controller] forgotPassword error:', error);
+    // Si c'est une erreur SMTP, on informe sans exposer les détails
+    if (error.code === 'EAUTH' || error.code === 'ECONNECTION') {
+      return res.status(500).json({
+        success: false,
+        message: 'Impossible d\'envoyer l\'e-mail. Vérifiez la configuration SMTP.',
+      });
+    }
+    return res.status(500).json({ success: false, message: 'Erreur serveur. Veuillez réessayer.' });
+  }
+};
+
+// ============================================================================
+// RESET PASSWORD CONTROLLER
+// ============================================================================
+// Endpoint: POST /api/auth/reset-password
+// Valide le token, hache le nouveau mot de passe et le sauvegarde
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token manquant.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le mot de passe doit contenir au moins 6 caractères.',
+      });
+    }
+
+    // Trouver l'utilisateur par token (vérifie aussi l'expiration)
+    const user = await userModel.findByResetToken(token);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lien invalide ou expiré. Veuillez refaire une demande de réinitialisation.',
+      });
+    }
+
+    // Hacher et sauvegarder le nouveau mot de passe
+    const hashedPassword = await bcryptjs.hash(password, 12);
+    await userModel.setUserPassword(user.id, hashedPassword);
+
+    // Invalider le token (usage unique)
+    await userModel.clearResetToken(user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.',
+    });
+  } catch (error) {
+    console.error('[auth.controller] resetPassword error:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur. Veuillez réessayer.' });
+  }
+};
+
 // ============================================================================
 // Export authentication controller functions
 module.exports = {
-  // User login with email and password
   login,
-  // First-time password setup for new users
   setPassword,
+  signup,
+  signupProfessional,
+  forgotPassword,
+  resetPassword,
 };

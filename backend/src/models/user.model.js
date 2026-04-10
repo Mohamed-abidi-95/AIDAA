@@ -89,28 +89,29 @@ const createUser = async (name, email, role = 'parent') => {
 // Notes: is_active defaults to 1 (true) - user is active immediately
 // Usage: Admin creates accounts with password set immediately (professionals, admins)
 //        Or user creates account via registration with password
-const createUserWithPassword = async ({ name, email, hashedPassword, role }) => {
+const createUserWithPassword = async ({ name, email, hashedPassword, role, forcePending }) => {
   try {
-    // Execute INSERT query to create new user with hashed password
+    // Parents who self-register start as pending (is_active=0, status='pending')
+    // forcePending=true allows other roles (e.g. professional) to also self-register as pending
+    // Admin-created accounts are active immediately
+    const isPending = role === 'parent' || forcePending === true;
+    const isActive = isPending ? 0 : 1;
+    const status = isPending ? 'pending' : 'approved';
+
     const results = await query(
-      // SQL prepared statement with ? placeholders for all parameters
-      'INSERT INTO users (name, email, password, role, is_active) VALUES (?, ?, ?, ?, 1)',
-      // Parameter array: [name, email, hashedPassword, role]
-      // Note: is_active is 1 (user is active by default)
-      [name, email, hashedPassword, role]
+      'INSERT INTO users (name, email, password, role, is_active, status) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, role, isActive, status]
     );
 
-    // Get the auto-generated user ID
     const userId = results.insertId;
 
-    // Return newly created user object WITHOUT password for security
-    // Never return password hash to client
     return {
       id: userId,
       name,
       email,
       role,
-      is_active: 1,
+      is_active: isActive,
+      status,
     };
   } catch (error) {
     console.error('[user.model] Error in createUserWithPassword:', error);
@@ -185,7 +186,7 @@ const updateUser = async (id, data) => {
 // Returns: Promise<array> - array of user objects
 // Usage: Admin dashboard, user management, statistics
 const getAllUsers = async (filters = {}) => {
-  let sql = 'SELECT id, name, email, role, is_active, created_at FROM users WHERE 1=1';
+  let sql = 'SELECT id, name, email, role, is_active, status, created_at FROM users WHERE 1=1';
   const params = [];
 
   if (filters.role) {
@@ -229,20 +230,15 @@ const setActiveStatus = async (id, is_active) => {
 // DELETE USER (SOFT DELETE)
 // ============================================================================
 // Function: deleteUser(id)
-// Purpose: Soft delete user by setting is_active = 0
+// Purpose: Hard delete — supprime définitivement l'utilisateur de la BDD
 // Parameters:
 //   - id (number) - user's ID
-// Returns: Promise<boolean> - true if update successful
-// Usage: Deactivate user account (data remains but account is inactive)
+// Returns: Promise<boolean> - true if deletion successful
 const deleteUser = async (id) => {
-  // Execute UPDATE query to set is_active = 0 (soft delete)
   const results = await query(
-    // SQL prepared statement setting is_active to 0
-    'UPDATE users SET is_active = 0 WHERE id = ?',
-    // Parameter array: [id]
+    'DELETE FROM users WHERE id = ?',
     [id]
   );
-  // Return true if at least one row was updated, false otherwise
   return results.affectedRows > 0;
 };
 
@@ -253,20 +249,43 @@ const deleteUser = async (id) => {
 module.exports = {
   // Find user by email (used in login)
   findByEmail,
-  // Find user by ID
   findById,
-  // Create new user with NULL password (legacy, for first-time setup)
   createUser,
-  // Create new user with hashed password (for complete account creation)
   createUserWithPassword,
-  // Set/update user password
   setUserPassword,
-  // Update user data
   updateUser,
-  // Get all users
   getAllUsers,
-  // Enable/disable user account
   setActiveStatus,
-  // Delete user (soft delete)
   deleteUser,
+  // Reset-password token management
+  setResetToken,
+  findByResetToken,
+  clearResetToken,
 };
+
+// ============================================================================
+// RESET TOKEN FUNCTIONS
+// ============================================================================
+
+async function setResetToken(userId, token, expiresAt) {
+  await query(
+    'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+    [token, expiresAt, userId]
+  );
+}
+
+async function findByResetToken(token) {
+  const results = await query(
+    'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+    [token]
+  );
+  return results.length > 0 ? results[0] : null;
+}
+
+async function clearResetToken(userId) {
+  await query(
+    'UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+    [userId]
+  );
+}
+

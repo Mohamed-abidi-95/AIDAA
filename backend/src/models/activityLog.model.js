@@ -12,7 +12,7 @@ const getByChildId = async (childId) => {
   return await query(
     `SELECT al.*, c.title as content_title, c.type as content_type 
      FROM activity_logs al
-     JOIN content c ON al.content_id = c.id
+     LEFT JOIN content c ON al.content_id = c.id
      WHERE al.child_id = ?
      ORDER BY al.date DESC`,
     [childId]

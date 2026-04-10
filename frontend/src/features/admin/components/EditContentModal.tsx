@@ -4,7 +4,7 @@
 // Modal for editing existing content
 
 import React, { useState, useEffect } from 'react';
-import { ContentItem, ContentFormData } from '../types/content.types';
+import { ContentItem, ContentFormData } from '../../content/types/content.types';
 
 interface EditContentModalProps {
   content: ContentItem | null;
@@ -341,4 +341,6 @@ export const EditContentModal: React.FC<EditContentModalProps> = ({
     </div>
   );
 };
+
+
 

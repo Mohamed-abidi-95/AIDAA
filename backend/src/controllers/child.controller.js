@@ -99,7 +99,8 @@ const getChild = async (req, res) => {
 // Body: { name, age }
 const createChild = async (req, res) => {
   try {
-    const { name, age } = req.body;
+    const { name, age, participantCategory, participant_category } = req.body;
+    const category = participantCategory || participant_category || 'enfant';
     const parentId = req.user.id;
 
     // Validate input
@@ -110,12 +111,19 @@ const createChild = async (req, res) => {
       });
     }
 
-    const childId = await childModel.create(parentId, name, age);
+    if (!['adulte', 'jeune', 'enfant'].includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid participant category',
+      });
+    }
+
+    const childId = await childModel.create(parentId, name, age, category);
 
     res.status(201).json({
       success: true,
       message: 'Child created successfully',
-      data: { id: childId, parent_id: parentId, name, age },
+      data: { id: childId, parent_id: parentId, name, age, participant_category: category },
     });
   } catch (error) {
     console.error('Create child error:', error);
@@ -135,13 +143,21 @@ const createChild = async (req, res) => {
 const updateChild = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, age } = req.body;
+    const { name, age, participantCategory, participant_category } = req.body;
+    const category = participantCategory || participant_category || 'enfant';
 
     // Validate input
     if (!name) {
       return res.status(400).json({
         success: false,
         message: 'Child name is required',
+      });
+    }
+
+    if (!['adulte', 'jeune', 'enfant'].includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid participant category',
       });
     }
 
@@ -161,12 +177,12 @@ const updateChild = async (req, res) => {
       });
     }
 
-    await childModel.update(id, name, age);
+    await childModel.update(id, name, age, category);
 
     res.status(200).json({
       success: true,
       message: 'Child updated successfully',
-      data: { id, parent_id: child.parent_id, name, age },
+      data: { id, parent_id: child.parent_id, name, age, participant_category: category },
     });
   } catch (error) {
     console.error('Update child error:', error);

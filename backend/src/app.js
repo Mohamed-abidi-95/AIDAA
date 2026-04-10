@@ -18,14 +18,47 @@ const contentRoutes = require('./routes/content.routes');
 const activityLogRoutes = require('./routes/activityLog.routes');
 const noteRoutes = require('./routes/note.routes');
 const messageRoutes = require('./routes/message.routes');
-const gameRoutes = require('./routes/game.routes');
-const teleconsultRoutes = require('./routes/teleconsult.routes');
-const adminRoutes = require('./routes/admin.routes');
+const gameRoutes         = require('./routes/game.routes');
+const teleconsultRoutes  = require('./routes/teleconsult.routes');
+const adminRoutes        = require('./routes/admin.routes');
+const parentRoutes       = require('./routes/parent.routes');
+const professionalRoutes = require('./routes/professional.routes');
+const sequenceRoutes     = require('./routes/sequence.routes');
+const aacRoutes          = require('./routes/aac.routes');
+const gamificationRoutes = require('./routes/gamification.routes');
 
 // ============================================================================
 // Import middlewares
 // ============================================================================
 const errorHandler = require('./middlewares/errorHandler');
+const { query: dbQuery } = require('./config/db');
+
+// ============================================================================
+// AUTO-MIGRATION : create missing tables on startup
+// ============================================================================
+const autoMigrate = async () => {
+  try {
+    await dbQuery(`
+      CREATE TABLE IF NOT EXISTS professional_invitations (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        parent_id       INT NOT NULL,
+        professional_id INT NOT NULL,
+        status          ENUM('pending','active','revoked') NOT NULL DEFAULT 'pending',
+        invited_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_id)       REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (professional_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_assignment  (parent_id, professional_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('[DB] ✅ professional_invitations table ready');
+  } catch (e) {
+    // Table may already exist or minor constraint issue — not fatal
+    if (!e.message.includes('already exists')) {
+      console.warn('[DB] auto-migrate warning:', e.message);
+    }
+  }
+};
+autoMigrate();
 
 // ============================================================================
 // Create Express app
@@ -98,7 +131,12 @@ app.use('/api/note', noteRoutes);
 app.use('/api/message', messageRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/teleconsult', teleconsultRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin',          adminRoutes);
+app.use('/api/parent',         parentRoutes);
+app.use('/api/professional',   professionalRoutes);
+app.use('/api/sequences',      sequenceRoutes);
+app.use('/api/aac',            aacRoutes);
+app.use('/api/gamification',   gamificationRoutes);
 
 // ============================================================================
 // 404 Error Handler

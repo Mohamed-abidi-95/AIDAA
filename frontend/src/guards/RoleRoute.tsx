@@ -4,7 +4,7 @@
 // Route guard that restricts access based on user role
 
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import type { UserRole, User } from '../types';
 
 // ============================================================================
@@ -72,3 +72,5 @@ export const RoleRoute = ({ allowedRoles }: RoleRouteProps): JSX.Element => {
   console.log('[RoleRoute] No user found, redirecting to /login');
   return <Navigate to="/login" replace />;
 };
+
+

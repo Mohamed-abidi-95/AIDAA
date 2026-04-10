@@ -3,8 +3,8 @@
 // ============================================================================
 // Service for handling auth-related API calls and localStorage management
 
-import api from './api';
-import type { User, LoginResponse, SetPasswordRequest, ApiResponse } from '../types';
+import api from '../../../lib/api';
+import type { User, LoginResponse, SetPasswordRequest, ApiResponse, SignupResponse, SignupRequest } from '../../../types';
 
 // ============================================================================
 // LOGIN FUNCTION
@@ -24,22 +24,26 @@ export const login = async (
 
     console.log('[auth.service] Login response:', response.data);
 
-    // Get response data
-    const data = response.data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = response.data as any;
 
     // Handle first-time password setup case
     if (data.mustSetPassword) {
       console.log('[auth.service] First-time login, mustSetPassword = true');
-      // Return first-time login response
-      // Frontend will show password setup page
       return data;
     }
 
+    // Handle pending approval (shouldn't reach here — backend returns 403 which axios throws)
+    // But handle it just in case
+    if (data.pendingApproval) {
+      return { success: false, pendingApproval: true, message: data.message || 'Pending approval' };
+    }
+
     // Handle successful login with existing password
-    if (data.success && 'data' in data && data.data?.token && data.data?.user) {
+    if (data.success && data.data?.token && data.data?.user) {
       console.log('[auth.service] Login successful, saving token and user');
       console.log('[auth.service] User role:', data.data.user.role);
-      
+
       // Save JWT token to localStorage for future requests
       localStorage.setItem('aidaa_token', data.data.token);
 
@@ -54,7 +58,7 @@ export const login = async (
       });
 
       // Return login response
-      return data as any;
+      return data;
     }
 
     // If response doesn't match expected format, throw error
@@ -63,6 +67,15 @@ export const login = async (
   } catch (error) {
     // Log the error for debugging
     console.error('[auth.service] Login error:', error);
+
+    // Handle 403 pending approval (axios throws on 403)
+    if ((error as any).response?.status === 403) {
+      const respData = (error as any).response?.data;
+      if (respData?.pendingApproval) {
+        return { success: false, pendingApproval: true, message: respData.message };
+      }
+      throw new Error(respData?.message || 'Account inactive. Contact administrator.');
+    }
 
     // If API request fails, enhance error message
     if (error instanceof Error) {
@@ -97,34 +110,58 @@ export const login = async (
 // Sets password for first-time users (parents with no password set)
 // Called after user receives email and clicks set-password link
 export const setPassword = async (userId: number, password: string): Promise<User> => {
-  try {
-    // Send POST request to backend set-password endpoint
-    const response = await api.post<ApiResponse<{ token: string; user: User }>>(
-      '/api/auth/set-password',
-      {
-        userId,
-        password,
-      } as SetPasswordRequest
-    );
+  // Send POST request to backend set-password endpoint
+  const response = await api.post<ApiResponse<{ token: string; user: User }>>(
+    '/api/auth/set-password',
+    {
+      userId,
+      password,
+    } as SetPasswordRequest
+  );
 
-    // Get response data
+  // Get response data
+  const data = response.data;
+
+  // Verify request was successful
+  if (!data.success || !data.data?.token || !data.data?.user) {
+    throw new Error('Failed to set password');
+  }
+
+  // Save JWT token to localStorage
+  localStorage.setItem('aidaa_token', data.data.token);
+
+  // Save user info to localStorage
+  localStorage.setItem('aidaa_user', JSON.stringify(data.data.user));
+
+  // Return user object (caller will handle redirect)
+  return data.data.user;
+};
+
+// ============================================================================
+// SIGNUP FUNCTION
+// ============================================================================
+export const signup = async (payload: SignupRequest): Promise<SignupResponse> => {
+  try {
+    const response = await api.post<SignupResponse>('/api/auth/signup', payload);
     const data = response.data;
 
-    // Verify request was successful
-    if (!data.success || !data.data?.token || !data.data?.user) {
-      throw new Error('Failed to set password');
+    // Parent pending approval — no token issued
+    if (data.pendingApproval || data.data?.pendingApproval) {
+      return { success: true, pendingApproval: true, message: data.message };
     }
 
-    // Save JWT token to localStorage
-    localStorage.setItem('aidaa_token', data.data.token);
+    if (!data.success || !data.data?.token || !data.data?.user) {
+      throw new Error(data.message || 'Signup failed');
+    }
 
-    // Save user info to localStorage
+    localStorage.setItem('aidaa_token', data.data.token!);
     localStorage.setItem('aidaa_user', JSON.stringify(data.data.user));
-
-    // Return user object (caller will handle redirect)
-    return data.data.user;
-  } catch (error) {
-    // Throw error for caller to handle
+    return data;
+  } catch (error: any) {
+    // If the error has a response (e.g. 409 conflict), extract message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
     throw error;
   }
 };
@@ -134,12 +171,17 @@ export const setPassword = async (userId: number, password: string): Promise<Use
 // ============================================================================
 // Clears authentication data from localStorage
 // Should be called when user logs out
-export const logout = (): void => {
+export const logout = (redirectToLogin = true): void => {
   // Remove JWT token from localStorage
   localStorage.removeItem('aidaa_token');
 
   // Remove user information from localStorage
   localStorage.removeItem('aidaa_user');
+  localStorage.removeItem('selected_child_id');
+
+  if (redirectToLogin) {
+    window.location.assign('/login');
+  }
 };
 
 // ============================================================================
@@ -149,22 +191,10 @@ export const logout = (): void => {
 // Returns null if no user is logged in
 export const getCurrentUser = (): User | null => {
   try {
-    // Get user JSON string from localStorage
     const userJson = localStorage.getItem('aidaa_user');
-
-    // If no user data in localStorage, return null
-    if (!userJson) {
-      return null;
-    }
-
-    // Parse JSON string back to User object
-    const user: User = JSON.parse(userJson);
-
-    // Return the parsed user object
-    return user;
-  } catch (error) {
-    // If parsing fails, user data is corrupted
-    // Clear it and return null
+    if (!userJson) return null;
+    return JSON.parse(userJson) as User;
+  } catch {
     localStorage.removeItem('aidaa_user');
     return null;
   }

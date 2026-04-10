@@ -17,6 +17,7 @@ const getAll = async (req, res) => {
       category: req.query.category,
       age_group: req.query.age_group,
       level: req.query.level,
+      participant_category: req.query.participant_category,
     };
 
     // Remove undefined filters

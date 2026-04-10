@@ -1,377 +1,233 @@
-# 🎯 AIDAA Project - Quick Reference Guide
+# 🎯 AIDAA — Guide de démarrage rapide
 
-**Last Updated:** April 4, 2026  
-**Project Phase:** Authentication System Complete - Ready for Dashboard Development  
-**Overall Status:** 60% Complete
-
----
-
-## 📌 Most Important URLs & Files
-
-### 🔌 Live Services
-```
-Frontend:   http://localhost:5173          (Vite dev server)
-Backend:    http://localhost:5000          (Express API)
-Health:     http://localhost:5000/health   (API status)
-Database:   localhost:3306                 (MySQL)
-```
-
-### 📂 Key Project Files
-```
-Documentation:
-  COMPREHENSIVE_PROJECT_UNDERSTANDING.md   ← READ THIS FIRST
-  PROJECT_PROGRESS.md                      ← Phase tracking
-  AUTHENTICATION_TEST_REPORT.md            ← Test guide
-
-Database:
-  aidaa_schema.sql                         ← Schema definition
-
-Backend Setup:
-  backend/setup-db.js                      ← Initialize DB
-  backend/fix-admin-password.js            ← Fix password issues
-  backend/test-login.js                    ← Test API
-
-Frontend:
-  frontend/src/App.tsx                     ← Main app
-  frontend/src/pages/LoginPage.tsx         ← Login UI
-```
+**Dernière mise à jour:** 9 avril 2026  
+**Statut du projet:** 88% complet  
+**Version:** 0.9.0-beta
 
 ---
 
-## ⚡ Quick Commands
+## ⚡ Démarrer en 3 commandes
 
-### Setup Database (First Time Only)
 ```bash
-cd backend
-npm install
-node setup-db.js
-```
-
-### Start Everything (3 Terminals)
-```bash
-# Terminal 1 - Backend
+# Terminal 1 — Backend
 cd backend && npm run dev
 
-# Terminal 2 - Frontend  
+# Terminal 2 — Frontend
 cd frontend && npm run dev
 
-# Terminal 3 - Browser
-# Open: http://localhost:5173
-```
-
-### Fix Issues
-```bash
-# Fix admin password if "Invalid email or password"
-node backend/fix-admin-password.js
-
-# Reinitialize database (CAUTION: Deletes all data)
-node backend/setup-db.js
-
-# Test authentication API
-node backend/test-login.js
+# Navigateur : http://localhost:5173
 ```
 
 ---
 
-## 🔐 Test Credentials
+## 🌐 URLs importantes
+
+| Service | URL |
+|---------|-----|
+| Application | http://localhost:5173 |
+| API Backend | http://localhost:5000 |
+| Santé API | http://localhost:5000/health |
+| Admin Panel | http://localhost:5173/admin/dashboard |
+| Parent Dashboard | http://localhost:5173/parent/dashboard |
+| Choix de rôle | http://localhost:5173/role-selection |
+| Sélection enfant | http://localhost:5173/child-selection |
+| Mot de passe oublié | http://localhost:5173/forgot-password |
+
+---
+
+## 🔐 Comptes de test
 
 ```
-Admin Account (✅ Works):
+ADMIN
   Email:    admin@aidaa.com
   Password: admin123
-  
-Parent Accounts (⚠️ Require Setup):
-  Email:    sarah.johnson@example.com
-  Email:    michael.smith@example.com
-  
-Professional Account (⚠️ Requires Setup):
-  Email:    emily.brown@aidaa.com
+  Accès:    /admin/dashboard
+
+PARENT
+  Email:    parent@aidaa.com
+  Password: parent123
+  Accès:    /role-selection → /parent/dashboard ou /child
+
+PROFESSIONNEL
+  Email:    professional@aidaa.com
+  Password: professional123
+  Accès:    /professional/dashboard
 ```
 
 ---
 
-## 📊 Project Architecture Overview
+## 🛠️ Setup initial (première fois)
 
-```
-┌─────────────────────────────────────────────────────┐
-│ Browser (Frontend - React/Vite)                     │
-│ http://localhost:5173                               │
-└──────────────────────┬──────────────────────────────┘
-                       │ HTTP/JSON
-                       ↓
-┌─────────────────────────────────────────────────────┐
-│ Express Server (Backend - Node.js)                  │
-│ http://localhost:5000                               │
-│ • Auth endpoints                                    │
-│ • User management                                   │
-│ • Content management                                │
-│ • Activity tracking                                 │
-└──────────────────────┬──────────────────────────────┘
-                       │ MySQL Queries
-                       ↓
-┌─────────────────────────────────────────────────────┐
-│ MySQL Database                                      │
-│ aidaa_db (6 tables)                                 │
-│ • users, children, content                         │
-│ • activity_logs, notes, teleconsultations          │
-└─────────────────────────────────────────────────────┘
+```bash
+# 1. Installer les dépendances
+cd backend && npm install
+cd ../frontend && npm install
+
+# 2. Créer backend/.env (copier depuis backend/.env.example)
+# Remplir : DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET
+
+# 3. Initialiser la base de données
+cd backend
+node setup-db.js
+
+# 4. Démarrer les serveurs
+npm run dev            # backend (terminal 1)
+cd ../frontend && npm run dev  # frontend (terminal 2)
 ```
 
 ---
 
-## 🎯 Authentication Flow (30 seconds)
+## 🗄️ Configuration base de données
 
-```
-1. User enters email + password → LoginPage
-2. Clicks "Login" → auth.service.login()
-3. POST /api/auth/login
-4. Backend validates credentials
-5. Returns JWT token
-6. Frontend stores token in localStorage
-7. Redirects to dashboard based on role
-```
-
----
-
-## 📁 Backend Structure at a Glance
-
-```
-routes/         → Define endpoints (auth.routes.js, user.routes.js, etc.)
-controllers/    → Business logic (auth.controller.js, user.controller.js, etc.)
-models/         → Database queries (user.model.js, child.model.js, etc.)
-middlewares/    → auth.js, roleCheck.js, errorHandler.js
-config/         → db.js (MySQL connection pool)
-app.js          → Express setup, middleware, route mounting
-server.js       → Start server on port 5000
-```
-
----
-
-## 📁 Frontend Structure at a Glance
-
-```
-pages/          → LoginPage.tsx, SetPasswordPage.tsx, Dashboards
-components/     → ProtectedRoute.tsx, RoleRoute.tsx (route guards)
-services/       → auth.service.ts (API calls), api.ts (axios setup)
-hooks/          → useAuth.ts (auth state management)
-types/          → TypeScript interfaces (User, Child, Content, etc.)
-styles/         → CSS files for pages
-App.tsx         → React Router setup
-main.tsx        → ReactDOM entry point
-```
-
----
-
-## 🔑 Environment Variables
-
-### Backend (.env)
-```
-PORT=5000
+```env
+# backend/.env
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=
-DB_DATABASE=aidaa_db
-JWT_SECRET=your_super_secret_jwt_key_change_in_production
-JWT_EXPIRES_IN=7d
-CORS_ORIGIN=*
+DB_PASSWORD=votre_mot_de_passe
+DB_NAME=aidaa_db
+JWT_SECRET=votre_secret_jwt_ici
+
+# Email (laisser vide → mode Ethereal automatique)
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+FRONTEND_URL=http://localhost:5173
 ```
 
-### Frontend (.env or vite.config.ts)
-```
-VITE_API_URL=http://localhost:5000
-```
+> 💡 Si `SMTP_USER` et `SMTP_PASS` sont vides, le système utilise automatiquement **Ethereal** pour les emails de test. L'URL de prévisualisation est retournée dans la réponse API.
 
 ---
 
-## 🧪 Testing Checklist
+## 🖥️ Pages de l'application
 
-- [ ] Backend running: `http://localhost:5000/health` returns 200 OK
-- [ ] Frontend running: `http://localhost:5173` loads without errors
-- [ ] Database setup: `node backend/setup-db.js` completes
-- [ ] Admin login works: `admin@aidaa.com` / `admin123`
-- [ ] Token stored: Check browser DevTools → localStorage → `aidaa_token`
-- [ ] Redirect works: Login redirects to `/admin/dashboard`
-- [ ] Protected route works: Try accessing `/parent/dashboard` without login (redirects to `/login`)
+### Authentification
+| Route | Description | Accès |
+|-------|-------------|-------|
+| `/login` | Connexion | Public |
+| `/forgot-password` | Demande reset MDP | Public |
+| `/reset-password?token=...` | Nouveau mot de passe | Public (lien email) |
+| `/set-password` | Premier setup parent | Public (lien admin) |
+
+### Espaces utilisateurs
+| Route | Description | Rôle requis |
+|-------|-------------|-------------|
+| `/admin/dashboard` | Gestion complète | Admin |
+| `/role-selection` | Choix Parent / Enfant | Parent |
+| `/child-selection` | Sélection de l'enfant | Parent |
+| `/parent/dashboard` | Suivi enfant + notes | Parent |
+| `/professional/dashboard` | Patients + notes | Professional |
+| `/child` | Espace enfant | Parent |
 
 ---
 
-## 🐛 Troubleshooting
+## 🎨 Design System
 
-### ❌ "Invalid email or password" (even with admin123)
+Toutes les pages partagent le même thème vert pharmacie :
+
+```css
+--green:       #00A651   /* Vert principal */
+--green-dark:  #007A3A   /* Vert foncé */
+--green-deep:  #00572A   /* Vert très foncé */
+--green-light: #E6F7EE   /* Fond vert clair */
+--sidebar-bg:  #013D1C   /* Fond sidebar */
+Font: Inter (Google Fonts)
+```
+
+### Préfixes CSS par page
+| Page | Préfixe |
+|------|---------|
+| AdminPanel | `adm-` |
+| ParentDashboard | `pd-` |
+| RoleSelection | `rs-` |
+| ChildSelection | `cs-` |
+
+---
+
+## 🔌 API — Points d'entrée principaux
+
 ```bash
-# Solution:
+# Test de santé
+GET http://localhost:5000/health
+
+# Connexion
+POST http://localhost:5000/api/auth/login
+Body: { "email": "admin@aidaa.com", "password": "admin123" }
+
+# Liste du contenu (authentifié)
+GET http://localhost:5000/api/content
+Header: Authorization: Bearer <token>
+
+# Créer un utilisateur (admin uniquement)
+POST http://localhost:5000/api/users
+Header: Authorization: Bearer <token_admin>
+Body: { "name": "...", "email": "...", "password": "...", "role": "parent" }
+```
+
+---
+
+## 🐛 Problèmes courants
+
+### "Invalid email or password"
+```bash
 node backend/fix-admin-password.js
 ```
 
-### ❌ "Cannot connect to database"
-```bash
-# Check MySQL is running:
-# Windows: MySQL service should be in Services
-# Check .env has correct DB credentials
-```
-
-### ❌ "CORS error"
-```
-Check: backend/src/app.js has cors({ origin: '*' })
-```
-
-### ❌ Port already in use
-```bash
-# Find process using port 5000
-netstat -ano | findstr 5000
-
-# Kill process
+### Port 5000 occupé
+```powershell
 Get-Process node | Stop-Process -Force
 ```
 
----
-
-## 🚀 Next Development Steps
-
-### Priority 1: Complete Dashboards (Current Phase)
-- [ ] ParentDashboard - Children list, activity tracking
-- [ ] AdminPanel - User management, statistics
-- [ ] ProfessionalPage - Notes, consultations
-
-### Priority 2: Complete API Endpoints
-- [ ] Children CRUD operations
-- [ ] Content CRUD operations
-- [ ] Activity log operations
-- [ ] Notes management
-- [ ] Teleconsultation booking
-
-### Priority 3: Advanced Features
-- [ ] File uploads (profile pictures, content)
-- [ ] Real-time notifications
-- [ ] Email alerts
-- [ ] Reporting & analytics
-
-### Priority 4: Testing & Deployment
-- [ ] Unit tests (backend & frontend)
-- [ ] Integration tests
-- [ ] E2E tests
-- [ ] Docker deployment
-- [ ] Production build
-
----
-
-## 📞 Useful Files to Edit
-
-When you need to:
-
-| Task | File | Line |
-|------|------|------|
-| Add new API endpoint | `backend/src/routes/*.routes.js` | - |
-| Add authentication logic | `backend/src/controllers/auth.controller.js` | - |
-| Add database query | `backend/src/models/*.model.js` | - |
-| Create new page | `frontend/src/pages/NewPage.tsx` | - |
-| Add component | `frontend/src/components/NewComponent.tsx` | - |
-| Modify API URL | `frontend/src/services/api.ts` | baseURL |
-| Add new type | `frontend/src/types/index.ts` | - |
-| Configure Vite | `frontend/vite.config.ts` | - |
-
----
-
-## 📚 Learning Resources Embedded
-
-Every file in the project contains:
-- ✅ Detailed comments explaining the code
-- ✅ Function signatures with parameter descriptions
-- ✅ Example usage in comments
-- ✅ Console logs for debugging (search for `console.log`)
-
-### Search for patterns:
+### BDD vide ou manquante
 ```bash
-# Find all database queries
-grep -r "SELECT\|INSERT\|UPDATE\|DELETE" backend/src/
+cd backend && node setup-db.js
+```
 
-# Find all API endpoints
-grep -r "router.get\|router.post\|router.put\|router.delete" backend/src/
+### Emails non reçus
+> En mode développement, laisser `SMTP_USER` et `SMTP_PASS` vides dans `.env`.
+> L'URL Ethereal est renvoyée directement dans la réponse de l'API.
 
-# Find all components
-grep -r "export const.*=" frontend/src/
+### Erreurs TypeScript PhpStorm
+> Redémarrer le service TypeScript : `Ctrl+Shift+A` → "Restart TypeScript Service"
+
+---
+
+## 📁 Fichiers clés à connaître
+
+```
+backend/src/
+  app.js                    ← Configuration Express
+  config/db.js              ← Connexion MySQL
+  config/mailer.js          ← Email + Ethereal
+  controllers/auth.controller.js   ← Login, signup, reset MDP
+  models/user.model.js      ← Modèle utilisateur (avec reset token)
+
+frontend/src/
+  App.tsx                   ← Racine de l'application
+  routes/routes-config.tsx  ← Toutes les routes
+  types/index.ts            ← Interfaces TypeScript
+  features/auth/hooks/useAuth.ts   ← Hook d'authentification
+  pages/AdminPanel.tsx      ← Interface admin complète
+  pages/ParentDashboard.tsx ← Tableau de bord parent
+  styles/AdminPanel.css     ← CSS admin (adm-*)
+  styles/ParentDashboard.css ← CSS parent (pd-*)
 ```
 
 ---
 
-## 🎓 Key Concepts
+## ✅ Checklist de vérification
 
-### Authentication Flow (5 min read)
-→ See `COMPREHENSIVE_PROJECT_UNDERSTANDING.md` → "🔐 Système d'Authentification"
-
-### Database Schema (5 min read)
-→ See `COMPREHENSIVE_PROJECT_UNDERSTANDING.md` → "📊 Base de Données"
-
-### API Routes (10 min read)
-→ See `COMPREHENSIVE_PROJECT_UNDERSTANDING.md` → "🔌 API Routes Complètes"
-
-### Type Safety (TypeScript)
-→ See `frontend/src/types/index.ts` - All interfaces defined here
-
-### State Management (React)
-→ See `frontend/src/hooks/useAuth.ts` - Auth state management
+- [ ] MySQL en cours d'exécution sur le port 3306
+- [ ] `backend/.env` configuré avec les bonnes credentials DB
+- [ ] `node backend/setup-db.js` exécuté au moins une fois
+- [ ] Backend démarré : `http://localhost:5000/health` répond `{"status":"OK"}`
+- [ ] Frontend démarré : `http://localhost:5173` charge la page de connexion
+- [ ] Connexion admin fonctionne : admin@aidaa.com / admin123
 
 ---
 
-## ✅ Verification Checklist
-
-Run these commands to verify everything works:
-
-```bash
-# 1. Check backend connectivity
-curl http://localhost:5000/health
-
-# 2. Test admin login via API
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@aidaa.com","password":"admin123"}'
-
-# 3. Check frontend bundle
-npm run build --prefix frontend
-
-# 4. Check database
-node -e "require('./backend/src/config/db').query('SELECT COUNT(*) FROM users')"
-
-# All should return success responses ✅
-```
-
----
-
-## 🎯 Success Criteria
-
-Your project is **successfully set up** when:
-
-✅ Backend server starts on port 5000  
-✅ Frontend dev server starts on port 5173  
-✅ Database contains 4 users (1 admin, 2 parents, 1 professional)  
-✅ Admin login works: `admin@aidaa.com` / `admin123`  
-✅ After login, redirects to `/admin/dashboard`  
-✅ Browser DevTools shows token in localStorage  
-✅ Accessing protected routes without auth redirects to `/login`
-
----
-
-## 📞 When You Get Stuck
-
-1. **Check the console logs** (F12 in browser → Console tab)
-2. **Check backend logs** (Terminal running `npm run dev`)
-3. **Check DATABASE** (Use `node backend/test-login.js`)
-4. **Search documentation** (COMPREHENSIVE_PROJECT_UNDERSTANDING.md)
-5. **Check middleware** (backend/src/middlewares/)
-6. **Verify .env files** (backend/.env and frontend/.env)
-
----
-
-## 🏁 You Are Here
-
-**Current Phase:** Authentication Complete ✅  
-**Next Phase:** Dashboard Development  
-**Overall Progress:** 60% Complete
-
-**Get started by reading:** `COMPREHENSIVE_PROJECT_UNDERSTANDING.md`
-
----
-
-**Need Help?** Check the full documentation in COMPREHENSIVE_PROJECT_UNDERSTANDING.md
-
+**Projet:** AIDAA — PFE 2026  
+**Dernière mise à jour:** 9 avril 2026

@@ -1,17 +1,18 @@
 /* Progress & Activity Analysis Dashboard Styles */
+/* Tous les sélecteurs sont scopés sous .dash pour éviter les collisions globales */
 
-* {
+.dash,
+.dash * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
+.dash {
   font-family: var(--font-sans, sans-serif);
   background: transparent;
-}
+  padding: 0 0 2rem;
 
-:root {
   --navy: #1e3a5f;
   --ink: #0f172a;
   --sub: #1e293b;
@@ -39,11 +40,7 @@ body {
   --orange-light: #fff7ed;
 }
 
-.dash {
-  padding: 0 0 2rem;
-}
-
-.header {
+.dash .header {
   background: var(--white);
   border-bottom: 1px solid var(--border-soft);
   padding: 1.25rem 1.5rem;
@@ -52,19 +49,19 @@ body {
   justify-content: space-between;
 }
 
-.header-left h1 {
+.dash .header-left h1 {
   font-size: 18px;
   font-weight: 500;
   color: var(--navy);
 }
 
-.header-left p {
+.dash .header-left p {
   font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
 }
 
-.child-pill {
+.dash .child-pill {
   background: var(--purple-light);
   color: var(--purple);
   font-size: 12px;
@@ -74,11 +71,11 @@ body {
   border: 1px solid #c7d2fe;
 }
 
-.section {
+.dash .section {
   padding: 1.25rem 1.5rem;
 }
 
-.section-title {
+.dash .section-title {
   font-size: 13px;
   font-weight: 500;
   color: var(--muted);
@@ -87,20 +84,20 @@ body {
   margin-bottom: 1rem;
 }
 
-.kpi-grid {
+.dash .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
-.kpi {
+.dash .kpi {
   background: var(--white);
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   padding: 1rem 1.125rem;
 }
 
-.kpi-icon {
+.dash .kpi-icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -111,65 +108,65 @@ body {
   margin-bottom: 0.625rem;
 }
 
-.kpi-val {
+.dash .kpi-val {
   font-size: 22px;
   font-weight: 500;
   color: var(--ink);
   line-height: 1;
 }
 
-.kpi-label {
+.dash .kpi-label {
   font-size: 12px;
   color: var(--muted);
   margin-top: 4px;
 }
 
-.kpi-change {
+.dash .kpi-change {
   font-size: 11px;
   margin-top: 6px;
   font-weight: 500;
 }
 
-.up {
+.dash .up {
   color: var(--green);
 }
 
-.dn {
+.dash .dn {
   color: var(--rose);
 }
 
-.charts-row {
+.dash .charts-row {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 12px;
 }
 
-.chart-card {
+.dash .chart-card {
   background: var(--white);
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   padding: 1rem 1.125rem;
 }
 
-.chart-card h3 {
+.dash .chart-card h3 {
   font-size: 13px;
   font-weight: 500;
   color: var(--sub);
   margin-bottom: 0.875rem;
 }
 
-.chart-wrap {
+.dash .chart-wrap {
   position: relative;
 }
 
-.legend {
+.dash .legend {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 10px;
 }
 
-.leg-item {
+.dash .leg-item {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -177,33 +174,33 @@ body {
   color: var(--muted);
 }
 
-.leg-dot {
+.dash .leg-dot {
   width: 9px;
   height: 9px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-.three-col {
+.dash .three-col {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
 }
 
-.progress-list {
+.dash .progress-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 4px;
 }
 
-.prog-row {
+.dash .prog-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.prog-label {
+.dash .prog-label {
   font-size: 12px;
   color: var(--std);
   width: 110px;
@@ -213,7 +210,7 @@ body {
   text-overflow: ellipsis;
 }
 
-.prog-bar-bg {
+.dash .prog-bar-bg {
   flex: 1;
   height: 7px;
   background: var(--bg-alt);
@@ -221,13 +218,13 @@ body {
   overflow: hidden;
 }
 
-.prog-bar {
+.dash .prog-bar {
   height: 100%;
   border-radius: 4px;
   transition: width 0.6s ease;
 }
 
-.prog-val {
+.dash .prog-val {
   font-size: 11px;
   color: var(--muted);
   width: 28px;
@@ -235,33 +232,33 @@ body {
   flex-shrink: 0;
 }
 
-.heatmap-grid {
+.dash .heatmap-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
   margin-top: 8px;
 }
 
-.heat-cell {
+.dash .heat-cell {
   height: 22px;
   border-radius: 4px;
 }
 
-.heat-label {
+.dash .heat-label {
   font-size: 10px;
   color: var(--muted);
   text-align: center;
   margin-top: 4px;
 }
 
-.heatmap-days {
+.dash .heatmap-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
   margin-bottom: 2px;
 }
 
-.score-ring-wrap {
+.dash .score-ring-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -269,31 +266,31 @@ body {
   margin-top: 4px;
 }
 
-.score-label-row {
+.dash .score-label-row {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
   gap: 8px;
 }
 
-.score-item {
+.dash .score-item {
   text-align: center;
   flex: 1;
 }
 
-.score-num {
+.dash .score-num {
   font-size: 16px;
   font-weight: 500;
   color: var(--ink);
 }
 
-.score-sub {
+.dash .score-sub {
   font-size: 10px;
   color: var(--muted);
   margin-top: 2px;
 }
 
-.tab-bar {
+.dash .tab-bar {
   display: flex;
   gap: 6px;
   padding: 0.75rem 1.5rem;
@@ -301,7 +298,7 @@ body {
   background: var(--bg-light);
 }
 
-.tab-btn {
+.dash .tab-btn {
   padding: 5px 14px;
   border-radius: 20px;
   font-size: 12px;
@@ -312,20 +309,20 @@ body {
   transition: all 0.15s;
 }
 
-.tab-btn.active {
+.dash .tab-btn.active {
   background: var(--white);
   color: var(--navy);
   border-color: var(--border);
   font-weight: 500;
 }
 
-.activity-table {
+.dash .activity-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
 
-.activity-table th {
+.dash .activity-table th {
   text-align: left;
   color: var(--muted);
   font-weight: 500;
@@ -333,13 +330,13 @@ body {
   border-bottom: 1px solid var(--border-soft);
 }
 
-.activity-table td {
+.dash .activity-table td {
   padding: 7px 8px;
   color: var(--std);
   border-bottom: 1px solid var(--border-soft);
 }
 
-.badge {
+.dash .badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 10px;
@@ -347,36 +344,35 @@ body {
   font-weight: 500;
 }
 
-.badge-green {
+.dash .badge-green {
   background: var(--green-light);
   color: var(--green);
 }
 
-.badge-amber {
+.dash .badge-amber {
   background: var(--amber-light);
   color: var(--amber);
 }
 
-.badge-rose {
+.dash .badge-rose {
   background: var(--rose-light);
   color: var(--rose);
 }
 
 @media (max-width: 768px) {
-  .kpi-grid {
+  .dash .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .charts-row {
+  .dash .charts-row {
     grid-template-columns: 1fr;
   }
 
-  .three-col {
+  .dash .three-col {
     grid-template-columns: 1fr;
   }
 
-  .activity-table {
-    font-size: 10px;
+  .dash .activity-table {
+    font-size: 11px;
   }
 }
-

@@ -250,4 +250,72 @@ module.exports = {
   listUsers,
   toggleUserActive,
   getStats,
+  getPendingRegistrations,
+  approveRegistration,
+  rejectRegistration,
+  getNotificationCount,
 };
+
+// ============================================================================
+// GET PENDING REGISTRATIONS
+// ============================================================================
+// GET /admin/pending-registrations
+async function getPendingRegistrations(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const rows = await query(
+      "SELECT id, name, email, role, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC"
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('getPendingRegistrations error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch pending registrations' });
+  }
+}
+
+// ============================================================================
+// APPROVE REGISTRATION
+// ============================================================================
+// POST /admin/approve-registration/:id
+async function approveRegistration(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const { id } = req.params;
+    await query("UPDATE users SET status = 'approved', is_active = 1 WHERE id = ?", [id]);
+    res.json({ success: true, message: 'Registration approved' });
+  } catch (error) {
+    console.error('approveRegistration error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve registration' });
+  }
+}
+
+// ============================================================================
+// REJECT REGISTRATION
+// ============================================================================
+// POST /admin/reject-registration/:id
+async function rejectRegistration(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const { id } = req.params;
+    await query("UPDATE users SET status = 'rejected', is_active = 0 WHERE id = ?", [id]);
+    res.json({ success: true, message: 'Registration rejected' });
+  } catch (error) {
+    console.error('rejectRegistration error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject registration' });
+  }
+}
+
+// ============================================================================
+// GET NOTIFICATION COUNT (pending registrations count)
+// ============================================================================
+// GET /admin/notification-count
+async function getNotificationCount(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const rows = await query("SELECT COUNT(*) as count FROM users WHERE status = 'pending'");
+    res.json({ success: true, data: { count: rows[0].count } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to get count' });
+  }
+}
+

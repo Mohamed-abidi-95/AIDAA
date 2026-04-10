@@ -36,6 +36,12 @@ const getAll = async (filters = {}) => {
     params.push(filters.level);
   }
 
+  // Filter by participant_category (show exact match OR 'tous')
+  if (filters.participant_category) {
+    sql += ' AND (participant_category = ? OR participant_category = "tous")';
+    params.push(filters.participant_category);
+  }
+
   sql += ' ORDER BY created_at DESC';
 
   return await query(sql, params);

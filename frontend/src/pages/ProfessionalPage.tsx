@@ -1,17 +1,27 @@
 // ============================================================================
-// PROFESSIONAL/DOCTOR DASHBOARD PAGE
+// PROFESSIONAL DASHBOARD — Redesigned with sidebar + pharmacy green theme
 // ============================================================================
-// Dashboard for medical professionals to manage patient notes and activity
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import '../styles/DashboardEnhanced.css';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import api from '../lib/api';
+import '../styles/ProfessionalDashboard.css';
+
+// ── Types ──────────────────────────────────────────────────────────────────
+type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'teleconsult';
 
 interface Child {
   id: number;
   name: string;
   age: number;
   parent_id: number;
+  parent_name?: string;
+  participant_category?: string;
+}
+
+interface ParentRecord {
+  id: number; name: string; email: string;
+  child_count: number; invited_at: string;
 }
 
 interface Activity {
@@ -29,238 +39,605 @@ interface Note {
   professional_name: string;
 }
 
-export const ProfessionalPage = (): JSX.Element => {
-  const { logout } = useAuth();
-  const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [newNote, setNewNote] = useState('');
-  const [view, setView] = useState('patients'); // 'patients', 'activities', 'notes'
+interface ApiResult<T> { success: boolean; data: T; message?: string; }
+interface Toast { id: number; type: 'success' | 'error'; msg: string; }
 
-  // Fetch all children (professionals can see all)
+// ── Toast hook ─────────────────────────────────────────────────────────────
+let toastId = 0;
+const useToast = () => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    const id = ++toastId;
+    setToasts(p => [...p, { id, type, msg }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  }, []);
+  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
+  return { toasts, add, remove };
+};
+
+// ── Nav config ─────────────────────────────────────────────────────────────
+const NAV = [
+  { id: 'patients',     icon: '👥', label: 'Mes patients' },
+  { id: 'activities',   icon: '📊', label: 'Activités' },
+  { id: 'notes',        icon: '📝', label: 'Notes cliniques' },
+  { id: 'invitations',  icon: '📨', label: 'Mes invitations' },
+  { id: 'teleconsult',  icon: '🎥', label: 'Téléconsultation' },
+] as const;
+
+// ── Component ──────────────────────────────────────────────────────────────
+export const ProfessionalPage = (): JSX.Element => {
+  const { logout, user } = useAuth();
+  const { toasts, add: toast, remove: removeToast } = useToast();
+
+  const [view, setView]                         = useState<ViewType>('patients');
+  const [patients, setPatients]                 = useState<Child[]>([]);
+  const [selectedPatient, setSelectedPatient]   = useState<Child | null>(null);
+  const [activities, setActivities]             = useState<Activity[]>([]);
+  const [notes, setNotes]                       = useState<Note[]>([]);
+  const [loading, setLoading]                   = useState(false);
+  const [noteLoading, setNoteLoading]           = useState(false);
+  const [newNote, setNewNote]                   = useState('');
+  const [search, setSearch]                     = useState('');
+  const [invitations, setInvitations]           = useState<ParentRecord[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+
+  // ── Fetch patients (enfants des parents qui ont invité ce professionnel) ──
   useEffect(() => {
-    const fetchChildren = async () => {
+    const fetchPatients = async () => {
       try {
-        const token = localStorage.getItem('aidaa_token');
-        // Professionals use the dedicated endpoint listing all children
-        const res = await fetch('http://localhost:5000/api/child/all', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
+        setLoading(true);
+        // Essai endpoint filtré → fallback /all
+        try {
+          const { data } = await api.get<ApiResult<Child[]>>('/api/professional/my-children');
+          if (data.success && data.data.length > 0) {
+            setPatients(data.data);
+            setSelectedPatient(data.data[0]);
+            return;
+          }
+        } catch { /* fallback */ }
+        const { data } = await api.get<ApiResult<Child[]>>('/api/child/all');
         if (data.success) {
-          setChildren(data.data);
+          setPatients(data.data);
+          if (data.data.length > 0) setSelectedPatient(data.data[0]);
         }
-      } catch (err) {
-        console.error('Error fetching patients:', err);
+      } catch {
+        toast('Erreur lors du chargement des patients', 'error');
+      } finally {
+        setLoading(false);
       }
     };
-    fetchChildren();
+    fetchPatients();
   }, []);
 
-  // Fetch activities and notes when child changes
+  // ── Fetch invitations (parents qui ont invité ce professionnel) ─────────
   useEffect(() => {
-    if (!selectedChild) return;
+    if (view !== 'invitations') return;
+    const fetchInvitations = async () => {
+      try {
+        setInvitationsLoading(true);
+        const { data } = await api.get<ApiResult<ParentRecord[]>>('/api/professional/my-parents');
+        if (data.success) setInvitations(data.data);
+      } catch { /* silent */ }
+      finally { setInvitationsLoading(false); }
+    };
+    fetchInvitations();
+  }, [view]);
 
+  // ── Fetch activities + notes when patient changes ────────────────────────
+  useEffect(() => {
+    if (!selectedPatient) return;
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('aidaa_token');
-
-        // Fetch activities
-        const activitiesRes = await fetch(
-          `http://localhost:5000/api/activity-log/child/${selectedChild.id}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const activitiesData = await activitiesRes.json();
-        if (activitiesData.success) setActivities(activitiesData.data);
-
-        // Fetch notes
-        const notesRes = await fetch(
-          `http://localhost:5000/api/note/child/${selectedChild.id}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const notesData = await notesRes.json();
-        if (notesData.success) setNotes(notesData.data);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
+        const [{ data: actData }, { data: noteData }] = await Promise.all([
+          api.get<ApiResult<Activity[]>>(`/api/activity-log/child/${selectedPatient.id}`),
+          api.get<ApiResult<Note[]>>(`/api/note/child/${selectedPatient.id}`),
+        ]);
+        if (actData.success) setActivities(actData.data);
+        if (noteData.success) setNotes(noteData.data);
+      } catch { /* silent */ }
     };
-
     fetchData();
-  }, [selectedChild]);
+  }, [selectedPatient]);
 
+  // ── Add clinical note ────────────────────────────────────────────────────
   const handleAddNote = async () => {
-    if (!selectedChild || !newNote.trim()) return;
-
+    if (!selectedPatient || !newNote.trim()) { toast('Saisissez une note avant de valider', 'error'); return; }
     try {
-      const token = localStorage.getItem('aidaa_token');
-      const res = await fetch('http://localhost:5000/api/note', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          childId: selectedChild.id,
-          content: newNote
-        })
+      setNoteLoading(true);
+      const { data } = await api.post<ApiResult<Note>>('/api/note', {
+        childId: selectedPatient.id,
+        content: newNote.trim(),
       });
-
-      const data = await res.json();
       if (data.success) {
         setNewNote('');
-        // Refresh notes
-        const notesRes = await fetch(
-          `http://localhost:5000/api/note/child/${selectedChild.id}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const notesData = await notesRes.json();
-        if (notesData.success) setNotes(notesData.data);
+        toast('Note clinique ajoutée ✓');
+        const { data: nd } = await api.get<ApiResult<Note[]>>(`/api/note/child/${selectedPatient.id}`);
+        if (nd.success) setNotes(nd.data);
+      } else {
+        toast(data.message || 'Erreur lors de l\'ajout', 'error');
       }
-    } catch (err) {
-      console.error('Error adding note:', err);
+    } catch {
+      toast('Erreur lors de l\'ajout de la note', 'error');
+    } finally {
+      setNoteLoading(false);
     }
   };
 
-  return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1>👨‍⚕️ Professional Portal</h1>
-        <button onClick={logout} className="logout-button">Logout</button>
-      </div>
+  // ── Stats ────────────────────────────────────────────────────────────────
+  const stats = (() => {
+    if (!activities.length) return { sessions: 0, time: 0, avgScore: 0 };
+    const totalTime = activities.reduce((s, a) => s + (a.duration_seconds || 0), 0);
+    const avgScore  = activities.reduce((s, a) => s + (a.score || 0), 0) / activities.length;
+    return { sessions: activities.length, time: Math.round(totalTime / 60), avgScore: Math.round(avgScore) };
+  })();
 
-      <div className="dashboard-content">
-        {/* Patient Selector */}
-        <div className="child-selector">
-          <label>Select Patient:</label>
-          <select
-            value={selectedChild?.id || ''}
-            onChange={(e) => {
-              const child = children.find(c => c.id === parseInt(e.target.value));
-              setSelectedChild(child || null);
-            }}
-          >
-            <option value="">-- Choose a patient --</option>
-            {children.map(child => (
-              <option key={child.id} value={child.id}>
-                {child.name} (Age {child.age})
-              </option>
-            ))}
-          </select>
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const profInitial  = user?.name?.charAt(0).toUpperCase() || 'P';
+  const currentNav   = NAV.find(n => n.id === view);
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  return (
+    <div className="prof-layout">
+
+      {/* ── SIDEBAR ── */}
+      <aside className="prof-sidebar">
+
+        {/* Brand */}
+        <div className="prof-sidebar__brand">
+          <div className="prof-sidebar__logo">🩺</div>
+          <div className="prof-sidebar__brand-text">
+            <h2>AIDAA</h2>
+            <span>Espace Professionnel</span>
+          </div>
         </div>
 
-        {selectedChild && (
-          <>
-            {/* Navigation Tabs */}
-            <div className="tabs">
-              <button
-                className={view === 'patients' ? 'tab active' : 'tab'}
-                onClick={() => setView('patients')}
-              >
-                👥 Patients
-              </button>
-              <button
-                className={view === 'activities' ? 'tab active' : 'tab'}
-                onClick={() => setView('activities')}
-              >
-                📊 Activities
-              </button>
-              <button
-                className={view === 'notes' ? 'tab active' : 'tab'}
-                onClick={() => setView('notes')}
-              >
-                📝 Notes
-              </button>
-            </div>
+        {/* Navigation */}
+        <nav className="prof-sidebar__nav">
+          <div className="prof-nav__label">Menu</div>
+          {NAV.map(n => (
+            <button
+              key={n.id}
+              className={`prof-nav__item ${view === n.id ? 'active' : ''}`}
+              onClick={() => setView(n.id as ViewType)}
+            >
+              <span className="nav-icon">{n.icon}</span>
+              {n.label}
+              {n.id === 'invitations' && patients.length > 0 && (
+                <span className="prof-nav__badge">{patients.length}</span>
+              )}
+            </button>
+          ))}
+        </nav>
 
-            {/* Patient Info View */}
-            {view === 'patients' && (
-              <div className="patient-info">
-                <h2>{selectedChild.name}</h2>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Age:</label>
-                    <span>{selectedChild.age} years</span>
-                  </div>
-                  <div className="info-item">
-                    <label>Patient ID:</label>
-                    <span>{selectedChild.id}</span>
-                  </div>
-                  <div className="info-item">
-                    <label>Total Activities:</label>
-                    <span>{activities.length}</span>
-                  </div>
-                  <div className="info-item">
-                    <label>Total Notes:</label>
-                    <span>{notes.length}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Activities View */}
-            {view === 'activities' && (
-              <div className="activities-view">
-                <h2>Patient Activity Log - {selectedChild.name}</h2>
-                <div className="activities-list">
-                  {activities.length > 0 ? (
-                    activities.map(activity => (
-                      <div key={activity.id} className="activity-card">
-                        <h3>{activity.content_title}</h3>
-                        <p>Date: {new Date(activity.date).toLocaleDateString()}</p>
-                        <p>Score: {activity.score} | Duration: {Math.round(activity.duration_seconds / 60)} minutes</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No activities recorded yet.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Notes View */}
-            {view === 'notes' && (
-              <div className="notes-view">
-                <h2>Patient Notes - {selectedChild.name}</h2>
-
-                {/* Add Note Form */}
-                <div className="add-note-form">
-                  <textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Write your clinical notes here..."
-                    rows={4}
-                  />
-                  <button onClick={handleAddNote}>Add Note</button>
-                </div>
-
-                {/* Notes List */}
-                <div className="notes-list">
-                  {notes.length > 0 ? (
-                    notes.map(note => (
-                      <div key={note.id} className="note-card">
-                        <div className="note-header">
-                          <h3>Your Note</h3>
-                          <small>{new Date(note.date).toLocaleDateString()}</small>
-                        </div>
-                        <p className="note-content">{note.content}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No notes written yet.</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {children.length === 0 && (
-          <div className="empty-state">
-            <p>No patients assigned yet. Contact an administrator.</p>
+        {/* Patients list */}
+        <div className="prof-sidebar__patients">
+          <div className="prof-section-title">Patients ({patients.length})</div>
+          <div className="prof-search-wrap">
+            <input
+              type="text"
+              className="prof-search"
+              placeholder="🔍 Rechercher…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-        )}
+          {filteredPatients.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className={`prof-patient-item ${selectedPatient?.id === p.id ? 'active' : ''}`}
+              onClick={() => setSelectedPatient(p)}
+            >
+              <span className="prof-patient-avatar">{p.name.charAt(0).toUpperCase()}</span>
+              <span className="prof-patient-name">
+                {p.name}
+                <small>
+                  {p.age} ans
+                  {p.participant_category ? ` · ${p.participant_category}` : ''}
+                  {p.parent_name ? ` · ${p.parent_name}` : ''}
+                </small>
+              </span>
+            </button>
+          ))}
+          {filteredPatients.length === 0 && (
+            <div className="prof-no-patients">Aucun résultat</div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="prof-sidebar__footer">
+          <div className="prof-sidebar__user">
+            <div className="prof-sidebar__avatar">{profInitial}</div>
+            <div className="prof-sidebar__user-info">
+              <div className="prof-sidebar__user-name">{user?.name || 'Professionnel'}</div>
+              <div className="prof-sidebar__user-role">Professionnel de santé</div>
+            </div>
+          </div>
+          <button className="prof-logout-btn" onClick={logout}>
+            <span>🚪</span> Se déconnecter
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN ── */}
+      <main className="prof-main">
+
+        {/* Topbar */}
+        <header className="prof-topbar">
+          <div className="prof-topbar__left">
+            <div className="prof-topbar__breadcrumb">Professionnel / {currentNav?.label}</div>
+            <h1>{currentNav?.icon} {currentNav?.label}</h1>
+          </div>
+          <div className="prof-topbar__right">
+            {patients.length > 0 && (
+              <div className="prof-patient-select">
+                <label>Patient :</label>
+                <select
+                  value={selectedPatient?.id || ''}
+                  onChange={e => setSelectedPatient(patients.find(p => p.id === +e.target.value) || null)}
+                >
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.age} ans)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="prof-content">
+
+          {/* Chargement */}
+          {loading && (
+            <div className="prof-loading">
+              <div className="prof-loading__spinner" />
+              <p>Chargement des patients…</p>
+            </div>
+          )}
+
+          {/* Aucun patient */}
+          {!loading && patients.length === 0 && (
+            <div className="prof-empty-state">
+              👥 Aucun patient assigné pour le moment.<br />
+              Contactez l'administrateur pour obtenir l'accès aux dossiers patients.
+            </div>
+          )}
+
+          {selectedPatient && !loading && (
+            <>
+              {/* KPIs */}
+              <div className="prof-kpis">
+                <div className="prof-kpi">
+                  <div className="prof-kpi__icon">👤</div>
+                  <div>
+                    <span className="prof-kpi__val">{selectedPatient.age}</span>
+                    <span className="prof-kpi__lbl">Âge (ans)</span>
+                  </div>
+                </div>
+                <div className="prof-kpi">
+                  <div className="prof-kpi__icon">🎮</div>
+                  <div>
+                    <span className="prof-kpi__val">{stats.sessions}</span>
+                    <span className="prof-kpi__lbl">Sessions</span>
+                  </div>
+                </div>
+                <div className="prof-kpi">
+                  <div className="prof-kpi__icon">⏱️</div>
+                  <div>
+                    <span className="prof-kpi__val">{stats.time}</span>
+                    <span className="prof-kpi__lbl">Minutes total</span>
+                  </div>
+                </div>
+                <div className="prof-kpi">
+                  <div className="prof-kpi__icon">⭐</div>
+                  <div>
+                    <span className="prof-kpi__val">{stats.avgScore}</span>
+                    <span className="prof-kpi__lbl">Score moyen</span>
+                  </div>
+                </div>
+                <div className="prof-kpi">
+                  <div className="prof-kpi__icon">📝</div>
+                  <div>
+                    <span className="prof-kpi__val">{notes.length}</span>
+                    <span className="prof-kpi__lbl">Notes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── VIEW: PATIENTS (fiche) ── */}
+              {view === 'patients' && (
+                <div className="prof-section">
+                  <div className="prof-section__head">
+                    <h2>👤 Fiche patient — {selectedPatient.name}</h2>
+                    {selectedPatient.parent_name && (
+                      <span className="prof-section__count">👨‍👩‍👧 Parent : {selectedPatient.parent_name}</span>
+                    )}
+                  </div>
+                  <div className="prof-section__body">
+                    <div className="prof-patient-card">
+                      <div className="prof-patient-card__avatar">
+                        {selectedPatient.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="prof-patient-card__details">
+                        <h3>{selectedPatient.name}</h3>
+                        <div className="prof-patient-card__grid">
+                          <div className="prof-patient-card__item">
+                            <label>Identifiant</label>
+                            <span>#{selectedPatient.id}</span>
+                          </div>
+                          <div className="prof-patient-card__item">
+                            <label>Âge</label>
+                            <span>{selectedPatient.age} ans</span>
+                          </div>
+                          <div className="prof-patient-card__item">
+                            <label>Catégorie</label>
+                            <span style={{ textTransform: 'capitalize' }}>{selectedPatient.participant_category || 'Enfant'}</span>
+                          </div>
+                          {selectedPatient.parent_name && (
+                            <div className="prof-patient-card__item">
+                              <label>Famille</label>
+                              <span>{selectedPatient.parent_name}</span>
+                            </div>
+                          )}
+                          <div className="prof-patient-card__item">
+                            <label>Sessions jouées</label>
+                            <span>{stats.sessions}</span>
+                          </div>
+                          <div className="prof-patient-card__item">
+                            <label>Temps total</label>
+                            <span>{stats.time} min</span>
+                          </div>
+                          <div className="prof-patient-card__item">
+                            <label>Score moyen</label>
+                            <span>{stats.avgScore} / 100</span>
+                          </div>
+                          <div className="prof-patient-card__item">
+                            <label>Notes cliniques</label>
+                            <span>{notes.length}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── VIEW: ACTIVITIES ── */}
+              {view === 'activities' && (
+                <div className="prof-section">
+                  <div className="prof-section__head">
+                    <h2>📊 Journal d'activités — {selectedPatient.name}</h2>
+                    <span className="prof-section__count">{activities.length} session(s)</span>
+                  </div>
+                  <div className="prof-section__body" style={{ padding: 0 }}>
+                    {activities.length === 0 ? (
+                      <div className="prof-empty">
+                        <div className="prof-empty__icon">📭</div>
+                        <p>Aucune activité enregistrée pour ce patient.</p>
+                      </div>
+                    ) : (
+                      <div className="prof-table-wrap">
+                        <table className="prof-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Activité</th>
+                              <th>Score</th>
+                              <th>Durée</th>
+                              <th>Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activities.map((act, i) => (
+                              <tr key={act.id}>
+                                <td style={{ color: '#7A9485', fontWeight: 600 }}>{i + 1}</td>
+                                <td><strong>{act.content_title}</strong></td>
+                                <td>
+                                  <span className={`prof-score-badge ${
+                                    act.score >= 70 ? 'prof-score-badge--good'
+                                    : act.score >= 40 ? 'prof-score-badge--mid'
+                                    : 'prof-score-badge--low'
+                                  }`}>
+                                    {act.score} / 100
+                                  </span>
+                                </td>
+                                <td>{Math.round((act.duration_seconds || 0) / 60)} min</td>
+                                <td>{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── VIEW: NOTES ── */}
+              {view === 'notes' && (
+                <>
+                  {/* Formulaire nouvelle note */}
+                  <div className="prof-section" style={{ marginBottom: 20 }}>
+                    <div className="prof-section__head">
+                      <h2>✏️ Nouvelle note clinique</h2>
+                    </div>
+                    <div className="prof-section__body">
+                      <div className="prof-note-form">
+                        <textarea
+                          className="prof-note-textarea"
+                          value={newNote}
+                          onChange={e => setNewNote(e.target.value)}
+                          placeholder={`Saisissez vos observations cliniques pour ${selectedPatient.name}…`}
+                          rows={5}
+                        />
+                        <button
+                          className="prof-btn prof-btn--primary"
+                          onClick={handleAddNote}
+                          disabled={noteLoading || !newNote.trim()}
+                        >
+                          {noteLoading ? '⏳ Enregistrement…' : '💾 Enregistrer la note'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Historique des notes */}
+                  <div className="prof-section">
+                    <div className="prof-section__head">
+                      <h2>📋 Historique des notes — {selectedPatient.name}</h2>
+                      <span className="prof-section__count">{notes.length} note(s)</span>
+                    </div>
+                    <div className="prof-section__body">
+                      {notes.length === 0 ? (
+                        <div className="prof-empty">
+                          <div className="prof-empty__icon">📭</div>
+                          <p>Aucune note clinique pour ce patient.</p>
+                        </div>
+                      ) : (
+                        <div className="prof-notes-list">
+                          {notes.map(note => (
+                            <div key={note.id} className="prof-note-card">
+                              <div className="prof-note-card__header">
+                                <span className="prof-note-card__author">🩺 Dr. {note.professional_name}</span>
+                                <span className="prof-note-card__date">
+                                  {new Date(note.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                </span>
+                              </div>
+                              <p className="prof-note-card__content">{note.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+
+              {/* ── VIEW: MES INVITATIONS ── */}
+              {view === 'invitations' && (
+                <div className="prof-section">
+                  <div className="prof-section__head">
+                    <h2>📨 Mes invitations reçues</h2>
+                    <span className="prof-section__count">{invitations.length} parent{invitations.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="prof-section__body">
+                    {invitationsLoading ? (
+                      <div className="prof-empty">
+                        <div className="prof-loading__spinner" style={{ margin: '24px auto 10px' }} />
+                        <p>Chargement…</p>
+                      </div>
+                    ) : invitations.length === 0 ? (
+                      <div className="prof-empty">
+                        <div className="prof-empty__icon">📭</div>
+                        <p>Aucun parent ne vous a encore invité.<br />
+                          <small style={{ color: 'var(--prof-text-light)' }}>
+                            Les parents peuvent vous inviter depuis leur tableau de bord → "Mon professionnel".
+                          </small>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="prof-inv-list">
+                        {invitations.map(inv => (
+                          <div key={inv.id} className="prof-inv-card">
+
+                            {/* En-tête */}
+                            <div className="prof-inv-card__head">
+                              <div className="prof-inv-card__avatar">{inv.name.charAt(0).toUpperCase()}</div>
+                              <div className="prof-inv-card__info">
+                                <strong>{inv.name}</strong>
+                                <span>{inv.email}</span>
+                              </div>
+                              <div className="prof-inv-card__meta">
+                                <span className="prof-inv-card__children">
+                                  👶 {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''}
+                                </span>
+                                <span className="prof-inv-card__date">
+                                  Depuis le {new Date(inv.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Étapes */}
+                            <div className="prof-inv-steps">
+                              <div className="prof-inv-step prof-inv-step--done">
+                                <div className="prof-inv-step__circle">✓</div>
+                                <div className="prof-inv-step__text">
+                                  <div className="prof-inv-step__label">Invitation reçue</div>
+                                  <div className="prof-inv-step__desc">{inv.name} vous a invité à suivre ses enfants</div>
+                                </div>
+                              </div>
+                              <div className="prof-inv-step prof-inv-step--done">
+                                <div className="prof-inv-step__circle">✓</div>
+                                <div className="prof-inv-step__text">
+                                  <div className="prof-inv-step__label">Compte configuré</div>
+                                  <div className="prof-inv-step__desc">Vous êtes connecté et actif sur la plateforme</div>
+                                </div>
+                              </div>
+                              <div className="prof-inv-step prof-inv-step--done">
+                                <div className="prof-inv-step__circle">✓</div>
+                                <div className="prof-inv-step__text">
+                                  <div className="prof-inv-step__label">Suivi actif ✅</div>
+                                  <div className="prof-inv-step__desc">
+                                    Vous suivez {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''} de cette famille
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action */}
+                            <div className="prof-inv-card__actions">
+                              <button
+                                className="prof-btn prof-btn--primary"
+                                style={{ fontSize: 13, padding: '8px 16px', alignSelf: 'auto' }}
+                                onClick={() => {
+                                  const firstChild = patients.find(p => p.parent_id === inv.id);
+                                  if (firstChild) { setSelectedPatient(firstChild); setView('patients'); }
+                                }}
+                              >
+                                👁️ Voir les patients de cette famille
+                              </button>
+                            </div>
+
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── VIEW: TELECONSULT ── */}
+              {view === 'teleconsult' && (
+                <div className="prof-coming-soon">
+                  <div className="prof-coming-soon__icon">🎥</div>
+                  <h2>Téléconsultation</h2>
+                  <p>
+                    La fonctionnalité de téléconsultation est en cours de développement.<br />
+                    Elle sera disponible dans une prochaine version.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
+
+      {/* ── TOASTS ── */}
+      <div className="prof-toast-wrap">
+        {toasts.map(t => (
+          <div key={t.id} className={`prof-toast prof-toast--${t.type}`}>
+            <span className="prof-toast__icon">{t.type === 'success' ? '✅' : '❌'}</span>
+            <span className="prof-toast__msg">{t.msg}</span>
+            <button className="prof-toast__close" onClick={() => removeToast(t.id)}>×</button>
+          </div>
+        ))}
       </div>
+
     </div>
   );
 };
