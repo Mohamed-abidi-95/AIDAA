@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import '../styles/ProfessionalDashboard.css';
@@ -67,6 +68,7 @@ const NAV = [
 // ── Component ──────────────────────────────────────────────────────────────
 export const ProfessionalPage = (): JSX.Element => {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const { toasts, add: toast, remove: removeToast } = useToast();
 
   const [view, setView]                         = useState<ViewType>('patients');
@@ -201,7 +203,13 @@ export const ProfessionalPage = (): JSX.Element => {
             <button
               key={n.id}
               className={`prof-nav__item ${view === n.id ? 'active' : ''}`}
-              onClick={() => setView(n.id as ViewType)}
+              onClick={() => {
+                if (n.id === 'teleconsult') {
+                  navigate('/professionnel/teleconsultation');
+                } else {
+                  setView(n.id as ViewType);
+                }
+              }}
             >
               <span className="nav-icon">{n.icon}</span>
               {n.label}

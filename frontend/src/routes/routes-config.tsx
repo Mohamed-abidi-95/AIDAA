@@ -11,6 +11,9 @@ import { ChildDashboard } from '../pages/ChildDashboard';
 import { ParentDashboard } from '../pages/ParentDashboard';
 import { AdminPanel } from '../pages/AdminPanel';
 import { ProfessionalPage } from '../pages/ProfessionalPage';
+import { TeleconsultationList } from '../pages/TeleconsultationList';
+import { TeleconsultationRoom } from '../pages/TeleconsultationRoom';
+import { TeleconsultationSchedule } from '../pages/TeleconsultationSchedule';
 import { ProgressDashboard } from '../pages/ProgressDashboard';
 import { PendingApprovalPage } from '../pages/PendingApprovalPage';
 import { ProfessionalSignupPage } from '../pages/ProfessionalSignupPage';
@@ -47,6 +50,9 @@ export const AppRoutes = (): JSX.Element => {
 
         <Route element={<RoleRoute allowedRoles={['professional']} />}>
           <Route path="professional/dashboard" element={<ProfessionalPage />} />
+          <Route path="professionnel/teleconsultation" element={<TeleconsultationList />} />
+          <Route path="professionnel/teleconsultation/planifier" element={<TeleconsultationSchedule />} />
+          <Route path="professionnel/teleconsultation/:sessionId" element={<TeleconsultationRoom />} />
         </Route>
       </Route>
 
