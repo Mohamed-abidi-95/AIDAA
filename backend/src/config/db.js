@@ -59,9 +59,7 @@ const query = async (sql, values = []) => {
       connection.release();
     }
   } catch (error) {
-    // Log error to console for debugging
-    console.error('Database Query Error:', error);
-    // Re-throw error for caller to handle
+    // Re-throw for caller to handle — avoid logging migration noise here
     throw error;
   }
 };

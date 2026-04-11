@@ -26,6 +26,7 @@ const professionalRoutes = require('./routes/professional.routes');
 const sequenceRoutes     = require('./routes/sequence.routes');
 const aacRoutes          = require('./routes/aac.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
+const analyticsRoutes    = require('./routes/analyticsRoutes');
 
 // ============================================================================
 // Import middlewares
@@ -34,29 +35,116 @@ const errorHandler = require('./middlewares/errorHandler');
 const { query: dbQuery } = require('./config/db');
 
 // ============================================================================
-// AUTO-MIGRATION : create missing tables on startup
+// AUTO-MIGRATION : create / alter missing tables and columns on startup
 // ============================================================================
 const autoMigrate = async () => {
-  try {
-    await dbQuery(`
-      CREATE TABLE IF NOT EXISTS professional_invitations (
-        id              INT AUTO_INCREMENT PRIMARY KEY,
-        parent_id       INT NOT NULL,
-        professional_id INT NOT NULL,
-        status          ENUM('pending','active','revoked') NOT NULL DEFAULT 'pending',
-        invited_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (parent_id)       REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (professional_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_assignment  (parent_id, professional_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('[DB] ✅ professional_invitations table ready');
-  } catch (e) {
-    // Table may already exist or minor constraint issue — not fatal
-    if (!e.message.includes('already exists')) {
-      console.warn('[DB] auto-migrate warning:', e.message);
+  const run = async (label, sql) => {
+    try {
+      await dbQuery(sql);
+      console.log(`[DB] ✅ ${label}`);
+    } catch (e) {
+      if (!e.message.includes('already exists') && !e.message.includes('Duplicate column')) {
+        console.warn(`[DB] ⚠️  ${label}: ${e.message}`);
+      }
     }
-  }
+  };
+
+  // ── professional_invitations ──────────────────────────────────────────────
+  await run('professional_invitations table', `
+    CREATE TABLE IF NOT EXISTS professional_invitations (
+      id              INT AUTO_INCREMENT PRIMARY KEY,
+      parent_id       INT NOT NULL,
+      professional_id INT NOT NULL,
+      status          ENUM('pending','active','revoked') NOT NULL DEFAULT 'pending',
+      invited_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (parent_id)       REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (professional_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE KEY unique_assignment  (parent_id, professional_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  // ── children — colonne manquante (cause de l'erreur de création) ──────────
+  await run('children.participant_category', `
+    ALTER TABLE children
+    ADD COLUMN participant_category ENUM('enfant','jeune','adulte') NOT NULL DEFAULT 'enfant'
+  `);
+
+  // ── users — colonnes ajoutées post-schéma initial ─────────────────────────
+  await run('users.status',              `ALTER TABLE users ADD COLUMN status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved'`);
+  await run('users.reset_token',         `ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) DEFAULT NULL`);
+  await run('users.reset_token_expires', `ALTER TABLE users ADD COLUMN reset_token_expires DATETIME DEFAULT NULL`);
+  await run('users.specialite',          `ALTER TABLE users ADD COLUMN specialite VARCHAR(100) DEFAULT NULL`);
+
+  // ── activity_logs — colonnes analytics ───────────────────────────────────
+  await run('activity_logs.score',            `ALTER TABLE activity_logs ADD COLUMN score INT DEFAULT 0`);
+  await run('activity_logs.duration_seconds', `ALTER TABLE activity_logs ADD COLUMN duration_seconds INT DEFAULT 0`);
+  await run('activity_logs.action',           `ALTER TABLE activity_logs ADD COLUMN action VARCHAR(50) DEFAULT 'content_accessed'`);
+  await run('activity_logs.content_id nullable', `ALTER TABLE activity_logs MODIFY COLUMN content_id INT DEFAULT NULL`);
+
+  // ── content — colonnes étendues ───────────────────────────────────────────
+  await run('content.category_color',       `ALTER TABLE content ADD COLUMN category_color VARCHAR(20) DEFAULT '#64748b'`);
+  await run('content.emoji',                `ALTER TABLE content ADD COLUMN emoji VARCHAR(10) DEFAULT '📄'`);
+  await run('content.duration',             `ALTER TABLE content ADD COLUMN duration VARCHAR(20) DEFAULT NULL`);
+  await run('content.steps',                `ALTER TABLE content ADD COLUMN steps INT DEFAULT NULL`);
+  await run('content.minutes',              `ALTER TABLE content ADD COLUMN minutes INT DEFAULT NULL`);
+  await run('content.emoji_color',          `ALTER TABLE content ADD COLUMN emoji_color VARCHAR(20) DEFAULT NULL`);
+  await run('content.participant_category', `ALTER TABLE content ADD COLUMN participant_category ENUM('enfant','jeune','adulte') DEFAULT 'enfant'`);
+
+  // ── tables optionnelles ───────────────────────────────────────────────────
+  await run('messages table', `CREATE TABLE IF NOT EXISTS messages (
+    id INT AUTO_INCREMENT PRIMARY KEY, child_id INT NOT NULL,
+    sender_id INT NOT NULL, receiver_id INT NOT NULL, content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id), FOREIGN KEY (receiver_id) REFERENCES users(id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('games table', `CREATE TABLE IF NOT EXISTS games (
+    id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(100) NOT NULL,
+    description TEXT, type VARCHAR(50), thumbnail_url VARCHAR(255),
+    instructions TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('guided_sequences table', `CREATE TABLE IF NOT EXISTS guided_sequences (
+    id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(200) NOT NULL, description TEXT,
+    emoji VARCHAR(10) DEFAULT '🔵', duration_minutes INT DEFAULT 5,
+    difficulty VARCHAR(50) DEFAULT 'facile',
+    participant_category ENUM('enfant','jeune','adulte') DEFAULT 'enfant',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('sequence_steps table', `CREATE TABLE IF NOT EXISTS sequence_steps (
+    id INT AUTO_INCREMENT PRIMARY KEY, sequence_id INT NOT NULL,
+    step_number INT NOT NULL, title VARCHAR(200) NOT NULL, description TEXT,
+    emoji VARCHAR(10) DEFAULT '▶️', duration_seconds INT DEFAULT 60,
+    FOREIGN KEY (sequence_id) REFERENCES guided_sequences(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('aac_symbols table', `CREATE TABLE IF NOT EXISTS aac_symbols (
+    id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(100) NOT NULL,
+    emoji VARCHAR(10) DEFAULT '🔵', category VARCHAR(100) DEFAULT 'Général',
+    color VARCHAR(20) DEFAULT '#64748b',
+    participant_category ENUM('enfant','jeune','adulte') DEFAULT 'enfant',
+    sort_order INT DEFAULT 0
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('badges table', `CREATE TABLE IF NOT EXISTS badges (
+    id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL,
+    emoji VARCHAR(10) DEFAULT '🏅', color VARCHAR(20) DEFAULT '#f59e0b',
+    condition_type VARCHAR(50) DEFAULT 'activities', condition_value INT DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('child_badges table', `CREATE TABLE IF NOT EXISTS child_badges (
+    child_id INT NOT NULL, badge_id INT NOT NULL,
+    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (child_id, badge_id),
+    FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+  await run('teleconsultations.created_at', `ALTER TABLE teleconsultations ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+
+  console.log('[DB] ✅ Auto-migration complète');
 };
 autoMigrate();
 
@@ -137,6 +225,7 @@ app.use('/api/professional',   professionalRoutes);
 app.use('/api/sequences',      sequenceRoutes);
 app.use('/api/aac',            aacRoutes);
 app.use('/api/gamification',   gamificationRoutes);
+app.use('/api/analytics',      analyticsRoutes);
 
 // ============================================================================
 // 404 Error Handler

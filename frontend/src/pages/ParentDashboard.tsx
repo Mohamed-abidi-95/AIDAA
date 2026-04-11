@@ -2,7 +2,7 @@
 // PARENT DASHBOARD — Fixed sidebar layout (same pattern as AdminPanel)
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
@@ -14,7 +14,6 @@ declare global { interface Window { Chart: any; } }
 interface Child { id: number; name: string; age: number; participant_category?: 'enfant' | 'jeune' | 'adulte'; }
 interface Activity { id: number; child_id: number; content_title: string; score: number; duration_seconds: number; date: string; }
 interface Note { id: number; child_id: number; content: string; professional_name: string; date: string; }
-interface SkillProgress { label: string; value: number; color: string; }
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
 interface InviteResult { id: number; name: string; email: string; inviteLink: string; previewUrl?: string; }
 interface ProfessionalRecord {
@@ -22,6 +21,12 @@ interface ProfessionalRecord {
   status: 'pending' | 'active' | 'revoked';
   invited_at: string;
 }
+
+// ── Analytics interfaces ─────────────────────────────────────────────────────
+interface AnalyticsOverview { totalSessions: number; totalMinutes: number; avgScore: number; streakDays: number; }
+interface TimelinePoint    { date: string; minutes: number; }
+interface BreakdownItem    { category: string; count: number; pct: number; }
+interface ScoreByCategory  { category: string; avgScore: number; }
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 const NAV = [
@@ -35,15 +40,6 @@ const NAV = [
 
 type ViewKey = typeof NAV[number]['key'];
 
-const SKILLS: SkillProgress[] = [
-  { label: 'Reconnaissance émotions', value: 82, color: '#00A651' },
-  { label: 'Langage & vocabulaire',   value: 74, color: '#007A3A' },
-  { label: 'Interaction sociale',     value: 68, color: '#00C853' },
-  { label: 'Motricité fine',          value: 71, color: '#00572A' },
-  { label: 'Tolérance sensorielle',   value: 60, color: '#33CC77' },
-  { label: 'Mémoire & attention',     value: 78, color: '#009944' },
-];
-
 // ── Component ───────────────────────────────────────────────────────────────
 export const ParentDashboard = (): JSX.Element => {
   const { logout } = useAuth();
@@ -54,7 +50,18 @@ export const ParentDashboard = (): JSX.Element => {
   const [activities, setActivities]         = useState<Activity[]>([]);
   const [notes, setNotes]                   = useState<Note[]>([]);
   const [view, setView]                     = useState<ViewKey>('summary');
-  const [chartsInitialized, setChartsInitialized] = useState(false);
+
+  // Analytics state
+  const [analyticsOverview,  setAnalyticsOverview]  = useState<AnalyticsOverview | null>(null);
+  const [analyticsTimeline,  setAnalyticsTimeline]  = useState<TimelinePoint[]>([]);
+  const [analyticsBreakdown, setAnalyticsBreakdown] = useState<BreakdownItem[]>([]);
+  const [analyticsScores,    setAnalyticsScores]    = useState<ScoreByCategory[]>([]);
+  const [analyticsLoading,   setAnalyticsLoading]   = useState(false);
+  const [analyticsError,     setAnalyticsError]     = useState('');
+
+  // Chart refs (avoid "canvas already in use" on child change)
+  const lineChartRef  = useRef<any>(null);
+  const donutChartRef = useRef<any>(null);
 
   // Create child form
   const [newChildName, setNewChildName]                   = useState('');
@@ -83,44 +90,103 @@ export const ParentDashboard = (): JSX.Element => {
   const [profActionLoading,      setProfActionLoading]      = useState(false);
   const [profActionMsg,          setProfActionMsg]          = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // ── Charts ──────────────────────────────────────────────────────────────
+  // ── Analytics data fetch ─────────────────────────────────────────────────
   useEffect(() => {
-    if (view === 'analytics' && !chartsInitialized && window.Chart) {
-      initializeCharts();
-      setChartsInitialized(true);
-    }
-  }, [view, chartsInitialized]);
+    if (view !== 'analytics' || !selectedChild) return;
+    const fetchAnalytics = async () => {
+      try {
+        setAnalyticsLoading(true);
+        setAnalyticsError('');
+        const [ovRes, tlRes, bdRes, scRes] = await Promise.all([
+          api.get(`/api/analytics/child/${selectedChild.id}/overview`),
+          api.get(`/api/analytics/child/${selectedChild.id}/sessions-timeline`),
+          api.get(`/api/analytics/child/${selectedChild.id}/activity-breakdown`),
+          api.get(`/api/analytics/child/${selectedChild.id}/scores-by-category`),
+        ]);
+        if (ovRes.data.success) setAnalyticsOverview(ovRes.data.data);
+        if (tlRes.data.success) setAnalyticsTimeline(tlRes.data.data);
+        if (bdRes.data.success) setAnalyticsBreakdown(bdRes.data.data);
+        if (scRes.data.success) setAnalyticsScores(scRes.data.data);
+      } catch (err: any) {
+        setAnalyticsError(err?.response?.data?.message || 'Erreur lors du chargement des analytiques.');
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, [view, selectedChild]);
 
-  const initializeCharts = () => {
-    const gridOpts = { color: 'rgba(100,116,139,.08)', borderColor: 'rgba(100,116,139,.12)' };
-    const fontOpts = { family: 'Inter,sans-serif', size: 11, color: '#64748b' };
+  // ── Chart rendering (re-runs whenever timeline/breakdown data changes) ────
+  useEffect(() => {
+    if (view !== 'analytics' || analyticsLoading || !window.Chart) return;
+    const timer = setTimeout(() => {
+      const gridOpts = { color: 'rgba(100,116,139,.08)', borderColor: 'rgba(100,116,139,.12)' };
+      const fontOpts = { family: 'Inter,sans-serif', size: 11, color: '#64748b' };
 
-    const lineCtx = document.getElementById('lineChart') as HTMLCanvasElement;
-    if (lineCtx) {
-      new window.Chart(lineCtx, {
-        type: 'line',
-        data: {
-          labels: ['8 Mar','11 Mar','14 Mar','17 Mar','20 Mar','23 Mar','26 Mar','29 Mar','1 Avr','3 Avr','5 Avr'],
-          datasets: [
-            { label: 'Temps', data: [12,18,22,15,25,28,20,30,24,18,26], borderColor: '#00A651', backgroundColor: 'rgba(0,166,81,.08)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00A651', borderWidth: 2 },
-            { label: 'Objectif', data: [20,20,20,20,20,20,20,20,20,20,20], borderColor: '#007A3A', borderDash: [4,4], borderWidth: 1.5, pointRadius: 0, fill: false },
-          ],
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: gridOpts, ticks: { ...fontOpts, maxRotation: 0 } }, y: { grid: gridOpts, ticks: { ...fontOpts }, min: 0, max: 40 } } },
-      });
-    }
-    const donutCtx = document.getElementById('donutChart') as HTMLCanvasElement;
-    if (donutCtx) {
-      new window.Chart(donutCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Émotions','Langage','Social','Moteur','Sensoriel','Cognition','Créativité'],
-          datasets: [{ data: [26,21,18,14,10,7,4], backgroundColor: ['#00A651','#007A3A','#00C853','#00572A','#33CC77','#009944','#C2EAD4'], borderWidth: 2, borderColor: '#fff' }],
-        },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '64%', plugins: { legend: { display: false } } },
-      });
-    }
-  };
+      // ── Line chart: sessions timeline ─────────────────────────────────────
+      const lineCtx = document.getElementById('lineChart') as HTMLCanvasElement | null;
+      if (lineCtx) {
+        if (lineChartRef.current) { lineChartRef.current.destroy(); lineChartRef.current = null; }
+        const labels = analyticsTimeline.map(p =>
+          new Date(p.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+        );
+        const minutesData = analyticsTimeline.map(p => p.minutes);
+        const avgMin = minutesData.length ? Math.round(minutesData.reduce((a, b) => a + b, 0) / minutesData.length) : 20;
+        lineChartRef.current = new window.Chart(lineCtx, {
+          type: 'line',
+          data: {
+            labels: labels.length ? labels : ['Aucune donnée'],
+            datasets: [
+              {
+                label: 'Temps (min)',
+                data: minutesData.length ? minutesData : [0],
+                borderColor: '#00A651', backgroundColor: 'rgba(0,166,81,.08)',
+                fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00A651', borderWidth: 2,
+              },
+              {
+                label: 'Objectif',
+                data: labels.length ? labels.map(() => avgMin) : [avgMin],
+                borderColor: '#007A3A', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: gridOpts, ticks: { ...fontOpts, maxRotation: 0 } },
+              y: { grid: gridOpts, ticks: { ...fontOpts }, min: 0 },
+            },
+          },
+        });
+      }
+
+      // ── Donut chart: activity breakdown ───────────────────────────────────
+      const donutCtx = document.getElementById('donutChart') as HTMLCanvasElement | null;
+      if (donutCtx) {
+        if (donutChartRef.current) { donutChartRef.current.destroy(); donutChartRef.current = null; }
+        const PALETTE = ['#00A651','#007A3A','#00C853','#00572A','#33CC77','#009944','#C2EAD4','#00E676'];
+        const bdLabels = analyticsBreakdown.map(b => b.category);
+        const bdData   = analyticsBreakdown.map(b => b.count);
+        donutChartRef.current = new window.Chart(donutCtx, {
+          type: 'doughnut',
+          data: {
+            labels: bdLabels.length ? bdLabels : ['Aucune activité'],
+            datasets: [{
+              data: bdData.length ? bdData : [1],
+              backgroundColor: bdLabels.length ? PALETTE.slice(0, bdLabels.length) : ['#e2e8f0'],
+              borderWidth: 2, borderColor: '#fff',
+            }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '64%',
+            plugins: { legend: { display: false } },
+          },
+        });
+      }
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [view, analyticsTimeline, analyticsBreakdown, analyticsLoading]);
 
   // ── Data fetching ────────────────────────────────────────────────────────
   const refreshChildren = async (): Promise<void> => {
@@ -167,7 +233,10 @@ export const ParentDashboard = (): JSX.Element => {
       await refreshChildren();
       setSelectedChild(data.data);
       setNewChildName(''); setNewChildAge(5); setNewParticipantCategory('enfant');
-    } catch { alert('Erreur lors de la création du profil.'); }
+    } catch (err: any) {
+      const serverMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || '';
+      alert(`Erreur lors de la création du profil.\n\n${serverMsg}`);
+    }
     finally { setCreatingChild(false); }
   };
 
@@ -420,28 +489,93 @@ export const ParentDashboard = (): JSX.Element => {
               {/* ── Analytics ── */}
               {view === 'analytics' && (
                 <>
-                  <div className="pd-kpi-grid">
-                    <div className="pd-kpi"><div className="pd-kpi-icon">🎮</div><div className="pd-kpi-val">47</div><div className="pd-kpi-label">Sessions jouées</div><div className="pd-kpi-change">↑ 12% vs mois dernier</div></div>
-                    <div className="pd-kpi"><div className="pd-kpi-icon">⏱</div><div className="pd-kpi-val">8,4 h</div><div className="pd-kpi-label">Temps total</div><div className="pd-kpi-change">↑ 6% vs mois dernier</div></div>
-                    <div className="pd-kpi"><div className="pd-kpi-icon">⭐</div><div className="pd-kpi-val">78</div><div className="pd-kpi-label">Score moy. / 100</div><div className="pd-kpi-change">↑ 5 pts vs mois dernier</div></div>
-                    <div className="pd-kpi"><div className="pd-kpi-icon">🔥</div><div className="pd-kpi-val">14</div><div className="pd-kpi-label">Jours consécutifs</div><div className="pd-kpi-change">Record personnel !</div></div>
-                  </div>
-                  <div className="pd-charts-row">
-                    <div className="pd-chart-card"><h3>Temps de session quotidien (minutes)</h3><div className="pd-chart-wrap" style={{ height: 180 }}><canvas id="lineChart" /></div></div>
-                    <div className="pd-chart-card"><h3>Répartition par type d'activité</h3><div className="pd-chart-wrap" style={{ height: 180 }}><canvas id="donutChart" /></div></div>
-                  </div>
-                  <div className="pd-chart-card">
-                    <h3>Progression des compétences</h3>
-                    <div className="pd-progress-list">
-                      {SKILLS.map((s, i) => (
-                        <div key={i} className="pd-prog-row">
-                          <div className="pd-prog-label">{s.label}</div>
-                          <div className="pd-prog-bar-bg"><div className="pd-prog-bar" style={{ width: `${s.value}%`, background: s.color }} /></div>
-                          <div className="pd-prog-val">{s.value}%</div>
-                        </div>
-                      ))}
+                  {analyticsError && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', color: '#dc2626', fontSize: 13, marginBottom: 16 }}>
+                      ❌ {analyticsError}
                     </div>
-                  </div>
+                  )}
+
+                  {analyticsLoading ? (
+                    <div style={{ textAlign: 'center', padding: 48, color: 'rgba(255,255,255,.6)', fontSize: 15 }}>
+                      ⏳ Chargement des analytiques…
+                    </div>
+                  ) : (
+                    <>
+                      {/* KPI cards */}
+                      <div className="pd-kpi-grid">
+                        <div className="pd-kpi">
+                          <div className="pd-kpi-icon">🎮</div>
+                          <div className="pd-kpi-val">{analyticsOverview?.totalSessions ?? '—'}</div>
+                          <div className="pd-kpi-label">Sessions jouées</div>
+                        </div>
+                        <div className="pd-kpi">
+                          <div className="pd-kpi-icon">⏱</div>
+                          <div className="pd-kpi-val">
+                            {analyticsOverview != null
+                              ? `${(analyticsOverview.totalMinutes / 60).toFixed(1)} h`
+                              : '—'}
+                          </div>
+                          <div className="pd-kpi-label">Temps total</div>
+                        </div>
+                        <div className="pd-kpi">
+                          <div className="pd-kpi-icon">⭐</div>
+                          <div className="pd-kpi-val">{analyticsOverview?.avgScore ?? '—'}</div>
+                          <div className="pd-kpi-label">Score moy. / 100</div>
+                        </div>
+                        <div className="pd-kpi">
+                          <div className="pd-kpi-icon">🔥</div>
+                          <div className="pd-kpi-val">{analyticsOverview?.streakDays ?? '—'}</div>
+                          <div className="pd-kpi-label">Jours consécutifs</div>
+                        </div>
+                      </div>
+
+                      {/* Charts row */}
+                      <div className="pd-charts-row">
+                        <div className="pd-chart-card">
+                          <h3>Temps de session quotidien (minutes)</h3>
+                          <div className="pd-chart-wrap" style={{ height: 180 }}>
+                            {analyticsTimeline.length === 0
+                              ? <p style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, paddingTop: 60, textAlign: 'center' }}>Aucune session enregistrée</p>
+                              : <canvas id="lineChart" />
+                            }
+                          </div>
+                        </div>
+                        <div className="pd-chart-card">
+                          <h3>Répartition par type d'activité</h3>
+                          <div className="pd-chart-wrap" style={{ height: 180 }}>
+                            {analyticsBreakdown.length === 0
+                              ? <p style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, paddingTop: 60, textAlign: 'center' }}>Aucune activité catégorisée</p>
+                              : <canvas id="donutChart" />
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scores by category */}
+                      <div className="pd-chart-card">
+                        <h3>Scores moyens par catégorie</h3>
+                        {analyticsScores.length === 0 ? (
+                          <p className="pd-empty-inline">Aucune donnée de score disponible pour l'instant.</p>
+                        ) : (
+                          <div className="pd-progress-list">
+                            {analyticsScores.map((s, i) => {
+                              const COLORS = ['#00A651','#007A3A','#00C853','#00572A','#33CC77','#009944'];
+                              const color  = COLORS[i % COLORS.length];
+                              return (
+                                <div key={i} className="pd-prog-row">
+                                  <div className="pd-prog-label" style={{ textTransform: 'capitalize' }}>{s.category}</div>
+                                  <div className="pd-prog-bar-bg">
+                                    <div className="pd-prog-bar" style={{ width: `${s.avgScore}%`, background: color }} />
+                                  </div>
+                                  <div className="pd-prog-val">{s.avgScore} / 100</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 

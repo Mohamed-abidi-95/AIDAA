@@ -7,9 +7,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import '../styles/ProfessionalDashboard.css';
+import AnalytiquesProfessionnel from './AnalytiquesProfessionnel';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'teleconsult';
+type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'teleconsult' | 'analytics';
 
 interface Child {
   id: number;
@@ -61,6 +62,7 @@ const NAV = [
   { id: 'patients',     icon: '👥', label: 'Mes patients' },
   { id: 'activities',   icon: '📊', label: 'Activités' },
   { id: 'notes',        icon: '📝', label: 'Notes cliniques' },
+  { id: 'analytics',    icon: '📈', label: 'Analytiques' },
   { id: 'invitations',  icon: '📨', label: 'Mes invitations' },
   { id: 'teleconsult',  icon: '🎥', label: 'Téléconsultation' },
 ] as const;
@@ -307,15 +309,23 @@ export const ProfessionalPage = (): JSX.Element => {
             </div>
           )}
 
-          {/* Aucun patient */}
-          {!loading && patients.length === 0 && (
+          {/* Aucun patient (masqué sur l'onglet analytics) */}
+          {!loading && patients.length === 0 && view !== 'analytics' && (
             <div className="prof-empty-state">
               👥 Aucun patient assigné pour le moment.<br />
               Contactez l'administrateur pour obtenir l'accès aux dossiers patients.
             </div>
           )}
 
-          {selectedPatient && !loading && (
+          {/* ── VUE ANALYTIQUES (niveau docteur, indépendante du patient sélectionné) ── */}
+          {view === 'analytics' && !loading && user?.id && (
+            <AnalytiquesProfessionnel
+              doctorId={user.id}
+              patients={patients}
+            />
+          )}
+
+          {selectedPatient && !loading && view !== 'analytics' && (
             <>
               {/* KPIs */}
               <div className="prof-kpis">
