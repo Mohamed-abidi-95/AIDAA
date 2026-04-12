@@ -85,13 +85,14 @@ const createWithAllFields = async (
   age_group,
   level,
   url,
-  description
+  description,
+  participant_category = 'enfant'
 ) => {
   const results = await query(
     `INSERT INTO content (
       title, type, category, category_color, emoji, duration,
-      steps, minutes, emoji_color, age_group, level, url, description
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      steps, minutes, emoji_color, age_group, level, url, description, participant_category
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title,
       type,
@@ -106,6 +107,7 @@ const createWithAllFields = async (
       level || 1,
       url,
       description || '',
+      ['enfant', 'jeune', 'adulte'].includes(participant_category) ? participant_category : 'enfant',
     ]
   );
   return results.insertId;
@@ -138,13 +140,14 @@ const updateWithAllFields = async (
   emoji_color,
   age_group,
   level,
-  description
+  description,
+  participant_category = 'enfant'
 ) => {
   const results = await query(
     `UPDATE content SET
       title = ?, type = ?, category = ?, category_color = ?, emoji = ?,
       duration = ?, steps = ?, minutes = ?, emoji_color = ?,
-      age_group = ?, level = ?, description = ?
+      age_group = ?, level = ?, description = ?, participant_category = ?
     WHERE id = ?`,
     [
       title,
@@ -159,6 +162,7 @@ const updateWithAllFields = async (
       age_group || '4-6',
       level || 1,
       description || '',
+      ['enfant', 'jeune', 'adulte'].includes(participant_category) ? participant_category : 'enfant',
       contentId,
     ]
   );

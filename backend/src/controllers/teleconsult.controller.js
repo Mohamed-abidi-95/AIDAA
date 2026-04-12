@@ -4,7 +4,8 @@
 // Handles virtual consultation scheduling and management
 
 const teleconsultModel = require('../models/teleconsult.model');
-const userModel = require('../models/user.model');
+const userModel        = require('../models/user.model');
+const { query }        = require('../config/db');
 
 // ============================================================================
 // Get all teleconsultations for authenticated user
@@ -117,6 +118,21 @@ const create = async (req, res) => {
         success: false,
         message: 'Access denied',
       });
+    }
+
+    // 🔒 Verify the professional is linked to the parent via professional_invitations
+    if (req.user.role !== 'admin') {
+      const linkRows = await query(
+        `SELECT 1 FROM professional_invitations
+         WHERE parent_id = ? AND professional_id = ? AND status != 'revoked'`,
+        [parentId, professionalId]
+      );
+      if (linkRows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Ce professionnel n\'est pas lié à ce parent',
+        });
+      }
     }
 
     const consultationId = await teleconsultModel.create(

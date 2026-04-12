@@ -1,68 +1,33 @@
-/* ========================================================================== */
-/* GLOBAL STYLES */
-/* ========================================================================== */
-/* Global CSS reset and default styles for the entire application */
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ========================================================================== */
-/* RESET AND DEFAULTS */
+/* SCROLLBAR STYLING */
 /* ========================================================================== */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ========================================================================== */
+/* FOCUS STYLES */
+/* ========================================================================== */
+*:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
 }
 
-html,
-body,
-#root {
-  width: 100%;
-  height: 100%;
-}
-
-body {
-  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont,
-    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f5f7fa;
-}
-
-input,
-button,
-select,
-textarea {
-  font-family: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-a {
-  color: #E07820;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-  color: #C45E0A;
+button:focus-visible {
+  outline-offset: -2px;
 }
 
 /* ========================================================================== */
-/* MICRO-INTERACTIONS — Applied globally to all clickable cards & buttons     */
+/* MICRO-INTERACTIONS */
 /* ========================================================================== */
-
-[role="button"],
-button {
-  transition: opacity 0.15s ease;
-  cursor: pointer;
-}
+nav button { transition: all 0.2s ease-in-out; }
 
 .card-interactive,
 .clickable-card {
@@ -75,39 +40,6 @@ button {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-/* ========================================================================== */
-/* SCROLLBAR STYLING */
-/* ========================================================================== */
-/* Custom scrollbar for better aesthetics */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-/* ========================================================================== */
-/* FOCUS STYLES FOR ACCESSIBILITY */
-/* ========================================================================== */
-/* Ensure proper focus indicators for keyboard navigation */
-
-*:focus-visible {
-  outline: 2px solid #E07820;
-  outline-offset: 2px;
-}
-
-button:focus-visible {
-  outline-offset: -2px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

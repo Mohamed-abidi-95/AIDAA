@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDAA Administration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Palette de couleurs basée sur le design de login */
+            --brand-orange: #F97316;       /* L'orange principal vibrant */
+            --brand-orange-dark: #EA580C;
+            --brand-orange-light: #FFEDD5; /* Fond clair pour les badges/états actifs */
+            
+            --bg-body: #FAFAFA;            /* Gris ultra clair pour le fond global */
+            --bg-surface: #FFFFFF;         /* Blanc pur pour les cartes */
+            
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --text-light: #9CA3AF;
+            
+            --border-color: #E5E7EB;
+            --border-input: #D1D5DB;
+            
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --info: #3B82F6;
+            --info-light: #DBEAFE;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR (Basé sur le panneau gauche du login) --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--brand-orange);
+            /* Motif de grille subtil comme sur la maquette */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            box-shadow: 4px 0 15px rgba(249, 115, 22, 0.2);
+        }
+
+        .sidebar-header {
+            padding: 32px 24px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            background-color: white;
+            color: var(--brand-orange);
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-text h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .brand-text span {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+
+        .sidebar-menu {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all 0.2s;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            border: 1px solid transparent;
+        }
+
+        .menu-item i {
+            width: 24px;
+            margin-right: 12px;
+            font-size: 18px;
+            opacity: 0.8;
+        }
+
+        .menu-item:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .menu-item.active {
+            background-color: white;
+            color: var(--brand-orange);
+            box-shadow: var(--shadow-md);
+        }
+        .menu-item.active i {
+            opacity: 1;
+            color: var(--brand-orange);
+        }
+
+        .sidebar-footer {
+            padding: 24px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--brand-orange);
+            font-size: 16px;
+        }
+
+        .user-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .user-info p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-logout {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border: none;
+            color: white;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-logout:hover {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .top-header {
+            height: 80px;
+            background-color: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 5;
+        }
+
+        .breadcrumb {
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .breadcrumb span.current {
+            color: var(--text-main);
+            font-weight: 700;
+            margin-left: 8px;
+            font-size: 20px;
+        }
+
+        .btn-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            position: relative;
+            font-size: 18px;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-body);
+            border-color: var(--border-input);
+        }
+
+        .badge-notification {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--brand-orange);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        /* --- STATS CARDS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon.orange { background: var(--brand-orange-light); color: var(--brand-orange); }
+        .stat-icon.blue { background: var(--info-light); color: var(--info); }
+        .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-icon.gray { background: #F3F4F6; color: var(--text-muted); }
+
+        .stat-info h3 {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .stat-info p {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* --- VIEWS --- */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- ÉLÉMENTS COMMUNS --- */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .section-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Badge style "Espace sécurisé" de la maquette */
+        .badge-pill {
+            background: var(--brand-orange-light);
+            color: var(--brand-orange-dark);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-panel {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            margin-bottom: 32px;
+        }
+
+        /* --- BOUTONS --- */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--brand-orange);
+            color: white;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.2);
+        }
+        .btn-primary:hover {
+            background: var(--brand-orange-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid var(--border-input);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            background: var(--bg-body);
+            border-color: var(--text-muted);
+        }
+
+        .btn-danger-outline {
+            background: white;
+            border: 1px solid var(--danger-light);
+            color: var(--danger);
+        }
+        .btn-danger-outline:hover {
+            background: var(--danger-light);
+        }
+
+        /* --- FORMULAIRES (Style Login) --- */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 24px;
+        }
+        .form-row .form-group { flex: 1; }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border-input);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 15px;
+            color: var(--text-main);
+            transition: all 0.2s;
+            background: var(--bg-surface);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-light);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--brand-orange);
+            box-shadow: 0 0 0 4px var(--brand-orange-light);
+        }
+
+        /* --- BIBLIOTHÈQUE --- */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .media-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-float);
+        }
+
+        .media-thumb {
+            position: relative;
+            height: 180px;
+            background-color: #1F2937;
+            background-image: url('https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=800&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            transition: 0.3s;
+        }
+
+        .media-card:hover .media-thumb::after {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .play-btn {
+            position: relative;
+            z-index: 2;
+            width: 56px;
+            height: 56px;
+            background: var(--brand-orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+            transition: 0.3s;
+            cursor: pointer;
+            padding-left: 4px; /* Center icon */
+        }
+        
+        .media-card:hover .play-btn {
+            transform: scale(1.1);
+        }
+
+        .media-type {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .media-content {
+            padding: 20px;
+        }
+
+        .media-content h4 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .media-content p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .media-tags {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tag {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            background: var(--bg-body);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .media-actions {
+            display: flex;
+            gap: 12px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .media-actions .btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        /* --- TABS --- */
+        .custom-tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .custom-tab {
+            padding: 12px 24px;
+            background: white;
+            border: 1px solid var(--border-input);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .custom-tab.active {
+            background: var(--brand-orange-light);
+            border-color: var(--brand-orange);
+            color: var(--brand-orange-dark);
+        }
+
+        /* --- TABLEAUX --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 20px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 700;
+        }
+
+        td {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 15px;
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        tbody tr:hover {
+            background-color: var(--bg-body);
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-avatar-sm {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            color: white;
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .role-pro {
+            background: var(--info-light);
+            color: var(--info);
+        }
+
+        .role-parent {
+            background: var(--brand-orange-light);
+            color: var(--brand-orange-dark);
+        }
+
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon">
+                <i class="fa-solid fa-puzzle-piece"></i> </div>
+            <div class="brand-text">
+                <h2>AIDAA</h2>
+                <span>ADMINISTRATION</span>
+            </div>
+        </div>
+
+        <div class="sidebar-menu">
+            <a class="menu-item active" onclick="switchTab('bibliotheque', this)">
+                <i class="fa-solid fa-swatchbook"></i> Bibliothèque
+            </a>
+            <a class="menu-item" onclick="switchTab('importer', this)">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Importer contenu
+            </a>
+            <a class="menu-item" onclick="switchTab('utilisateurs', this)">
+                <i class="fa-solid fa-users"></i> Utilisateurs
+            </a>
+            <a class="menu-item" onclick="switchTab('demandes', this)">
+                <i class="fa-solid fa-bell"></i> Demandes
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar">A</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Administrateur</p>
+                </div>
+            </div>
+            <button class="btn-logout">
+                Se déconnecter <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="top-header">
+            <div class="breadcrumb">
+                Administration / <span class="current" id="page-title">Bibliothèque</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge-notification">3</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="content-area">
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-layer-group"></i></div>
+                    <div class="stat-info">
+                        <h3>6</h3>
+                        <p>Contenus publiés</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fa-solid fa-user-group"></i></div>
+                    <div class="stat-info">
+                        <h3>18</h3>
+                        <p>Utilisateurs inscrits</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-info">
+                        <h3>18</h3>
+                        <p>Comptes actifs</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon gray"><i class="fa-regular fa-hourglass-half"></i></div>
+                    <div class="stat-info">
+                        <h3>0</h3>
+                        <p>Demandes en attente</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-bibliotheque" class="view-section active">
+                <div class="section-header">
+                    <h3>Bibliothèque de contenus</h3>
+                    <div class="badge-pill">
+                        <i class="fa-solid fa-chart-pie"></i> 6 éléments
+                    </div>
+                </div>
+                
+                <div class="media-grid">
+                    <div class="media-card">
+                        <div class="media-thumb">
+                            <span class="media-type"><i class="fa-solid fa-video" style="color: var(--brand-orange)"></i> Vidéo</span>
+                            <div class="play-btn"><i class="fa-solid fa-play"></i></div>
+                        </div>
+                        <div class="media-content">
+                            <h4>Apprentissage des couleurs</h4>
+                            <p>Une courte vidéo interactive pour reconnaître les couleurs de base.</p>
+                            <div class="media-tags">
+                                <span class="tag"><i class="fa-solid fa-language"></i> Français</span>
+                                <span class="tag"><i class="fa-regular fa-clock"></i> 8 min</span>
+                            </div>
+                            <div class="media-actions">
+                                <button class="btn btn-outline"><i class="fa-solid fa-pen"></i> Éditer</button>
+                                <button class="btn btn-danger-outline"><i class="fa-regular fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="media-card">
+                        <div class="media-thumb" style="background-image: url('https://images.unsplash.com/photo-1516280440503-62584dcb3206?q=80&w=800&auto=format&fit=crop');">
+                            <span class="media-type"><i class="fa-solid fa-music" style="color: var(--info)"></i> Audio</span>
+                            <div class="play-btn"><i class="fa-solid fa-volume-high"></i></div>
+                        </div>
+                        <div class="media-content">
+                            <h4>Sons des animaux</h4>
+                            <p>Exercice de reconnaissance auditive des animaux de la ferme.</p>
+                            <div class="media-tags">
+                                <span class="tag"><i class="fa-solid fa-language"></i> Arabe</span>
+                                <span class="tag"><i class="fa-regular fa-clock"></i> 5 min</span>
+                            </div>
+                            <div class="media-actions">
+                                <button class="btn btn-outline"><i class="fa-solid fa-pen"></i> Éditer</button>
+                                <button class="btn btn-danger-outline"><i class="fa-regular fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="media-card">
+                        <div class="media-thumb" style="background-image: url('https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?q=80&w=800&auto=format&fit=crop');">
+                            <span class="media-type"><i class="fa-solid fa-gamepad" style="color: var(--success)"></i> Activité</span>
+                            <div class="play-btn"><i class="fa-solid fa-puzzle-piece"></i></div>
+                        </div>
+                        <div class="media-content">
+                            <h4>Puzzle des émotions</h4>
+                            <p>Jeu interactif pour associer des expressions faciales aux émotions.</p>
+                            <div class="media-tags">
+                                <span class="tag"><i class="fa-solid fa-language"></i> Bilingue</span>
+                                <span class="tag"><i class="fa-regular fa-clock"></i> 10 min</span>
+                            </div>
+                            <div class="media-actions">
+                                <button class="btn btn-outline"><i class="fa-solid fa-pen"></i> Éditer</button>
+                                <button class="btn btn-danger-outline"><i class="fa-regular fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-importer" class="view-section">
+                <div class="card-panel">
+                    <div class="section-header">
+                        <h3>Nouveau contenu</h3>
+                        <div class="badge-pill">
+                            <i class="fa-solid fa-lock"></i> Espace sécurisé
+                        </div>
+                    </div>
+                    
+                    <div class="custom-tabs">
+                        <div class="custom-tab active"><i class="fa-solid fa-video"></i> Vidéo</div>
+                        <div class="custom-tab"><i class="fa-solid fa-music"></i> Audio</div>
+                        <div class="custom-tab"><i class="fa-solid fa-gamepad"></i> Activité interactive</div>
+                    </div>
+
+                    <form>
+                        <div class="form-group">
+                            <label>Fichier source *</label>
+                            <div style="border: 2px dashed var(--border-input); border-radius: var(--radius-md); padding: 32px; text-align: center; background: var(--bg-body); cursor: pointer;">
+                                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 32px; color: var(--brand-orange); margin-bottom: 12px;"></i>
+                                <p style="font-weight: 600; margin-bottom: 4px;">Cliquez pour uploader un fichier</p>
+                                <p style="font-size: 13px; color: var(--text-muted);">MP4, MP3, PNG ou ZIP (Max 50MB)</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Titre du contenu *</label>
+                            <input type="text" class="form-control" placeholder="Ex: Apprentissage des couleurs">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Catégorie</label>
+                                <input type="text" class="form-control" placeholder="Ex: Langage, Motricité">
+                            </div>
+                            <div class="form-group">
+                                <label>Durée estimée</label>
+                                <input type="text" class="form-control" placeholder="Ex: 5 min">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Description (Optionnelle)</label>
+                            <textarea class="form-control" rows="4" placeholder="Décrivez le but de ce contenu..."></textarea>
+                        </div>
+
+                        <div style="text-align: right; margin-top: 32px;">
+                            <button type="button" class="btn btn-primary">
+                                Publier le contenu <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="view-utilisateurs" class="view-section">
+                
+                <div class="card-panel">
+                    <div class="section-header">
+                        <h3>Ajouter un utilisateur</h3>
+                    </div>
+                    <form>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Adresse e-mail *</label>
+                                <input type="email" class="form-control" placeholder="exemple@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Nom d'utilisateur *</label>
+                                <input type="text" class="form-control" placeholder="Prénom Nom">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Mot de passe temporaire *</label>
+                                <input type="password" class="form-control" placeholder="Min. 8 caractères">
+                            </div>
+                            <div class="form-group">
+                                <label>Rôle attribué</label>
+                                <select class="form-control">
+                                    <option>👨‍👩‍👧 Compte Parent</option>
+                                    <option>⚕️ Professionnel de santé</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary">
+                            Créer le compte
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card-panel">
+                    <div class="section-header">
+                        <h3>Annuaire des membres</h3>
+                        <div class="badge-pill">18 inscrits</div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Utilisateur</th>
+                                    <th>Contact</th>
+                                    <th>Rôle</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <div class="user-avatar-sm" style="background: var(--info);">D</div>
+                                            <strong style="font-weight: 600;">Dr. Martin</strong>
+                                        </div>
+                                    </td>
+                                    <td style="color: var(--text-muted);">doctor@gmail.com</td>
+                                    <td><span class="role-badge role-pro"><i class="fa-solid fa-stethoscope"></i> Professionnel</span></td>
+                                    <td style="text-align: right;">
+                                        <button class="btn btn-outline" style="padding: 8px 12px;"><i class="fa-solid fa-pen"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <div class="user-avatar-sm" style="background: var(--brand-orange);">S</div>
+                                            <strong style="font-weight: 600;">Famille Salem</strong>
+                                        </div>
+                                    </td>
+                                    <td style="color: var(--text-muted);">salem@gmail.com</td>
+                                    <td><span class="role-badge role-parent"><i class="fa-solid fa-house-user"></i> Parent</span></td>
+                                    <td style="text-align: right;">
+                                        <button class="btn btn-outline" style="padding: 8px 12px;"><i class="fa-solid fa-pen"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-demandes" class="view-section">
+                <div class="card-panel" style="min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <div style="width: 80px; height: 80px; background: var(--success-light); color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 24px;">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <h3 style="font-size: 24px; color: var(--text-main); margin-bottom: 8px;">Tout est à jour !</h3>
+                    <p style="color: var(--text-muted); font-size: 15px;">Vous n'avez aucune demande d'inscription en attente.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Gestion de la navigation
+        function switchTab(viewId, element) {
+            // 1. Mise à jour du menu
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            // 2. Mise à jour du fil d'ariane
+            const titleMap = {
+                'bibliotheque': 'Bibliothèque',
+                'importer': 'Importer contenu',
+                'utilisateurs': 'Utilisateurs',
+                'demandes': 'Demandes'
+            };
+            document.getElementById('page-title').innerText = titleMap[viewId];
+
+            // 3. Changement de vue
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+        }
+    </script>
+</body>
+</html>

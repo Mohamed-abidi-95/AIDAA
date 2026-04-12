@@ -1,254 +1,337 @@
 // ============================================================================
-// TELECONSULTATION LIST — Liste des sessions planifiées (Espace Professionnel)
+// TELECONSULTATION LIST — Design identique à ProfessionalPage (Tailwind + FA)
 // ============================================================================
 
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
+import api from '../lib/api';
 import { mockSessions, STATUS_CONFIG } from '../data/teleconsultation.mock';
-import '../styles/ProfessionalDashboard.css';
 
-// ── Nav items (mirrors ProfessionalPage) ────────────────────────────────────
-const NAV_ITEMS = [
-  { icon: '👥', label: 'Mes patients',    path: '/professional/dashboard' },
-  { icon: '📊', label: 'Activités',       path: '/professional/dashboard' },
-  { icon: '📝', label: 'Notes cliniques', path: '/professional/dashboard' },
-  { icon: '📨', label: 'Mes invitations', path: '/professional/dashboard' },
-  { icon: '🎥', label: 'Téléconsultation',path: '/professionnel/teleconsultation', active: true },
-];
-// ============================================================================
+// ── Types ──────────────────────────────────────────────────────────────────
+interface Child {
+  id: number; name: string; age: number;
+  parent_id: number; parent_name?: string; participant_category?: string;
+}
+interface ApiResult<T> { success: boolean; data: T; message?: string; }
+interface Toast { id: number; type: 'success' | 'error'; msg: string; }
+
+// ── Toast hook ─────────────────────────────────────────────────────────────
+let toastId = 0;
+const useToast = () => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    const id = ++toastId;
+    setToasts(p => [...p, { id, type, msg }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  }, []);
+  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
+  return { toasts, add, remove };
+};
+
+// ── Nav config (mirrors ProfessionalPage) ──────────────────────────────────
+const NAV = [
+  { id: 'patients',    fa: 'fa-solid fa-hospital-user',     label: 'Mes patients'    },
+  { id: 'activities',  fa: 'fa-solid fa-chart-column',       label: 'Activités'       },
+  { id: 'notes',       fa: 'fa-solid fa-notes-medical',      label: 'Notes cliniques' },
+  { id: 'analytics',   fa: 'fa-solid fa-chart-line',         label: 'Analytiques'     },
+  { id: 'invitations', fa: 'fa-solid fa-envelope-open-text', label: 'Invitations'     },
+] as const;
+
+// ── Score badge ────────────────────────────────────────────────────────────
+const ScoreBadge = ({ score }: { score: number }) => {
+  const cls = score >= 70
+    ? 'bg-emerald-100 text-emerald-700'
+    : score >= 40 ? 'bg-amber-100 text-amber-700'
+    : 'bg-red-100 text-red-700';
+  return <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${cls}`}>{score} / 100</span>;
+};
+
+// ── Status badge ──────────────────────────────────────────────────────────
+const StatusBadge = ({ status }: { status: 'planned' | 'ongoing' | 'done' }) => {
+  const cls = status === 'ongoing'
+    ? 'bg-emerald-100 text-emerald-700'
+    : status === 'planned' ? 'bg-blue-100 text-blue-700'
+    : 'bg-slate-100 text-slate-600';
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cls}`}>
+      {status === 'ongoing' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+      {STATUS_CONFIG[status].label}
+    </span>
+  );
+};
+
+// ── Component ──────────────────────────────────────────────────────────────
 export const TeleconsultationList = (): JSX.Element => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toasts, add: toast, remove: removeToast } = useToast();
+
+  const [patients, setPatients]               = useState<Child[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Child | null>(null);
+  const [search, setSearch]                   = useState('');
+  const [loading, setLoading]                 = useState(false);
 
   const profInitial = user?.name?.charAt(0).toUpperCase() ?? 'P';
 
+  // ── Fetch patients ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        setLoading(true);
+        try {
+          const { data } = await api.get<ApiResult<Child[]>>('/api/professional/my-children');
+          if (data.success && data.data.length > 0) {
+            setPatients(data.data); setSelectedPatient(data.data[0]); return;
+          }
+        } catch { /* fallback */ }
+        const { data } = await api.get<ApiResult<Child[]>>('/api/child/all');
+        if (data.success) { setPatients(data.data); if (data.data.length > 0) setSelectedPatient(data.data[0]); }
+      } catch { toast('Erreur lors du chargement des patients', 'error'); }
+      finally { setLoading(false); }
+    };
+    fetchPatients();
+  }, []);
+
+  const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="prof-layout">
+    <div className="font-sans antialiased flex h-screen overflow-hidden bg-slate-50 animate-page-in">
 
-      {/* ── SIDEBAR ── */}
-      <aside className="prof-sidebar">
-
+      {/* ══════════════ SIDEBAR ══════════════ */}
+      <aside
+        className="w-[280px] flex flex-col z-10 shrink-0 overflow-y-auto"
+        style={{
+          background: '#F97316',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px)',
+          backgroundSize: '20px 20px',
+          boxShadow: '4px 0 15px rgba(249,115,22,0.2)',
+        }}
+      >
         {/* Brand */}
-        <div className="prof-sidebar__brand">
-          <div className="prof-sidebar__logo">🩺</div>
-          <div className="prof-sidebar__brand-text">
-            <h2>AIDAA</h2>
-            <span>Espace Professionnel</span>
+        <div className="flex items-center gap-4 px-6 py-8 shrink-0">
+          <div className="w-12 h-12 bg-white text-brand-orange rounded-xl flex items-center justify-center text-2xl shadow-sm shrink-0">
+            <i className="fa-solid fa-stethoscope" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
+            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Espace Professionnel</span>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="prof-sidebar__nav">
-          <div className="prof-nav__label">Navigation</div>
-          {NAV_ITEMS.map(n => (
-            <button
-              key={n.label}
-              className={`prof-nav__item ${n.active ? 'active' : ''}`}
-              onClick={() => navigate(n.path)}
+        <nav className="flex-1 px-5 flex flex-col gap-2">
+          {NAV.map(n => (
+            <button key={n.id}
+              className="flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border text-white border-transparent hover:bg-white/15 hover:border-white/20 transition-all"
+              onClick={() => navigate('/professional/dashboard')}
             >
-              <span className="nav-icon">{n.icon}</span>
+              <i className={`${n.fa} w-6 mr-3 text-lg opacity-80`} />
               {n.label}
             </button>
           ))}
+          {/* Téléconsultation — active */}
+          <button className="flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border bg-white text-brand-orange shadow-md border-transparent">
+            <i className="fa-solid fa-video w-6 mr-3 text-lg text-brand-orange" />
+            Téléconsultation
+          </button>
         </nav>
 
+        {/* Patients list */}
+        <div className="px-5 pb-4 flex flex-col gap-2 shrink-0">
+          <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest px-1 pt-3 pb-1">
+            Patients ({patients.length})
+          </p>
+          <div className="relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs" />
+            <input
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher…"
+              className="w-full pl-8 pr-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 transition"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+            {loading
+              ? <p className="text-white/40 text-xs text-center py-3">Chargement…</p>
+              : filteredPatients.map(p => (
+                <button key={p.id} onClick={() => setSelectedPatient(p)}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-left text-sm transition-all border
+                    ${selectedPatient?.id === p.id ? 'bg-white/20 border-white/30 text-white' : 'bg-white/06 border-transparent text-white/70 hover:bg-white/12 hover:text-white'}`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate leading-tight">{p.name}</p>
+                    <p className="text-[11px] text-white/50 truncate">{p.age} ans{p.parent_name ? ` · ${p.parent_name}` : ''}</p>
+                  </div>
+                </button>
+              ))
+            }
+            {!loading && filteredPatients.length === 0 && (
+              <p className="text-white/40 text-xs text-center py-3">Aucun résultat</p>
+            )}
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="prof-sidebar__footer">
-          <div className="prof-sidebar__user">
-            <div className="prof-sidebar__avatar">{profInitial}</div>
-            <div className="prof-sidebar__user-info">
-              <div className="prof-sidebar__user-name">{user?.name ?? 'Professionnel'}</div>
-              <div className="prof-sidebar__user-role">Professionnel de santé</div>
+        <div className="p-6 shrink-0">
+          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-brand-orange text-base shrink-0">
+              {profInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Professionnel'}</p>
+              <p className="text-xs text-white/70">Professionnel de santé</p>
             </div>
           </div>
-          <button className="prof-logout-btn" onClick={logout}>
-            <span>🚪</span> Se déconnecter
+          <button onClick={logout}
+            className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
+            Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
           </button>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <main className="prof-main">
+      {/* ══════════════ MAIN ══════════════════ */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Topbar */}
-        <header className="prof-topbar">
-          <div className="prof-topbar__left">
-            <div className="prof-topbar__breadcrumb">Professionnel / Téléconsultation</div>
-            <h1>🎥 Téléconsultations</h1>
+        {/* Top header */}
+        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm text-slate-500 font-medium">Professionnel /</span>
+            <span className="text-xl font-bold text-slate-900">Téléconsultations</span>
           </div>
-          <div className="prof-topbar__right">
-            <button
-              onClick={() => navigate('/professionnel/teleconsultation/planifier')}
-              style={{
-                padding: '10px 22px',
-                background: '#E07820',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 10,
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(224,120,32,.3)',
-                transition: 'opacity 0.15s',
-              }}
-            >
-              + Planifier une session
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/professionnel/teleconsultation/planifier')}
+            className="flex items-center gap-2 bg-brand-orange hover:bg-orange-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-brand-orange/20 transition-all"
+          >
+            <i className="fa-solid fa-plus" /> Planifier une session
+          </button>
         </header>
 
-        {/* Content */}
-        <div className="prof-content">
-          {mockSessions.length === 0 ? (
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-10">
 
-            /* ── Empty state ── */
-            <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-              <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: '#FEF3E7',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 28, margin: '0 auto 16px',
-              }}>🎥</div>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#1A0D00', marginBottom: 8 }}>
-                Aucune téléconsultation planifiée
-              </p>
-              <p style={{ fontSize: 13, color: '#8C6840', marginBottom: 24 }}>
-                Planifiez votre première session avec un patient.
-              </p>
-              <button
-                onClick={() => navigate('/professionnel/teleconsultation/planifier')}
-                style={{
-                  padding: '11px 28px',
-                  background: '#E07820',
-                  color: '#fff', border: 'none',
-                  borderRadius: 10, fontWeight: 700,
-                  fontSize: 14, cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(224,120,32,.3)',
-                }}
-              >
-                + Planifier une session
-              </button>
-            </div>
-
-          ) : (
-
-            /* ── Session table ── */
-            <div className="prof-section">
-              <div className="prof-section__head">
-                <h2>📅 Mes sessions</h2>
-                <span className="prof-section__count">{mockSessions.length} session(s)</span>
-              </div>
-
-              <div className="prof-section__body" style={{ padding: 0 }}>
-                <div className="prof-table-wrap">
-                  <table className="prof-table">
-                    <thead>
-                      <tr>
-                        <th>Patient</th>
-                        <th>Date</th>
-                        <th>Heure</th>
-                        <th>Durée</th>
-                        <th>Statut</th>
-                        <th>Score préc.</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mockSessions.map(session => {
-                        const cfg = STATUS_CONFIG[session.status];
-                        return (
-                          <tr key={session.id}>
-
-                            {/* Patient cell */}
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                  width: 34, height: 34, borderRadius: '50%',
-                                  background: 'linear-gradient(135deg,#C45E0A,#E07820)', color: '#fff',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontWeight: 700, fontSize: 14, flexShrink: 0,
-                                }}>
-                                  {session.patientName.charAt(0)}
-                                </div>
-                                <div>
-                                  <strong style={{ display: 'block', fontSize: 14, color: '#1A0D00' }}>
-                                    {session.patientName}
-                                  </strong>
-                                  <small style={{ color: '#8C6840', fontSize: 11 }}>
-                                    {session.patientAge} ans · {session.participantCategory}
-                                  </small>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td>
-                              {new Date(session.date).toLocaleDateString('fr-FR', {
-                                day: '2-digit', month: 'long', year: 'numeric',
-                              })}
-                            </td>
-                            <td style={{ fontWeight: 600 }}>{session.time}</td>
-                            <td>{session.duration} min</td>
-
-                            {/* Status badge */}
-                            <td>
-                              <span style={{
-                                background: cfg.bg,
-                                color: cfg.color,
-                                borderRadius: 999,
-                                padding: '4px 12px',
-                                fontSize: 11,
-                                fontWeight: 700,
-                                whiteSpace: 'nowrap',
-                              }}>
-                                {cfg.label}
-                              </span>
-                            </td>
-
-                            {/* Score */}
-                            <td>
-                              <span className={`prof-score-badge ${
-                                session.lastScore >= 70 ? 'prof-score-badge--good'
-                                : session.lastScore >= 40 ? 'prof-score-badge--mid'
-                                : 'prof-score-badge--low'
-                              }`}>
-                                {session.lastScore} / 100
-                              </span>
-                            </td>
-
-                            {/* Action */}
-                            <td>
-                              <button
-                                onClick={() => navigate(`/professionnel/teleconsultation/${session.id}`)}
-                                style={{
-                                  padding: '7px 16px',
-                                  borderRadius: 8,
-                                  border: `1.5px solid ${session.status === 'ongoing' ? '#E07820' : '#F0E6D8'}`,
-                                  background: session.status === 'ongoing' ? '#FEF3E7' : '#fff',
-                                  color: '#C45E0A',
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s',
-                                }}
-                              >
-                                {session.status === 'planned'
-                                  ? '▶ Démarrer'
-                                  : session.status === 'ongoing'
-                                    ? '🟢 Rejoindre'
-                                    : '👁 Voir'}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+          {/* Stats */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+            {[
+              { icon: 'fa-solid fa-calendar-check', value: mockSessions.length,                                       label: 'Sessions totales' },
+              { icon: 'fa-solid fa-circle-play',    value: mockSessions.filter(s => s.status === 'planned').length,  label: 'Planifiées'      },
+              { icon: 'fa-solid fa-circle-dot',     value: mockSessions.filter(s => s.status === 'ongoing').length,  label: 'En cours'        },
+              { icon: 'fa-solid fa-circle-check',   value: mockSessions.filter(s => s.status === 'done').length,     label: 'Terminées'       },
+            ].map(s => (
+              <div key={s.label} className="bg-white rounded-2xl p-5 flex items-center gap-4 border border-slate-100 shadow-sm">
+                <div className="w-12 h-12 rounded-[14px] bg-orange-100 text-brand-orange flex items-center justify-center text-xl shrink-0">
+                  <i className={s.icon} />
+                </div>
+                <div>
+                  <p className="text-[28px] font-bold leading-none text-slate-900 mb-1">{s.value}</p>
+                  <p className="text-sm text-slate-500 font-medium">{s.label}</p>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Session table */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between px-7 py-5 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                <i className="fa-solid fa-calendar-days mr-2 text-brand-orange" /> Mes sessions
+              </h3>
+              <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                {mockSessions.length} session(s)
+              </span>
             </div>
-          )}
+
+            {mockSessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4 p-7">
+                <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center text-3xl text-brand-orange">
+                  <i className="fa-solid fa-video" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-slate-600 mb-1">Aucune téléconsultation planifiée</p>
+                  <p className="text-sm">Planifiez votre première session avec un patient.</p>
+                </div>
+                <button
+                  onClick={() => navigate('/professionnel/teleconsultation/planifier')}
+                  className="flex items-center gap-2 bg-brand-orange hover:bg-orange-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-brand-orange/20 transition-all text-sm mt-2"
+                >
+                  <i className="fa-solid fa-plus" /> Planifier une session
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Patient', 'Date', 'Heure', 'Durée', 'Statut', 'Score préc.', 'Action'].map(h => (
+                        <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockSessions.map(session => (
+                      <tr key={session.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <td className="px-7 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-brand-orange flex items-center justify-center font-bold text-white text-sm shrink-0">
+                              {session.patientName.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-800 text-sm">{session.patientName}</p>
+                              <p className="text-xs text-slate-400">{session.patientAge} ans · {session.participantCategory}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-7 py-4 text-slate-600 text-sm">
+                          {new Date(session.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </td>
+                        <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{session.time}</td>
+                        <td className="px-7 py-4 text-slate-500 text-sm">{session.duration} min</td>
+                        <td className="px-7 py-4"><StatusBadge status={session.status} /></td>
+                        <td className="px-7 py-4"><ScoreBadge score={session.lastScore} /></td>
+                        <td className="px-7 py-4">
+                          <button
+                            onClick={() => navigate(`/professionnel/teleconsultation/${session.id}`)}
+                            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border
+                              ${session.status === 'ongoing'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                : session.status === 'planned'
+                                  ? 'bg-orange-50 text-brand-orange border-orange-200 hover:bg-orange-100'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                          >
+                            {session.status === 'planned'
+                              ? <><i className="fa-solid fa-play mr-1.5" />Démarrer</>
+                              : session.status === 'ongoing'
+                                ? <><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />Rejoindre</>
+                                : <><i className="fa-solid fa-eye mr-1.5" />Voir</>
+                            }
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      </main>
+      </div>
+
+      {/* ── Toasts ── */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">
+        {toasts.map(t => (
+          <div key={t.id}
+            className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-sm font-semibold
+              ${t.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
+          >
+            <i className={t.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
+            <span>{t.msg}</span>
+            <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100 text-lg leading-none">×</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -4,27 +4,17 @@
 // Envoie un email de réinitialisation — même design split-screen que Login
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
-import '../styles/LoginPage.css';
-
-const CrossLogo = () => (
-  <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-    <rect x="15" y="4" width="10" height="32" rx="3" fill="white" fillOpacity="0.9"/>
-    <rect x="4" y="15" width="32" height="10" rx="3" fill="white" fillOpacity="0.9"/>
-  </svg>
-);
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 export const ForgotPasswordPage = (): JSX.Element => {
-  const navigate = useNavigate();
-
-  const [email, setEmail]         = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError]         = useState('');
-  const [sent, setSent]           = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // mode démo Ethereal
+  const [email,      setEmail]      = useState('');
+  const [isLoading,  setIsLoading]  = useState(false);
+  const [error,      setError]      = useState('');
+  const [sent,       setSent]       = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const emailTouched = email.length > 0;
   const emailValid   = isValidEmail(email);
@@ -32,14 +22,13 @@ export const ForgotPasswordPage = (): JSX.Element => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    if (!email.trim())  { setError("L'adresse e-mail est requise"); return; }
-    if (!emailValid)    { setError('Adresse e-mail invalide'); return; }
-
+    if (!email.trim()) { setError("L'adresse e-mail est requise"); return; }
+    if (!emailValid)   { setError('Adresse e-mail invalide'); return; }
     setIsLoading(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await api.post<any>('/api/auth/forgot-password', { email: email.trim().toLowerCase() });
-      if (res.data?.previewUrl) setPreviewUrl(res.data.previewUrl); // mode Ethereal
+      if (res.data?.previewUrl) setPreviewUrl(res.data.previewUrl);
       setSent(true);
     } catch (err: unknown) {
       const msg = (err as any)?.response?.data?.message
@@ -50,181 +39,200 @@ export const ForgotPasswordPage = (): JSX.Element => {
     }
   };
 
-  return (
-    <div className="login-container">
+  const features = [
+    { icon: 'fa-solid fa-key',           text: 'Récupération sécurisée'   },
+    { icon: 'fa-regular fa-envelope',    text: 'Lien envoyé par e-mail'   },
+    { icon: 'fa-regular fa-clock',       text: 'Lien valide 1 heure'      },
+    { icon: 'fa-solid fa-shield-halved', text: 'Token à usage unique'      },
+  ];
 
-      {/* ── Panneau branding gauche ── */}
-      <div className="login-brand-panel">
-        <div className="login-brand-pattern" aria-hidden="true">
-          {Array.from({ length: 20 }).map((_, i) => <div key={i} className="brand-cross-dot" />)}
+  return (
+    <div className="font-sans antialiased text-slate-800 bg-slate-50 h-screen flex overflow-hidden">
+
+      {/* ══════════════════ LEFT BRANDING PANEL ══════════════════ */}
+      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 relative bg-gradient-to-br from-brand-orange to-orange-500 overflow-hidden flex-col justify-between p-12">
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-orange-700/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '40px 40px' }} />
+
+        <div className="relative z-10 pt-4">
+          <div className="w-14 h-14 bg-white text-brand-orange rounded-2xl flex items-center justify-center text-3xl shadow-xl shadow-orange-900/20 mb-6">
+            <i className="fa-solid fa-key" />
+          </div>
+          <h1 className="text-4xl font-bold text-white tracking-tight mb-3">AIDAA</h1>
+          <p className="text-orange-100 text-lg max-w-md leading-relaxed font-light">
+            Plateforme de suivi et d'accompagnement pour enfants autistes.
+          </p>
         </div>
-        <div className="login-brand-logo"><CrossLogo /></div>
-        <h1 className="login-brand-title">AIDAA</h1>
-        <p className="login-brand-subtitle">
-          Plateforme de suivi et d'accompagnement<br />pour enfants autistes
-        </p>
-        <div className="login-brand-features">
-          {[
-            { icon: '🔑', text: 'Récupération sécurisée' },
-            { icon: '📧', text: 'Lien envoyé par e-mail' },
-            { icon: '⏰', text: 'Lien valide 1 heure' },
-            { icon: '🔒', text: 'Token à usage unique' },
-          ].map((f) => (
-            <div className="login-brand-feature" key={f.text}>
-              <span className="login-brand-feature-icon">{f.icon}</span>
-              <span className="login-brand-feature-text">{f.text}</span>
+
+        <div className="relative z-10 flex flex-col gap-4 max-w-md my-auto">
+          {features.map(f => (
+            <div key={f.text} className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-white/20">
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-white shrink-0">
+                <i className={f.icon} />
+              </div>
+              <span className="text-white font-medium">{f.text}</span>
             </div>
           ))}
         </div>
-        <div className="login-brand-version">v1.0 — PFE 2026</div>
+
+        <div className="relative z-10 text-orange-200/70 text-xs font-medium uppercase tracking-wider pb-4">
+          v1.0 — PFE 2026
+        </div>
       </div>
 
-      {/* ── Panneau formulaire droit ── */}
-      <div className="login-form-panel">
-        <div className="login-card">
+      {/* ══════════════════ RIGHT PANEL ══════════════════════ */}
+      <div className="w-full lg:w-7/12 xl:w-1/2 flex flex-col justify-center bg-white relative overflow-y-auto">
+        <div className="w-full max-w-[440px] mx-auto px-6 py-12 lg:px-8">
 
-          {/* ── État : formulaire ── */}
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 bg-brand-orange text-white rounded-lg flex items-center justify-center text-xl shadow-lg shadow-orange-500/30">
+              <i className="fa-solid fa-key" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">AIDAA</span>
+          </div>
+
+          {/* ── État : formulaire ─────────────────────────────── */}
           {!sent && (
             <>
-              <div className="login-header-badge">
-                <span className="badge-dot" /> Récupération de compte
+              <div className="mb-8">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold uppercase tracking-wide mb-5">
+                  <i className="fa-solid fa-rotate-left text-[10px]" /> Récupération de compte
+                </span>
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">Mot de passe oublié ?</h2>
+                <p className="text-slate-500 text-sm">
+                  Entrez votre adresse e-mail. Vous recevrez un lien sécurisé pour choisir un nouveau mot de passe.
+                </p>
               </div>
-              <h2 className="login-title">Mot de passe oublié ?</h2>
-              <p className="login-sub">
-                Entrez votre adresse e-mail. Vous recevrez un lien sécurisé
-                pour choisir un nouveau mot de passe.
-              </p>
 
               {error && (
-                <div className="error-message" role="alert">
-                  <span className="error-icon">✕</span>
-                  <span>{error}</span>
+                <div className="flex items-center gap-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium" role="alert">
+                  <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">✕</span>
+                  {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="login-form" noValidate>
-                <div className="form-group">
-                  <label htmlFor="email" className="form-label">Adresse e-mail</label>
-                  <div className={`input-wrap ${emailTouched ? (emailValid ? 'input-valid' : 'input-warn') : ''}`}>
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="exemple@email.com"
-                      className="form-input"
-                      disabled={isLoading}
-                      autoComplete="email"
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-700">Adresse e-mail</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <i className="fa-regular fa-envelope" />
+                    </div>
+                    <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="exemple@email.com" autoComplete="email" disabled={isLoading}
+                      className={`block w-full pl-10 pr-9 py-3 border rounded-xl text-slate-900 placeholder-slate-400 bg-white transition-all focus:outline-none focus:ring-4 focus:ring-brand-orange/10 focus:border-brand-orange
+                        ${emailTouched ? (emailValid ? 'border-brand-orange' : 'border-amber-400') : 'border-slate-200'}
+                        ${isLoading ? 'opacity-55 cursor-not-allowed' : ''}`}
                     />
-                    {emailTouched && <span className="input-status-icon">{emailValid ? '✓' : ''}</span>}
+                    {emailTouched && emailValid && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-orange font-bold text-sm pointer-events-none">✓</span>
+                    )}
                   </div>
                 </div>
 
-                <button type="submit" className="submit-button" disabled={isLoading || !emailValid}>
+                <button type="submit" disabled={isLoading || !emailValid}
+                  className="w-full flex items-center justify-center gap-2 bg-brand-orange hover:bg-orange-700 disabled:opacity-55 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl shadow-lg shadow-brand-orange/20 transition-all duration-200 hover:-translate-y-0.5">
                   {isLoading
-                    ? <><span className="btn-spinner" /> Envoi en cours…</>
-                    : 'Envoyer le lien de réinitialisation →'
+                    ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" /> Envoi en cours…</>
+                    : <>Envoyer le lien <i className="fa-solid fa-paper-plane text-sm" /></>
                   }
                 </button>
               </form>
 
-              <div className="login-divider"><span>ou</span></div>
-              <button type="button" className="signup-link-button" onClick={() => navigate('/login')}>
-                ← Retour à la connexion
-              </button>
+              <div className="relative my-7">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-slate-400 text-xs uppercase tracking-wider">ou</span>
+                </div>
+              </div>
+
+              <Link to="/login"
+                className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-3 rounded-xl transition-all shadow-sm">
+                <i className="fa-solid fa-arrow-left text-slate-400 text-sm" />
+                Retour à la connexion
+              </Link>
             </>
           )}
 
-          {/* ── État : email envoyé ── */}
+          {/* ── État : e-mail envoyé ───────────────────────────── */}
           {sent && (
-            <div style={{ width: '100%', textAlign: 'center' }}>
+            <div className="text-center">
               {/* Icône succès */}
-              <div style={{
-                width: 80, height: 80, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #007A3A, #00A651)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 24px', fontSize: 36, color: 'white',
-                boxShadow: '0 8px 24px rgba(0,166,81,.35)',
-              }}>📧</div>
-
-              <h2 className="login-title" style={{ color: '#007A3A' }}>E-mail envoyé !</h2>
-              <p className="login-sub">
-                Un lien de réinitialisation a été envoyé à <br/>
-                <strong style={{ color: '#0f2318' }}>{email}</strong>
-              </p>
-
-              {/* Encart instructions */}
-              <div style={{
-                background: '#E6F7EE', border: '1px solid #C2EAD4',
-                borderRadius: 12, padding: '16px 20px', margin: '20px 0',
-                textAlign: 'left',
-              }}>
-                <p style={{ margin: 0, fontSize: 13, color: '#005C26', lineHeight: 1.7 }}>
-                  <strong>Étapes suivantes :</strong><br/>
-                  1️⃣ &nbsp;Consultez votre boîte e-mail<br/>
-                  2️⃣ &nbsp;Cliquez sur le lien dans le message AIDAA<br/>
-                  3️⃣ &nbsp;Choisissez un nouveau mot de passe<br/>
-                  ⏰ &nbsp;Le lien est valable <strong>1 heure</strong>
-                </p>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
+                <i className="fa-regular fa-envelope text-white text-3xl" />
               </div>
 
-              {/* Note spam */}
-              <p style={{ fontSize: 12, color: '#7A9485', marginBottom: 24 }}>
-                Vous ne trouvez pas l'e-mail ? Vérifiez vos spams ou relancez la demande.
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold uppercase tracking-wide mb-4">
+                <i className="fa-solid fa-circle-check text-[10px]" /> E-mail envoyé
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Consultez votre boîte mail !</h2>
+              <p className="text-slate-500 text-sm mb-6">
+                Un lien a été envoyé à <strong className="text-slate-800">{email}</strong>
               </p>
 
-              {/* Lien de prévisualisation Ethereal (mode démo sans SMTP configuré) */}
+              {/* Instructions */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-left mb-5">
+                <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide mb-3">Étapes suivantes</p>
+                <ol className="text-sm text-emerald-700 space-y-2.5">
+                  <li className="flex items-start gap-2.5">
+                    <i className="fa-solid fa-inbox mt-0.5 shrink-0" />
+                    Consultez votre boîte e-mail
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <i className="fa-solid fa-arrow-pointer mt-0.5 shrink-0" />
+                    Cliquez sur le lien dans le message AIDAA
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <i className="fa-solid fa-key mt-0.5 shrink-0" />
+                    Choisissez un nouveau mot de passe
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <i className="fa-regular fa-clock mt-0.5 shrink-0" />
+                    Le lien est valable <strong>1 heure</strong>
+                  </li>
+                </ol>
+              </div>
+
+              <p className="text-xs text-slate-400 mb-5">
+                Vous ne trouvez pas l'e-mail ? Vérifiez vos spams.
+              </p>
+
+              {/* Mode démo Ethereal */}
               {previewUrl && (
-                <div style={{
-                  background: '#FFF8E1', border: '1px solid #FFE082',
-                  borderRadius: 10, padding: '14px 16px', marginBottom: 20,
-                  textAlign: 'left',
-                }}>
-                  <p style={{ margin: '0 0 8px', fontSize: 13, color: '#7A4F00', fontWeight: 700 }}>
-                    🧪 Mode démo — Prévisualisation de l'email :
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left mb-5">
+                  <p className="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1.5">
+                    <i className="fa-solid fa-flask" /> Mode démo — Prévisualisation :
                   </p>
-                  <a
-                    href={previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: '#007A3A', fontSize: 12, wordBreak: 'break-all',
-                      fontWeight: 600,
-                    }}
-                  >
+                  <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-emerald-700 font-semibold break-all hover:underline">
                     {previewUrl}
                   </a>
-                  <p style={{ margin: '8px 0 0', fontSize: 11, color: '#B0C4BA' }}>
-                    (Ouvre l'email dans Ethereal — aucun vrai email envoyé)
-                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">(Aucun vrai email envoyé — Ethereal)</p>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
-                <button
-                  type="button"
-                  className="submit-button"
-                  onClick={() => navigate('/login')}
-                >
-                  Retour à la connexion →
-                </button>
-                <button
-                  type="button"
-                  className="signup-link-button"
-                  onClick={() => { setSent(false); setEmail(''); }}
-                >
-                  ↺ Renvoyer avec un autre e-mail
+              <div className="flex flex-col gap-3">
+                <Link to="/login"
+                  className="w-full flex items-center justify-center gap-2 bg-brand-orange hover:bg-orange-700 text-white font-medium py-3.5 rounded-xl shadow-lg shadow-brand-orange/20 transition-all hover:-translate-y-0.5">
+                  Retour à la connexion <i className="fa-solid fa-arrow-right text-sm" />
+                </Link>
+                <button type="button" onClick={() => { setSent(false); setEmail(''); }}
+                  className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-3 rounded-xl transition-all shadow-sm">
+                  <i className="fa-solid fa-rotate-left text-slate-400 text-sm" />
+                  Renvoyer avec un autre e-mail
                 </button>
               </div>
             </div>
           )}
 
-          <p className="login-footer-note">
+          <p className="mt-10 text-center text-xs text-slate-400">
             © 2026 AIDAA — Application de suivi pour enfants autistes
           </p>
         </div>
       </div>
-
     </div>
   );
 };

@@ -144,6 +144,9 @@ const autoMigrate = async () => {
 
   await run('teleconsultations.created_at', `ALTER TABLE teleconsultations ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
 
+  // ── messages — colonne is_read pour le compteur de non-lus ───────────────
+  await run('messages.is_read', `ALTER TABLE messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`);
+
   console.log('[DB] ✅ Auto-migration complète');
 };
 autoMigrate();

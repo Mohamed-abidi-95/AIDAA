@@ -76,20 +76,28 @@ const inviteProfessional = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const inviteLink  = `${frontendUrl}/set-password?userId=${profId}`;
     let previewUrl = null;
+    let emailSent  = false;
+    let emailError = null;
 
     try {
       const mail = await sendInviteEmail(email.toLowerCase(), profName, inviter.name, inviteLink);
       previewUrl = mail.previewUrl;
+      emailSent  = true;
     } catch (mailErr) {
+      emailError = mailErr.message;
       console.error('[parent.controller] Email error:', mailErr.message);
     }
 
-    console.log(`[parent.controller] Invitation : ${email} par ${inviter.email}`);
+    // Toujours afficher le lien dans les logs (utile si l'email échoue)
+    console.log(`[parent.controller] ✅ Invitation créée pour ${email}`);
+    console.log(`[parent.controller] 🔗 Lien d'activation : ${inviteLink}`);
+    if (previewUrl) console.log(`[parent.controller] 📧 Aperçu Ethereal : ${previewUrl}`);
+    if (emailError) console.warn(`[parent.controller] ⚠️  Email non envoyé : ${emailError}`);
 
     return res.status(201).json({
       success: true,
-      message: `Invitation envoyée à ${profName}`,
-      data: { id: profId, name: profName, email: email.toLowerCase(), role: 'professional', inviteLink, previewUrl },
+      message: emailSent ? `Invitation envoyée à ${profName}` : `Invitation créée pour ${profName} (email non envoyé)`,
+      data: { id: profId, name: profName, email: email.toLowerCase(), role: 'professional', inviteLink, previewUrl, emailSent, emailError },
     });
   } catch (error) {
     console.error('[parent.controller] inviteProfessional:', error);
@@ -181,18 +189,23 @@ const resendInvitation = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const inviteLink  = `${frontendUrl}/set-password?userId=${professionalId}`;
     let previewUrl = null;
+    let emailSent  = false;
 
     try {
       const mail = await sendInviteEmail(prof.email, prof.name, req.user.name, inviteLink);
       previewUrl = mail.previewUrl;
+      emailSent  = true;
     } catch (mailErr) {
       console.error('[parent.controller] Resend email error:', mailErr.message);
     }
 
+    console.log(`[parent.controller] 🔗 Lien renvoyé : ${inviteLink}`);
+    if (previewUrl) console.log(`[parent.controller] 📧 Aperçu Ethereal : ${previewUrl}`);
+
     return res.status(200).json({
       success: true,
       message: prof.invite_status === 'revoked' ? 'Accès réactivé et invitation renvoyée.' : 'Invitation renvoyée avec succès.',
-      data: { inviteLink, previewUrl },
+      data: { inviteLink, previewUrl, emailSent },
     });
   } catch (error) {
     console.error('[parent.controller] resendInvitation:', error);
@@ -200,4 +213,28 @@ const resendInvitation = async (req, res) => {
   }
 };
 
-module.exports = { inviteProfessional, getMyProfessionals, revokeInvitation, resendInvitation };
+// ============================================================================
+// DELETE PERMANENT /api/parent/invitation/:professionalId/delete
+// Supprime définitivement la ligne de professional_invitations
+// ============================================================================
+const deleteInvitation = async (req, res) => {
+  try {
+    const { professionalId } = req.params;
+    const rows = await query(
+      'SELECT * FROM professional_invitations WHERE parent_id = ? AND professional_id = ?',
+      [req.user.id, professionalId]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Invitation introuvable.' });
+
+    await query(
+      'DELETE FROM professional_invitations WHERE parent_id = ? AND professional_id = ?',
+      [req.user.id, professionalId]
+    );
+    return res.status(200).json({ success: true, message: 'Invitation supprimée définitivement.' });
+  } catch (error) {
+    console.error('[parent.controller] deleteInvitation:', error);
+    return res.status(500).json({ success: false, message: 'Erreur lors de la suppression.' });
+  }
+};
+
+module.exports = { inviteProfessional, getMyProfessionals, revokeInvitation, resendInvitation, deleteInvitation };

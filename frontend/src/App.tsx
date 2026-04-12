@@ -6,6 +6,7 @@
 
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './routes/routes-config';
+import { AuthProvider } from './features/auth/context/AuthContext';
 
 // ============================================================================
 // APP COMPONENT
@@ -14,7 +15,9 @@ import { AppRoutes } from './routes/routes-config';
 export const App = (): JSX.Element => {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

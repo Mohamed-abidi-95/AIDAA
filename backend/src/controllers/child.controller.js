@@ -4,6 +4,7 @@
 // Handles child management operations
 
 const childModel = require('../models/child.model');
+const { query }  = require('../config/db');
 
 // ============================================================================
 // Get all children for authenticated parent
@@ -34,8 +35,27 @@ const getMyChildren = async (req, res) => {
 // Get all children (professional/admin)
 // ============================================================================
 // GET /child/all
+// 🔒 Professionals: only children whose parent is linked via professional_invitations
+// 🔒 Admin: all children
 const getAllChildren = async (req, res) => {
   try {
+    if (req.user.role === 'professional') {
+      // Restrict to children of parents linked to this professional
+      const children = await query(
+        `SELECT c.* FROM children c
+         JOIN professional_invitations pi ON pi.parent_id = c.parent_id
+         WHERE pi.professional_id = ? AND pi.status != 'revoked'
+         ORDER BY c.name ASC`,
+        [req.user.id]
+      );
+      return res.status(200).json({
+        success: true,
+        message: 'Children retrieved successfully',
+        data: children,
+      });
+    }
+
+    // Admin: return all children
     const children = await childModel.getAll();
 
     res.status(200).json({

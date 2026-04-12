@@ -14,41 +14,30 @@ import { useAuth } from '../features/auth/hooks/useAuth';
 // If user is authenticated, renders the route normally
 export const ProtectedRoute = (): JSX.Element => {
   // Get authentication state from useAuth hook
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
 
-  // ========================================================================
-  // CHECK BOTH REACT STATE AND LOCALSTORAGE (fallback)
-  // ========================================================================
-  // Use localStorage as fallback because React state updates are async
-  // localStorage is updated immediately by authService, so use it as source of truth
-  const hasValidToken = !!localStorage.getItem('aidaa_token');
-  const hasValidUser = !!localStorage.getItem('aidaa_user');
-  const isAuthenticatedFallback = hasValidToken && hasValidUser;
-
-  // ========================================================================
-  // FINAL AUTHENTICATION CHECK
-  // ========================================================================
-  // isAuthenticated from hook (may be delayed) OR fallback to localStorage (immediate)
-  const isFullyAuthenticated = isAuthenticated || isAuthenticatedFallback;
+  // Wait for localStorage to be read before deciding — prevents false redirects
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <span className="w-10 h-10 rounded-full border-4 border-brand-orange/20 border-t-brand-orange animate-spin block" />
+      </div>
+    );
+  }
 
   // ========================================================================
   // REDIRECT IF NOT AUTHENTICATED
   // ========================================================================
   // If user is not logged in (neither hook state nor localStorage), redirect to login page
-  if (!isFullyAuthenticated) {
-    console.log('[ProtectedRoute] Not authenticated, redirecting to /login', {
-      isAuthenticated,
-      isAuthenticatedFallback,
-      token: !!localStorage.getItem('aidaa_token'),
-      user: !!localStorage.getItem('aidaa_user'),
-    });
+  if (!isAuthenticated) {
+    console.log('[ProtectedRoute] Not authenticated → /login');
     // Navigate to login page
     // The 'replace' flag prevents adding to browser history
     // So user can't navigate back to protected route
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[ProtectedRoute] Authenticated, rendering child routes');
+  console.log('[ProtectedRoute] Authenticated ✓');
 
   // ========================================================================
   // RENDER CHILD ROUTES
@@ -57,5 +46,4 @@ export const ProtectedRoute = (): JSX.Element => {
   // Outlet represents the matched child route component
   return <Outlet />;
 };
-
 

@@ -254,6 +254,10 @@ module.exports = {
   approveRegistration,
   rejectRegistration,
   getNotificationCount,
+  getAllRelations,
+  getAllMessages,
+  getAllNotes,
+  deleteRelation,
 };
 
 // ============================================================================
@@ -316,6 +320,92 @@ async function getNotificationCount(req, res) {
     res.json({ success: true, data: { count: rows[0].count } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to get count' });
+  }
+}
+
+// ============================================================================
+// DELETE RELATION (admin)
+// ============================================================================
+// DELETE /admin/relations/:id
+async function deleteRelation(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const { id } = req.params;
+    const rows = await query('SELECT id FROM professional_invitations WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Relation introuvable.' });
+    await query('DELETE FROM professional_invitations WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Relation supprimée définitivement.' });
+  } catch (error) {
+    console.error('deleteRelation error:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la suppression.' });
+  }
+}
+// ============================================================================
+// GET /admin/relations
+async function getAllRelations(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const rows = await query(
+      `SELECT pi.id, pi.status, pi.invited_at,
+              p.name   AS parent_name,       p.email  AS parent_email,
+              pro.name AS professional_name, pro.email AS professional_email
+       FROM professional_invitations pi
+       JOIN users p   ON pi.parent_id       = p.id
+       JOIN users pro ON pi.professional_id = pro.id
+       ORDER BY pi.invited_at DESC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('getAllRelations error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch relations' });
+  }
+}
+
+// ============================================================================
+// GET ALL MESSAGES
+// ============================================================================
+// GET /admin/messages
+async function getAllMessages(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const rows = await query(
+      `SELECT m.id, m.content, m.created_at, m.is_read,
+              s.name AS sender_name,   s.role AS sender_role,
+              r.name AS receiver_name, r.role AS receiver_role,
+              c.name AS child_name
+       FROM messages m
+       JOIN users    s ON m.sender_id   = s.id
+       JOIN users    r ON m.receiver_id = r.id
+       JOIN children c ON m.child_id    = c.id
+       ORDER BY m.created_at DESC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('getAllMessages error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch messages' });
+  }
+}
+
+// ============================================================================
+// GET ALL NOTES
+// ============================================================================
+// GET /admin/notes
+async function getAllNotes(req, res) {
+  try {
+    const { query } = require('../config/db');
+    const rows = await query(
+      `SELECT n.id, n.content, n.date,
+              u.name AS professional_name, u.email AS professional_email,
+              c.name AS child_name
+       FROM notes n
+       JOIN users    u ON n.professional_id = u.id
+       JOIN children c ON n.child_id        = c.id
+       ORDER BY n.date DESC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('getAllNotes error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notes' });
   }
 }
 

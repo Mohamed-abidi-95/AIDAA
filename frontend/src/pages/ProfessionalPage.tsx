@@ -1,46 +1,30 @@
 // ============================================================================
-// PROFESSIONAL DASHBOARD — Redesigned with sidebar + pharmacy green theme
+// PROFESSIONAL DASHBOARD — Design identique à AdminPanel (Tailwind + FA icons)
 // ============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
-import '../styles/ProfessionalDashboard.css';
 import AnalytiquesProfessionnel from './AnalytiquesProfessionnel';
+import { MessagerieView } from './MessagerieView';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'teleconsult' | 'analytics';
+type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'analytics' | 'messages';
 
 interface Child {
-  id: number;
-  name: string;
-  age: number;
-  parent_id: number;
-  parent_name?: string;
-  participant_category?: string;
+  id: number; name: string; age: number;
+  parent_id: number; parent_name?: string; participant_category?: string;
 }
-
 interface ParentRecord {
-  id: number; name: string; email: string;
-  child_count: number; invited_at: string;
+  id: number; name: string; email: string; child_count: number; invited_at: string;
 }
-
 interface Activity {
-  id: number;
-  content_title: string;
-  score: number;
-  duration_seconds: number;
-  date: string;
+  id: number; content_title: string; score: number; duration_seconds: number; date: string;
 }
-
 interface Note {
-  id: number;
-  content: string;
-  date: string;
-  professional_name: string;
+  id: number; content: string; date: string; professional_name: string;
 }
-
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
 interface Toast { id: number; type: 'success' | 'error'; msg: string; }
 
@@ -59,13 +43,47 @@ const useToast = () => {
 
 // ── Nav config ─────────────────────────────────────────────────────────────
 const NAV = [
-  { id: 'patients',     icon: '👥', label: 'Mes patients' },
-  { id: 'activities',   icon: '📊', label: 'Activités' },
-  { id: 'notes',        icon: '📝', label: 'Notes cliniques' },
-  { id: 'analytics',    icon: '📈', label: 'Analytiques' },
-  { id: 'invitations',  icon: '📨', label: 'Mes invitations' },
-  { id: 'teleconsult',  icon: '🎥', label: 'Téléconsultation' },
+  { id: 'patients',    fa: 'fa-solid fa-hospital-user',      label: 'Mes patients'    },
+  { id: 'activities',  fa: 'fa-solid fa-chart-column',        label: 'Activités'       },
+  { id: 'notes',       fa: 'fa-solid fa-notes-medical',       label: 'Notes cliniques' },
+  { id: 'analytics',   fa: 'fa-solid fa-chart-line',          label: 'Analytiques'     },
+  { id: 'invitations', fa: 'fa-solid fa-envelope-open-text',  label: 'Invitations'     },
+  { id: 'messages',    fa: 'fa-solid fa-comments',            label: 'Messagerie'      },
 ] as const;
+
+// ── Input helpers ──────────────────────────────────────────────────────────
+const inputCls  = 'w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 bg-white text-[14px] focus:outline-none focus:ring-4 focus:ring-brand-orange/10 focus:border-brand-orange transition-all';
+
+// ── StatCard ───────────────────────────────────────────────────────────────
+const StatCard = ({ icon, value, label, sub }: { icon: string; value: number | string; label: string; sub?: string }) => (
+  <div className="bg-white rounded-2xl p-5 flex items-center gap-4 border border-slate-100 shadow-sm">
+    <div className="w-12 h-12 rounded-[14px] bg-orange-100 text-brand-orange flex items-center justify-center text-xl shrink-0">
+      <i className={icon} />
+    </div>
+    <div>
+      <p className="text-[28px] font-bold leading-none text-slate-900 mb-1">{value}</p>
+      <p className="text-sm text-slate-500 font-medium">{label}</p>
+      {sub && <p className="text-xs text-slate-400">{sub}</p>}
+    </div>
+  </div>
+);
+
+// ── Section wrapper ────────────────────────────────────────────────────────
+const Section = ({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-6">
+    <div className="flex items-center justify-between px-7 py-5 border-b border-slate-100">
+      <h3 className="text-base font-bold text-slate-900">{title}</h3>
+      {badge}
+    </div>
+    <div className="p-7">{children}</div>
+  </div>
+);
+
+// ── Score badge ────────────────────────────────────────────────────────────
+const ScoreBadge = ({ score }: { score: number }) => {
+  const cls = score >= 70 ? 'bg-emerald-100 text-emerald-700' : score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  return <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${cls}`}>{score} / 100</span>;
+};
 
 // ── Component ──────────────────────────────────────────────────────────────
 export const ProfessionalPage = (): JSX.Element => {
@@ -85,38 +103,26 @@ export const ProfessionalPage = (): JSX.Element => {
   const [invitations, setInvitations]           = useState<ParentRecord[]>([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
 
-  // ── Fetch patients (enfants des parents qui ont invité ce professionnel) ──
+  // ── Fetch patients ───────────────────────────────────────────────────────
   useEffect(() => {
     const fetchPatients = async () => {
       try {
         setLoading(true);
-        // Essai endpoint filtré → fallback /all
-        try {
-          const { data } = await api.get<ApiResult<Child[]>>('/api/professional/my-children');
-          if (data.success && data.data.length > 0) {
-            setPatients(data.data);
-            setSelectedPatient(data.data[0]);
-            return;
-          }
-        } catch { /* fallback */ }
-        const { data } = await api.get<ApiResult<Child[]>>('/api/child/all');
+        const { data } = await api.get<ApiResult<Child[]>>('/api/professional/my-children');
         if (data.success) {
           setPatients(data.data);
           if (data.data.length > 0) setSelectedPatient(data.data[0]);
         }
-      } catch {
-        toast('Erreur lors du chargement des patients', 'error');
-      } finally {
-        setLoading(false);
-      }
+      } catch { toast('Erreur lors du chargement des patients', 'error'); }
+      finally { setLoading(false); }
     };
     fetchPatients();
   }, []);
 
-  // ── Fetch invitations (parents qui ont invité ce professionnel) ─────────
+  // ── Fetch invitations ────────────────────────────────────────────────────
   useEffect(() => {
     if (view !== 'invitations') return;
-    const fetchInvitations = async () => {
+    const fetch = async () => {
       try {
         setInvitationsLoading(true);
         const { data } = await api.get<ApiResult<ParentRecord[]>>('/api/professional/my-parents');
@@ -124,47 +130,39 @@ export const ProfessionalPage = (): JSX.Element => {
       } catch { /* silent */ }
       finally { setInvitationsLoading(false); }
     };
-    fetchInvitations();
+    fetch();
   }, [view]);
 
-  // ── Fetch activities + notes when patient changes ────────────────────────
+  // ── Fetch activities + notes ─────────────────────────────────────────────
   useEffect(() => {
     if (!selectedPatient) return;
-    const fetchData = async () => {
+    const fetch = async () => {
       try {
-        const [{ data: actData }, { data: noteData }] = await Promise.all([
+        const [{ data: a }, { data: n }] = await Promise.all([
           api.get<ApiResult<Activity[]>>(`/api/activity-log/child/${selectedPatient.id}`),
           api.get<ApiResult<Note[]>>(`/api/note/child/${selectedPatient.id}`),
         ]);
-        if (actData.success) setActivities(actData.data);
-        if (noteData.success) setNotes(noteData.data);
+        if (a.success) setActivities(a.data);
+        if (n.success) setNotes(n.data);
       } catch { /* silent */ }
     };
-    fetchData();
+    fetch();
   }, [selectedPatient]);
 
-  // ── Add clinical note ────────────────────────────────────────────────────
+  // ── Add note ─────────────────────────────────────────────────────────────
   const handleAddNote = async () => {
     if (!selectedPatient || !newNote.trim()) { toast('Saisissez une note avant de valider', 'error'); return; }
     try {
       setNoteLoading(true);
-      const { data } = await api.post<ApiResult<Note>>('/api/note', {
-        childId: selectedPatient.id,
-        content: newNote.trim(),
-      });
+      const { data } = await api.post<ApiResult<Note>>('/api/note', { childId: selectedPatient.id, content: newNote.trim() });
       if (data.success) {
         setNewNote('');
         toast('Note clinique ajoutée ✓');
         const { data: nd } = await api.get<ApiResult<Note[]>>(`/api/note/child/${selectedPatient.id}`);
         if (nd.success) setNotes(nd.data);
-      } else {
-        toast(data.message || 'Erreur lors de l\'ajout', 'error');
-      }
-    } catch {
-      toast('Erreur lors de l\'ajout de la note', 'error');
-    } finally {
-      setNoteLoading(false);
-    }
+      } else toast(data.message || "Erreur lors de l'ajout", 'error');
+    } catch { toast("Erreur lors de l'ajout de la note", 'error'); }
+    finally { setNoteLoading(false); }
   };
 
   // ── Stats ────────────────────────────────────────────────────────────────
@@ -175,487 +173,416 @@ export const ProfessionalPage = (): JSX.Element => {
     return { sessions: activities.length, time: Math.round(totalTime / 60), avgScore: Math.round(avgScore) };
   })();
 
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const profInitial  = user?.name?.charAt(0).toUpperCase() || 'P';
-  const currentNav   = NAV.find(n => n.id === view);
+  const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const profInitial      = user?.name?.charAt(0).toUpperCase() || 'P';
+  const currentNav       = NAV.find(n => n.id === view);
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="prof-layout">
+    <div className="font-sans antialiased flex h-screen overflow-hidden bg-slate-50 animate-page-in">
 
-      {/* ── SIDEBAR ── */}
-      <aside className="prof-sidebar">
-
+      {/* ══════════════ SIDEBAR ══════════════ */}
+      <aside
+        className="w-[280px] flex flex-col z-10 shrink-0 overflow-y-auto"
+        style={{
+          background: '#F97316',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px)',
+          backgroundSize: '20px 20px',
+          boxShadow: '4px 0 15px rgba(249,115,22,0.2)',
+        }}
+      >
         {/* Brand */}
-        <div className="prof-sidebar__brand">
-          <div className="prof-sidebar__logo">🩺</div>
-          <div className="prof-sidebar__brand-text">
-            <h2>AIDAA</h2>
-            <span>Espace Professionnel</span>
+        <div className="flex items-center gap-4 px-6 py-8 shrink-0">
+          <div className="w-12 h-12 bg-white text-brand-orange rounded-xl flex items-center justify-center text-2xl shadow-sm shrink-0">
+            <i className="fa-solid fa-stethoscope" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
+            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Espace Professionnel</span>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="prof-sidebar__nav">
-          <div className="prof-nav__label">Menu</div>
+        {/* Nav */}
+        <nav className="flex-1 px-5 flex flex-col gap-2">
           {NAV.map(n => (
-            <button
-              key={n.id}
-              className={`prof-nav__item ${view === n.id ? 'active' : ''}`}
-              onClick={() => {
-                if (n.id === 'teleconsult') {
-                  navigate('/professionnel/teleconsultation');
-                } else {
-                  setView(n.id as ViewType);
-                }
-              }}
+            <button key={n.id}
+              className={`flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border transition-all
+                ${view === n.id
+                  ? 'bg-white text-brand-orange shadow-md border-transparent'
+                  : 'text-white border-transparent hover:bg-white/15 hover:border-white/20'}`}
+              onClick={() => setView(n.id as ViewType)}
             >
-              <span className="nav-icon">{n.icon}</span>
+              <i className={`${n.fa} w-6 mr-3 text-lg ${view === n.id ? 'text-brand-orange' : 'opacity-80'}`} />
               {n.label}
-              {n.id === 'invitations' && patients.length > 0 && (
-                <span className="prof-nav__badge">{patients.length}</span>
-              )}
             </button>
           ))}
+          {/* Téléconsultation link */}
+          <button
+            className="flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border text-white border-transparent hover:bg-white/15 hover:border-white/20 transition-all"
+            onClick={() => navigate('/professionnel/teleconsultation')}
+          >
+            <i className="fa-solid fa-video w-6 mr-3 text-lg opacity-80" />
+            Téléconsultation
+          </button>
         </nav>
 
         {/* Patients list */}
-        <div className="prof-sidebar__patients">
-          <div className="prof-section-title">Patients ({patients.length})</div>
-          <div className="prof-search-wrap">
+        <div className="px-5 pb-4 flex flex-col gap-2 shrink-0">
+          <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest px-1 pt-3 pb-1">
+            Patients ({patients.length})
+          </p>
+          {/* Search */}
+          <div className="relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs" />
             <input
               type="text"
-              className="prof-search"
-              placeholder="🔍 Rechercher…"
               value={search}
               onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher…"
+              className="w-full pl-8 pr-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 transition"
             />
           </div>
-          {filteredPatients.map(p => (
-            <button
-              key={p.id}
-              type="button"
-              className={`prof-patient-item ${selectedPatient?.id === p.id ? 'active' : ''}`}
-              onClick={() => setSelectedPatient(p)}
-            >
-              <span className="prof-patient-avatar">{p.name.charAt(0).toUpperCase()}</span>
-              <span className="prof-patient-name">
-                {p.name}
-                <small>
-                  {p.age} ans
-                  {p.participant_category ? ` · ${p.participant_category}` : ''}
-                  {p.parent_name ? ` · ${p.parent_name}` : ''}
-                </small>
-              </span>
-            </button>
-          ))}
-          {filteredPatients.length === 0 && (
-            <div className="prof-no-patients">Aucun résultat</div>
-          )}
+          <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+            {filteredPatients.map(p => (
+              <button key={p.id}
+                onClick={() => setSelectedPatient(p)}
+                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-left text-sm transition-all border
+                  ${selectedPatient?.id === p.id
+                    ? 'bg-white/20 border-white/30 text-white'
+                    : 'bg-white/06 border-transparent text-white/70 hover:bg-white/12 hover:text-white'}`}
+              >
+                <div className="w-7 h-7 rounded-full bg-white/20 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                  {p.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold truncate leading-tight">{p.name}</p>
+                  <p className="text-[11px] text-white/50 truncate">{p.age} ans{p.parent_name ? ` · ${p.parent_name}` : ''}</p>
+                </div>
+              </button>
+            ))}
+            {filteredPatients.length === 0 && (
+              <p className="text-white/40 text-xs text-center py-3">Aucun résultat</p>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="prof-sidebar__footer">
-          <div className="prof-sidebar__user">
-            <div className="prof-sidebar__avatar">{profInitial}</div>
-            <div className="prof-sidebar__user-info">
-              <div className="prof-sidebar__user-name">{user?.name || 'Professionnel'}</div>
-              <div className="prof-sidebar__user-role">Professionnel de santé</div>
+        <div className="p-6 shrink-0">
+          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-brand-orange text-base shrink-0">
+              {profInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Professionnel'}</p>
+              <p className="text-xs text-white/70">Professionnel de santé</p>
             </div>
           </div>
-          <button className="prof-logout-btn" onClick={logout}>
-            <span>🚪</span> Se déconnecter
+          <button onClick={logout}
+            className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
+            Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
           </button>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <main className="prof-main">
+      {/* ══════════════ MAIN ══════════════════ */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Topbar */}
-        <header className="prof-topbar">
-          <div className="prof-topbar__left">
-            <div className="prof-topbar__breadcrumb">Professionnel / {currentNav?.label}</div>
-            <h1>{currentNav?.icon} {currentNav?.label}</h1>
+        {/* Top header */}
+        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm text-slate-500 font-medium">Professionnel /</span>
+            <span className="text-xl font-bold text-slate-900">{currentNav?.label ?? 'Téléconsultation'}</span>
           </div>
-          <div className="prof-topbar__right">
-            {patients.length > 0 && (
-              <div className="prof-patient-select">
-                <label>Patient :</label>
-                <select
-                  value={selectedPatient?.id || ''}
-                  onChange={e => setSelectedPatient(patients.find(p => p.id === +e.target.value) || null)}
-                >
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.age} ans)</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+          {patients.length > 0 && view !== 'messages' && (
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-slate-500 font-medium">Patient :</label>
+              <select
+                value={selectedPatient?.id || ''}
+                onChange={e => setSelectedPatient(patients.find(p => p.id === +e.target.value) || null)}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition"
+              >
+                {patients.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.age} ans)</option>
+                ))}
+              </select>
+            </div>
+          )}
         </header>
 
-        {/* Content */}
-        <div className="prof-content">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-10">
 
-          {/* Chargement */}
+          {/* Loading */}
           {loading && (
-            <div className="prof-loading">
-              <div className="prof-loading__spinner" />
+            <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
+              <span className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin" />
               <p>Chargement des patients…</p>
             </div>
           )}
 
-          {/* Aucun patient (masqué sur l'onglet analytics) */}
-          {!loading && patients.length === 0 && view !== 'analytics' && (
-            <div className="prof-empty-state">
-              👥 Aucun patient assigné pour le moment.<br />
-              Contactez l'administrateur pour obtenir l'accès aux dossiers patients.
+          {/* No patients (except analytics + messages) */}
+          {!loading && patients.length === 0 && view !== 'analytics' && view !== 'messages' && (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 gap-4">
+              <i className="fa-solid fa-hospital-user text-5xl" />
+              <div className="text-center">
+                <p className="font-semibold text-slate-600">Aucun patient assigné</p>
+                <p className="text-sm mt-1">Contactez l'administrateur pour obtenir l'accès aux dossiers patients.</p>
+              </div>
             </div>
           )}
 
-          {/* ── VUE ANALYTIQUES (niveau docteur, indépendante du patient sélectionné) ── */}
+          {/* ── VUE : ANALYTIQUES ── */}
           {view === 'analytics' && !loading && user?.id && (
-            <AnalytiquesProfessionnel
-              doctorId={user.id}
-              patients={patients}
-            />
+            <AnalytiquesProfessionnel doctorId={user.id} patients={patients} />
           )}
 
-          {selectedPatient && !loading && view !== 'analytics' && (
+          {/* ── VUE : MESSAGERIE ── */}
+          {view === 'messages' && !loading && user?.id && (
+            <MessagerieView role="professional" myId={user.id} accent="orange" />
+          )}
+
+          {selectedPatient && !loading && view !== 'analytics' && view !== 'messages' && (
             <>
               {/* KPIs */}
-              <div className="prof-kpis">
-                <div className="prof-kpi">
-                  <div className="prof-kpi__icon">👤</div>
-                  <div>
-                    <span className="prof-kpi__val">{selectedPatient.age}</span>
-                    <span className="prof-kpi__lbl">Âge (ans)</span>
-                  </div>
-                </div>
-                <div className="prof-kpi">
-                  <div className="prof-kpi__icon">🎮</div>
-                  <div>
-                    <span className="prof-kpi__val">{stats.sessions}</span>
-                    <span className="prof-kpi__lbl">Sessions</span>
-                  </div>
-                </div>
-                <div className="prof-kpi">
-                  <div className="prof-kpi__icon">⏱️</div>
-                  <div>
-                    <span className="prof-kpi__val">{stats.time}</span>
-                    <span className="prof-kpi__lbl">Minutes total</span>
-                  </div>
-                </div>
-                <div className="prof-kpi">
-                  <div className="prof-kpi__icon">⭐</div>
-                  <div>
-                    <span className="prof-kpi__val">{stats.avgScore}</span>
-                    <span className="prof-kpi__lbl">Score moyen</span>
-                  </div>
-                </div>
-                <div className="prof-kpi">
-                  <div className="prof-kpi__icon">📝</div>
-                  <div>
-                    <span className="prof-kpi__val">{notes.length}</span>
-                    <span className="prof-kpi__lbl">Notes</span>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 xl:grid-cols-5 gap-5 mb-8">
+                <StatCard icon="fa-solid fa-user" value={selectedPatient.age} label="Âge (ans)" />
+                <StatCard icon="fa-solid fa-gamepad" value={stats.sessions} label="Sessions" />
+                <StatCard icon="fa-regular fa-clock" value={stats.time} label="Minutes total" />
+                <StatCard icon="fa-solid fa-star" value={stats.avgScore} label="Score moyen" />
+                <StatCard icon="fa-solid fa-notes-medical" value={notes.length} label="Notes cliniques" />
               </div>
 
-              {/* ── VIEW: PATIENTS (fiche) ── */}
+              {/* ── Fiche patient ── */}
               {view === 'patients' && (
-                <div className="prof-section">
-                  <div className="prof-section__head">
-                    <h2>👤 Fiche patient — {selectedPatient.name}</h2>
-                    {selectedPatient.parent_name && (
-                      <span className="prof-section__count">👨‍👩‍👧 Parent : {selectedPatient.parent_name}</span>
-                    )}
-                  </div>
-                  <div className="prof-section__body">
-                    <div className="prof-patient-card">
-                      <div className="prof-patient-card__avatar">
-                        {selectedPatient.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="prof-patient-card__details">
-                        <h3>{selectedPatient.name}</h3>
-                        <div className="prof-patient-card__grid">
-                          <div className="prof-patient-card__item">
-                            <label>Identifiant</label>
-                            <span>#{selectedPatient.id}</span>
+                <Section
+                  title={`Fiche patient — ${selectedPatient.name}`}
+                  badge={
+                    selectedPatient.parent_name ? (
+                      <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">
+                        <i className="fa-solid fa-house-user text-xs" /> {selectedPatient.parent_name}
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <div className="flex gap-6 items-start">
+                    <div className="w-16 h-16 rounded-2xl bg-brand-orange flex items-center justify-center text-white text-2xl font-bold shrink-0">
+                      {selectedPatient.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">{selectedPatient.name}</h2>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[
+                          { label: 'Identifiant',     val: `#${selectedPatient.id}` },
+                          { label: 'Âge',             val: `${selectedPatient.age} ans` },
+                          { label: 'Catégorie',       val: selectedPatient.participant_category || 'Enfant' },
+                          { label: 'Famille',         val: selectedPatient.parent_name || '—' },
+                          { label: 'Sessions',        val: String(stats.sessions) },
+                          { label: 'Temps total',     val: `${stats.time} min` },
+                          { label: 'Score moyen',     val: `${stats.avgScore} / 100` },
+                          { label: 'Notes cliniques', val: String(notes.length) },
+                        ].map(item => (
+                          <div key={item.label} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{item.label}</p>
+                            <p className="text-base font-bold text-slate-800 capitalize">{item.val}</p>
                           </div>
-                          <div className="prof-patient-card__item">
-                            <label>Âge</label>
-                            <span>{selectedPatient.age} ans</span>
-                          </div>
-                          <div className="prof-patient-card__item">
-                            <label>Catégorie</label>
-                            <span style={{ textTransform: 'capitalize' }}>{selectedPatient.participant_category || 'Enfant'}</span>
-                          </div>
-                          {selectedPatient.parent_name && (
-                            <div className="prof-patient-card__item">
-                              <label>Famille</label>
-                              <span>{selectedPatient.parent_name}</span>
-                            </div>
-                          )}
-                          <div className="prof-patient-card__item">
-                            <label>Sessions jouées</label>
-                            <span>{stats.sessions}</span>
-                          </div>
-                          <div className="prof-patient-card__item">
-                            <label>Temps total</label>
-                            <span>{stats.time} min</span>
-                          </div>
-                          <div className="prof-patient-card__item">
-                            <label>Score moyen</label>
-                            <span>{stats.avgScore} / 100</span>
-                          </div>
-                          <div className="prof-patient-card__item">
-                            <label>Notes cliniques</label>
-                            <span>{notes.length}</span>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </div>
-                </div>
+                </Section>
               )}
 
-              {/* ── VIEW: ACTIVITIES ── */}
+              {/* ── Activités ── */}
               {view === 'activities' && (
-                <div className="prof-section">
-                  <div className="prof-section__head">
-                    <h2>📊 Journal d'activités — {selectedPatient.name}</h2>
-                    <span className="prof-section__count">{activities.length} session(s)</span>
-                  </div>
-                  <div className="prof-section__body" style={{ padding: 0 }}>
-                    {activities.length === 0 ? (
-                      <div className="prof-empty">
-                        <div className="prof-empty__icon">📭</div>
-                        <p>Aucune activité enregistrée pour ce patient.</p>
-                      </div>
-                    ) : (
-                      <div className="prof-table-wrap">
-                        <table className="prof-table">
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>Activité</th>
-                              <th>Score</th>
-                              <th>Durée</th>
-                              <th>Date</th>
+                <Section
+                  title={`Journal d'activités — ${selectedPatient.name}`}
+                  badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{activities.length} session(s)</span>}
+                >
+                  {activities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                      <i className="fa-solid fa-inbox text-5xl" />
+                      <p className="font-medium">Aucune activité enregistrée pour ce patient.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto -mx-7 -mb-7">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-100">
+                            <th className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">#</th>
+                            <th className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Activité</th>
+                            <th className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Score</th>
+                            <th className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Durée</th>
+                            <th className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activities.map((act, i) => (
+                            <tr key={act.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                              <td className="px-7 py-4 text-brand-orange font-bold text-sm">{i + 1}</td>
+                              <td className="px-7 py-4 font-semibold text-slate-800">{act.content_title}</td>
+                              <td className="px-7 py-4"><ScoreBadge score={act.score} /></td>
+                              <td className="px-7 py-4 text-slate-500 text-sm">{Math.round((act.duration_seconds || 0) / 60)} min</td>
+                              <td className="px-7 py-4 text-slate-500 text-sm">{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {activities.map((act, i) => (
-                              <tr key={act.id}>
-                                <td style={{ color: '#7A9485', fontWeight: 600 }}>{i + 1}</td>
-                                <td><strong>{act.content_title}</strong></td>
-                                <td>
-                                  <span className={`prof-score-badge ${
-                                    act.score >= 70 ? 'prof-score-badge--good'
-                                    : act.score >= 40 ? 'prof-score-badge--mid'
-                                    : 'prof-score-badge--low'
-                                  }`}>
-                                    {act.score} / 100
-                                  </span>
-                                </td>
-                                <td>{Math.round((act.duration_seconds || 0) / 60)} min</td>
-                                <td>{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Section>
               )}
 
-              {/* ── VIEW: NOTES ── */}
+              {/* ── Notes cliniques ── */}
               {view === 'notes' && (
                 <>
-                  {/* Formulaire nouvelle note */}
-                  <div className="prof-section" style={{ marginBottom: 20 }}>
-                    <div className="prof-section__head">
-                      <h2>✏️ Nouvelle note clinique</h2>
+                  {/* Formulaire */}
+                  <Section title="Nouvelle note clinique">
+                    <div className="flex flex-col gap-4">
+                      <textarea
+                        value={newNote}
+                        onChange={e => setNewNote(e.target.value)}
+                        placeholder={`Saisissez vos observations cliniques pour ${selectedPatient.name}…`}
+                        rows={4}
+                        className={inputCls}
+                      />
+                      <button
+                        onClick={handleAddNote}
+                        disabled={noteLoading || !newNote.trim()}
+                        className="self-start flex items-center gap-2 bg-brand-orange hover:bg-orange-700 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-brand-orange/20 transition-all"
+                      >
+                        {noteLoading
+                          ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Enregistrement…</>
+                          : <><i className="fa-solid fa-floppy-disk" /> Enregistrer la note</>
+                        }
+                      </button>
                     </div>
-                    <div className="prof-section__body">
-                      <div className="prof-note-form">
-                        <textarea
-                          className="prof-note-textarea"
-                          value={newNote}
-                          onChange={e => setNewNote(e.target.value)}
-                          placeholder={`Saisissez vos observations cliniques pour ${selectedPatient.name}…`}
-                          rows={5}
-                        />
-                        <button
-                          className="prof-btn prof-btn--primary"
-                          onClick={handleAddNote}
-                          disabled={noteLoading || !newNote.trim()}
-                        >
-                          {noteLoading ? '⏳ Enregistrement…' : '💾 Enregistrer la note'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  </Section>
 
-                  {/* Historique des notes */}
-                  <div className="prof-section">
-                    <div className="prof-section__head">
-                      <h2>📋 Historique des notes — {selectedPatient.name}</h2>
-                      <span className="prof-section__count">{notes.length} note(s)</span>
-                    </div>
-                    <div className="prof-section__body">
-                      {notes.length === 0 ? (
-                        <div className="prof-empty">
-                          <div className="prof-empty__icon">📭</div>
-                          <p>Aucune note clinique pour ce patient.</p>
-                        </div>
-                      ) : (
-                        <div className="prof-notes-list">
-                          {notes.map(note => (
-                            <div key={note.id} className="prof-note-card">
-                              <div className="prof-note-card__header">
-                                <span className="prof-note-card__author">🩺 Dr. {note.professional_name}</span>
-                                <span className="prof-note-card__date">
-                                  {new Date(note.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                </span>
-                              </div>
-                              <p className="prof-note-card__content">{note.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-
-              {/* ── VIEW: MES INVITATIONS ── */}
-              {view === 'invitations' && (
-                <div className="prof-section">
-                  <div className="prof-section__head">
-                    <h2>📨 Mes invitations reçues</h2>
-                    <span className="prof-section__count">{invitations.length} parent{invitations.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="prof-section__body">
-                    {invitationsLoading ? (
-                      <div className="prof-empty">
-                        <div className="prof-loading__spinner" style={{ margin: '24px auto 10px' }} />
-                        <p>Chargement…</p>
-                      </div>
-                    ) : invitations.length === 0 ? (
-                      <div className="prof-empty">
-                        <div className="prof-empty__icon">📭</div>
-                        <p>Aucun parent ne vous a encore invité.<br />
-                          <small style={{ color: 'var(--prof-text-light)' }}>
-                            Les parents peuvent vous inviter depuis leur tableau de bord → "Mon professionnel".
-                          </small>
-                        </p>
+                  {/* Historique */}
+                  <Section
+                    title={`Historique — ${selectedPatient.name}`}
+                    badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{notes.length} note(s)</span>}
+                  >
+                    {notes.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+                        <i className="fa-solid fa-notes-medical text-4xl" />
+                        <p className="font-medium">Aucune note clinique pour ce patient.</p>
                       </div>
                     ) : (
-                      <div className="prof-inv-list">
-                        {invitations.map(inv => (
-                          <div key={inv.id} className="prof-inv-card">
-
-                            {/* En-tête */}
-                            <div className="prof-inv-card__head">
-                              <div className="prof-inv-card__avatar">{inv.name.charAt(0).toUpperCase()}</div>
-                              <div className="prof-inv-card__info">
-                                <strong>{inv.name}</strong>
-                                <span>{inv.email}</span>
+                      <div className="flex flex-col gap-3">
+                        {notes.map(note => (
+                          <div key={note.id} className="bg-slate-50 border border-slate-100 border-l-4 border-l-brand-orange rounded-xl p-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <i className="fa-solid fa-stethoscope text-brand-orange text-sm" />
+                                <span className="font-bold text-slate-800 text-sm">Dr. {note.professional_name}</span>
                               </div>
-                              <div className="prof-inv-card__meta">
-                                <span className="prof-inv-card__children">
-                                  👶 {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''}
-                                </span>
-                                <span className="prof-inv-card__date">
-                                  Depuis le {new Date(inv.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </span>
-                              </div>
+                              <span className="text-xs text-slate-400">
+                                {new Date(note.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                              </span>
                             </div>
-
-                            {/* Étapes */}
-                            <div className="prof-inv-steps">
-                              <div className="prof-inv-step prof-inv-step--done">
-                                <div className="prof-inv-step__circle">✓</div>
-                                <div className="prof-inv-step__text">
-                                  <div className="prof-inv-step__label">Invitation reçue</div>
-                                  <div className="prof-inv-step__desc">{inv.name} vous a invité à suivre ses enfants</div>
-                                </div>
-                              </div>
-                              <div className="prof-inv-step prof-inv-step--done">
-                                <div className="prof-inv-step__circle">✓</div>
-                                <div className="prof-inv-step__text">
-                                  <div className="prof-inv-step__label">Compte configuré</div>
-                                  <div className="prof-inv-step__desc">Vous êtes connecté et actif sur la plateforme</div>
-                                </div>
-                              </div>
-                              <div className="prof-inv-step prof-inv-step--done">
-                                <div className="prof-inv-step__circle">✓</div>
-                                <div className="prof-inv-step__text">
-                                  <div className="prof-inv-step__label">Suivi actif ✅</div>
-                                  <div className="prof-inv-step__desc">
-                                    Vous suivez {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''} de cette famille
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Action */}
-                            <div className="prof-inv-card__actions">
-                              <button
-                                className="prof-btn prof-btn--primary"
-                                style={{ fontSize: 13, padding: '8px 16px', alignSelf: 'auto' }}
-                                onClick={() => {
-                                  const firstChild = patients.find(p => p.parent_id === inv.id);
-                                  if (firstChild) { setSelectedPatient(firstChild); setView('patients'); }
-                                }}
-                              >
-                                👁️ Voir les patients de cette famille
-                              </button>
-                            </div>
-
+                            <p className="text-slate-600 text-sm leading-relaxed">{note.content}</p>
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
-                </div>
+                  </Section>
+                </>
               )}
 
-              {/* ── VIEW: TELECONSULT ── */}
-              {view === 'teleconsult' && (
-                <div className="prof-coming-soon">
-                  <div className="prof-coming-soon__icon">🎥</div>
-                  <h2>Téléconsultation</h2>
-                  <p>
-                    La fonctionnalité de téléconsultation est en cours de développement.<br />
-                    Elle sera disponible dans une prochaine version.
-                  </p>
-                </div>
+              {/* ── Invitations ── */}
+              {view === 'invitations' && (
+                <Section
+                  title="Mes invitations reçues"
+                  badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{invitations.length} parent(s)</span>}
+                >
+                  {invitationsLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                      <span className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin" />
+                      <p>Chargement…</p>
+                    </div>
+                  ) : invitations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                      <i className="fa-solid fa-envelope text-4xl" />
+                      <p className="font-medium">Aucun parent ne vous a encore invité.</p>
+                      <p className="text-sm text-center max-w-sm">Les parents peuvent vous inviter depuis leur tableau de bord → "Mon professionnel".</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      {invitations.map(inv => (
+                        <div key={inv.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                          {/* Header */}
+                          <div className="flex items-center gap-4 p-5 bg-slate-50 border-b border-slate-100">
+                            <div className="w-12 h-12 rounded-full bg-brand-orange flex items-center justify-center font-bold text-white text-lg shrink-0">
+                              {inv.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900">{inv.name}</p>
+                              <p className="text-sm text-slate-500">{inv.email}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-xs font-bold">
+                                <i className="fa-solid fa-baby" /> {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''}
+                              </span>
+                              <p className="text-xs text-slate-400 mt-1">
+                                depuis le {new Date(inv.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                          {/* Steps */}
+                          <div className="p-5 flex flex-col gap-2">
+                            {[
+                              { label: 'Invitation reçue', desc: `${inv.name} vous a invité à suivre ses enfants` },
+                              { label: 'Compte configuré',  desc: 'Vous êtes connecté et actif sur la plateforme' },
+                              { label: 'Suivi actif ✅',    desc: `Vous suivez ${inv.child_count} enfant${inv.child_count !== 1 ? 's' : ''} de cette famille` },
+                            ].map(step => (
+                              <div key={step.label} className="flex items-start gap-3 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                                <div className="w-6 h-6 rounded-full bg-brand-orange flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                                  <i className="fa-solid fa-check text-[10px]" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-slate-800">{step.label}</p>
+                                  <p className="text-xs text-slate-500">{step.desc}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Action */}
+                          <div className="px-5 pb-5">
+                            <button
+                              onClick={() => {
+                                const firstChild = patients.find(p => p.parent_id === inv.id);
+                                if (firstChild) { setSelectedPatient(firstChild); setView('patients'); }
+                              }}
+                              className="flex items-center gap-2 bg-brand-orange hover:bg-orange-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-brand-orange/20 transition-all"
+                            >
+                              <i className="fa-solid fa-eye" /> Voir les patients de cette famille
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Section>
               )}
             </>
           )}
         </div>
-      </main>
+      </div>
 
-      {/* ── TOASTS ── */}
-      <div className="prof-toast-wrap">
+      {/* ── Toasts ── */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">
         {toasts.map(t => (
-          <div key={t.id} className={`prof-toast prof-toast--${t.type}`}>
-            <span className="prof-toast__icon">{t.type === 'success' ? '✅' : '❌'}</span>
-            <span className="prof-toast__msg">{t.msg}</span>
-            <button className="prof-toast__close" onClick={() => removeToast(t.id)}>×</button>
+          <div key={t.id}
+            className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-sm font-semibold
+              ${t.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
+          >
+            <i className={t.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
+            <span>{t.msg}</span>
+            <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100 text-lg leading-none">×</button>
           </div>
         ))}
       </div>
-
     </div>
   );
 };

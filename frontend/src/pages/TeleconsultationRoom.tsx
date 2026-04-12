@@ -14,9 +14,9 @@ interface ChatMessage {
 
 // ── Icon control button ──────────────────────────────────────────────────────
 const CtrlBtn = ({
-  icon, label, active = true, danger = false, onClick,
+  icon, label, active = true, onClick,
 }: {
-  icon: string; label: string; active?: boolean; danger?: boolean; onClick: () => void;
+  icon: string; label: string; active?: boolean; onClick: () => void;
 }) => (
   <button
     title={label}
@@ -24,7 +24,7 @@ const CtrlBtn = ({
     style={{
       width: 48, height: 48,
       borderRadius: '50%',
-      background: danger ? '#DC2626' : active ? '#2D2D2D' : '#4B4B4B',
+      background: active ? '#2D2D2D' : '#4B4B4B',
       color: '#fff',
       border: 'none',
       cursor: 'pointer',
@@ -41,20 +41,20 @@ const CtrlBtn = ({
 
 // ============================================================================
 export const TeleconsultationRoom = (): JSX.Element => {
-  const navigate    = useNavigate();
+  const navigate      = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
 
   const [micOn,    setMicOn]    = useState(true);
   const [camOn,    setCamOn]    = useState(true);
   const [sharing,  setSharing]  = useState(false);
   const [message,  setMessage]  = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatLog,  setChatLog]  = useState<ChatMessage[]>([]);
 
   const session = mockSessions.find(s => s.id === parseInt(sessionId ?? '0', 10));
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    setMessages(prev => [
+    setChatLog(prev => [
       ...prev,
       {
         from: 'Vous',
@@ -74,17 +74,15 @@ export const TeleconsultationRoom = (): JSX.Element => {
       overflow: 'hidden',
     }}>
 
-      {/* ══════════════════════════════════════════
-          LEFT — Video area + controls
-      ══════════════════════════════════════════ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* ══ LEFT — Video + Controls ══ */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
 
-        {/* Top session badge */}
+        {/* Session badge */}
         {session && (
           <div style={{
             position: 'absolute', top: 18, left: 18, zIndex: 10,
-          background: 'rgba(158,64,0,0.9)',
-          border: '1px solid #E07820',
+            background: 'rgba(158,64,0,0.9)',
+            border: '1px solid #E07820',
             borderRadius: 10,
             padding: '8px 16px',
             color: '#fff',
@@ -94,7 +92,10 @@ export const TeleconsultationRoom = (): JSX.Element => {
             alignItems: 'center',
             gap: 8,
           }}>
-            <span style={{ background: '#E07820', borderRadius: '50%', width: 8, height: 8, display: 'inline-block' }} />
+            <span style={{
+              background: '#E07820', borderRadius: '50%',
+              width: 8, height: 8, display: 'inline-block',
+            }} />
             {session.patientName} · Session #{sessionId}
           </div>
         )}
@@ -108,7 +109,6 @@ export const TeleconsultationRoom = (): JSX.Element => {
           justifyContent: 'center',
           flexDirection: 'column',
           gap: 14,
-          position: 'relative',
         }}>
           <div style={{ fontSize: 72, opacity: 0.25 }}>📷</div>
           <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: 500, margin: 0 }}>
@@ -120,7 +120,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
           {/* Self-view mini tile */}
           <div style={{
             position: 'absolute',
-            bottom: 20, right: 20,
+            bottom: 88, right: 20,
             width: 160, height: 90,
             background: '#2D2D2D',
             borderRadius: 10,
@@ -132,7 +132,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
           </div>
         </div>
 
-        {/* ── Control bar ── */}
+        {/* Control bar */}
         <div style={{
           background: '#1C1917',
           borderTop: '1px solid #2D2D2D',
@@ -141,6 +141,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 16,
+          flexShrink: 0,
         }}>
           <CtrlBtn
             icon={micOn ? '🎙️' : '🔇'}
@@ -156,12 +157,10 @@ export const TeleconsultationRoom = (): JSX.Element => {
           />
           <CtrlBtn
             icon="🖥️"
-            label={sharing ? 'Arrêter le partage' : "Partager l'écran"}
+            label={sharing ? "Arrêter le partage" : "Partager l'écran"}
             active={sharing}
             onClick={() => setSharing(p => !p)}
           />
-
-          {/* Terminer */}
           <button
             onClick={() => navigate('/professionnel/teleconsultation')}
             style={{
@@ -174,7 +173,6 @@ export const TeleconsultationRoom = (): JSX.Element => {
               fontSize: 14,
               cursor: 'pointer',
               boxShadow: '0 4px 16px rgba(220,38,38,.45)',
-              transition: 'opacity 0.15s',
               marginLeft: 8,
             }}
           >
@@ -183,9 +181,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          RIGHT — Patient info + Chat
-      ══════════════════════════════════════════ */}
+      {/* ══ RIGHT — Patient info + Chat ══ */}
       <div style={{
         width: 320,
         background: '#1C1917',
@@ -195,21 +191,25 @@ export const TeleconsultationRoom = (): JSX.Element => {
         flexShrink: 0,
       }}>
 
-        {/* Patient info card */}
+        {/* Patient info */}
         {session ? (
           <div style={{ padding: '18px 16px', borderBottom: '1px solid #2D2D2D' }}>
+
+            {/* Avatar + name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#C45E0A,#E07820)',
+                width: 44, height: 44, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#C45E0A,#E07820)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, color: '#fff', fontSize: 18, flexShrink: 0,
               }}>
                 {session.patientName.charAt(0)}
               </div>
               <div>
-              color: '#fff', fontWeight: 700, fontSize: 14 }}>{session.patientName}</div>
-              <div style={{ color: '#8C6840', fontSize: 12 }}>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                  {session.patientName}
+                </div>
+                <div style={{ color: '#8C6840', fontSize: 12 }}>
                   {session.patientAge} ans · {session.participantCategory}
                 </div>
               </div>
@@ -217,21 +217,14 @@ export const TeleconsultationRoom = (): JSX.Element => {
 
             {/* Info grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {[
-                { label: 'Durée',        value: `${session.duration} min` },
+              {([
+                { label: 'Durée',       value: `${session.duration} min` },
                 { label: 'Score préc.', value: `${session.lastScore} / 100` },
-              ].map(({ label, value }) => (
-                <div key={label} style={{
-                  background: '#2D2D2D',
-                  borderRadius: 8,
-                  padding: '8px 10px',
-                }}>
+              ] as const).map(({ label, value }) => (
+                <div key={label} style={{ background: '#2D2D2D', borderRadius: 8, padding: '8px 10px' }}>
                   <div style={{
-              fontSize: 10,
-                  color: '#8C6840',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.8px',
-                  marginBottom: 3,
+                    fontSize: 10, color: '#8C6840',
+                    textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 3,
                   }}>
                     {label}
                   </div>
@@ -240,15 +233,19 @@ export const TeleconsultationRoom = (): JSX.Element => {
               ))}
             </div>
 
+            {/* Notes */}
             {session.notes && (
               <div style={{
                 marginTop: 10,
                 background: '#2D2D2D',
                 borderRadius: 8,
                 padding: '10px 12px',
-              borderLeft: '3px solid #E07820',
-            }}>
-              <div style={{ fontSize: 10, color: '#8C6840', marginBottom: 3, letterSpacing: '0.5px' }}>NOTES</div>
+                borderLeft: '3px solid #E07820',
+              }}>
+                <div style={{
+                  fontSize: 10, color: '#8C6840',
+                  letterSpacing: '0.8px', marginBottom: 4,
+                }}>NOTES</div>
                 <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
                   {session.notes}
                 </p>
@@ -258,7 +255,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
         ) : (
           <div style={{
             padding: '20px 16px',
-            color: '#4B7A5C',
+            color: '#8C6840',
             textAlign: 'center',
             borderBottom: '1px solid #2D2D2D',
             fontSize: 13,
@@ -267,7 +264,7 @@ export const TeleconsultationRoom = (): JSX.Element => {
           </div>
         )}
 
-        {/* ── Chat panel ── */}
+        {/* Chat panel */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Chat header */}
@@ -277,14 +274,12 @@ export const TeleconsultationRoom = (): JSX.Element => {
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
+            display: 'flex', alignItems: 'center', gap: 8,
           }}>
             💬 Chat
           </div>
 
-          {/* Messages */}
+          {/* Messages list */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
@@ -293,15 +288,12 @@ export const TeleconsultationRoom = (): JSX.Element => {
             flexDirection: 'column',
             gap: 10,
           }}>
-            {messages.length === 0 ? (
-              <p style={{
-            color: '#8C6840', fontSize: 12,
-              textAlign: 'center', marginTop: 20,
-              }}>
+            {chatLog.length === 0 ? (
+              <p style={{ color: '#8C6840', fontSize: 12, textAlign: 'center', marginTop: 20 }}>
                 Aucun message pour le moment
               </p>
             ) : (
-              messages.map((m, i) => (
+              chatLog.map((m, i) => (
                 <div key={i} style={{
                   background: '#2D2D2D',
                   borderRadius: 10,
@@ -344,9 +336,9 @@ export const TeleconsultationRoom = (): JSX.Element => {
             <button
               onClick={sendMessage}
               style={{
-              width: 38, height: 38,
-              borderRadius: 8,
-              background: '#E07820',
+                width: 38, height: 38,
+                borderRadius: 8,
+                background: '#E07820',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
@@ -363,13 +355,4 @@ export const TeleconsultationRoom = (): JSX.Element => {
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
 

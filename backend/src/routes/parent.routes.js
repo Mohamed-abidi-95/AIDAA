@@ -27,6 +27,9 @@ router.get('/my-professionals', parentController.getMyProfessionals);
 // ── DELETE /api/parent/invitation/:id ─────────────────────────────────────
 router.delete('/invitation/:professionalId', parentController.revokeInvitation);
 
+// ── DELETE /api/parent/invitation/:professionalId/delete — suppression définitive ──
+router.delete('/invitation/:professionalId/delete', parentController.deleteInvitation);
+
 // ── POST /api/parent/resend-invitation/:id ─────────────────────────────────
 router.post('/resend-invitation/:professionalId', parentController.resendInvitation);
 

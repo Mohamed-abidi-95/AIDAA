@@ -1,0 +1,45 @@
+# ============================================================
+# AIDAA — Root .gitignore
+# ============================================================
+
+# Dépendances Node.js
+node_modules/
+**/node_modules/
+
+# Fichiers .env locaux optionnels (non inclus dans le repo)
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+
+# Fichiers uploadés par les utilisateurs (vidéos, images…)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Build du frontend
+frontend/dist/
+frontend/dist-ssr/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Éditeurs et IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# OS
+desktop.ini
+

@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDAA - Espace Enfant Complet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            green: '#10b981',
+                            orange: '#f97316',
+                            blue: '#1e293b',
+                            bg: '#f8fafc'
+                        }
+                    }
+                }
+            }
+        }
+
+        // Script pour gérer la navigation entre les 4 onglets
+        function showPage(pageId) {
+            // Cacher toutes les pages
+            ['biblio-page', 'sequences-page', 'aac-page', 'games-page'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            // Afficher la page demandée
+            document.getElementById(pageId).classList.remove('hidden');
+
+            // Réinitialiser les styles de tous les boutons
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-orange-100', 'text-brand-orange', 'font-semibold', 'border-b-2', 'border-brand-orange');
+                btn.classList.add('text-slate-600', 'border-transparent', 'hover:border-slate-300');
+            });
+
+            // Appliquer le style actif au bouton cliqué
+            const activeBtnId = pageId.split('-')[0] + '-btn';
+            const activeBtn = document.getElementById(activeBtnId);
+            activeBtn.classList.remove('text-slate-600', 'border-transparent', 'hover:border-slate-300');
+            activeBtn.classList.add('bg-orange-100', 'text-brand-orange', 'font-semibold', 'border-b-2', 'border-brand-orange');
+        }
+    </script>
+    <style>
+        nav button { transition: all 0.2s ease-in-out; }
+        /* Scrollbar styling for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-brand-bg text-brand-blue font-sans antialiased h-screen flex flex-col overflow-hidden">
+
+<header class="bg-white/90 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-8 shadow-sm shrink-0 z-20 relative">
+    <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full border-4 border-emerald-400 p-1 flex items-center justify-center bg-emerald-50 shadow-inner overflow-hidden">
+            <img src="https://api.iconify.design/twemoji:child.svg" alt="Avatar enfant" class="w-10 h-10">
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Bonjour <span class="text-brand-green">mohamed</span> ! 👋</h1>
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mt-1">Espace Enfant <i class="fa-solid fa-child-reaching text-brand-green"></i></p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+            <div class="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-inner">
+                <i class="fa-solid fa-star text-lg"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-slate-800">300 <span class="text-sm text-slate-400">pts</span></p>
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Total</p>
+            </div>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+            <div class="w-10 h-10 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shadow-inner">
+                <i class="fa-solid fa-medal text-lg"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-slate-800">5 <span class="text-sm text-slate-400">badges</span></p>
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Gagnés</p>
+            </div>
+        </div>
+        <div class="flex gap-2 ml-4">
+            <button class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 rounded-xl px-5 py-2.5 flex items-center gap-2.5 shadow-sm transition">
+                <i class="fa-solid fa-arrow-left text-xs"></i> Retour
+            </button>
+            <button class="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl px-5 py-2.5 flex items-center gap-2.5 shadow-sm transition">
+                <i class="fa-solid fa-power-off text-sm"></i> Déconnexion
+            </button>
+        </div>
+    </div>
+</header>
+
+<nav class="bg-white border-b border-slate-200 h-16 flex items-center px-10 shrink-0 z-10 relative">
+    <div class="flex gap-2 h-full pt-2">
+        <button id="biblio-btn" onclick="showPage('biblio-page')" class="flex items-center gap-3 px-6 h-full bg-orange-100 text-brand-orange font-semibold border-b-2 border-brand-orange rounded-t-xl transition">
+            <i class="fa-solid fa-book-open w-5 text-center"></i> Bibliothèque
+        </button>
+        <button id="sequences-btn" onclick="showPage('sequences-page')" class="flex items-center gap-3 px-6 h-full text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 rounded-t-xl transition">
+            <i class="fa-solid fa-list-ol w-5 text-center"></i> Séquences
+        </button>
+        <button id="aac-btn" onclick="showPage('aac-page')" class="flex items-center gap-3 px-6 h-full text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 rounded-t-xl transition">
+            <i class="fa-regular fa-comment-dots w-5 text-center"></i> AAC
+        </button>
+        <button id="games-btn" onclick="showPage('games-page')" class="flex items-center gap-3 px-6 h-full text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 rounded-t-xl transition">
+            <i class="fa-solid fa-gamepad w-5 text-center"></i> Jeux
+        </button>
+    </div>
+</nav>
+
+<main class="flex-1 overflow-y-auto p-10 pb-20 relative">
+
+    <div id="biblio-page" class="space-y-8 animate-fade-in">
+        <div class="flex items-center gap-4">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900"><i class="fa-solid fa-tv mr-2 text-brand-orange"></i> Vidéos</h2>
+            <span class="bg-slate-200 text-slate-600 py-1 px-3 rounded-full text-sm font-bold">6</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-full h-48 bg-gradient-to-br from-orange-300 to-red-400 relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                    <i class="fa-solid fa-play text-white text-4xl opacity-80 group-hover:scale-125 group-hover:opacity-100 transition-all drop-shadow-lg z-10"></i>
+                    <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
+                </div>
+                <div class="p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 line-clamp-1">ahlla</h3>
+                    <div class="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><img src="https://api.iconify.design/twemoji:flag-france.svg" class="w-4 h-4"> Français</span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch"></i> 6 min</span>
+                    </div>
+                    <button class="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md shadow-brand-orange/20 transition">
+                        <i class="fa-solid fa-play text-xs"></i> Regarder
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-full h-48 bg-gradient-to-br from-green-300 to-emerald-500 relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                    <i class="fa-solid fa-play text-white text-4xl opacity-80 group-hover:scale-125 group-hover:opacity-100 transition-all drop-shadow-lg z-10"></i>
+                </div>
+                <div class="p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 line-clamp-1">ff</h3>
+                    <div class="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-language text-slate-400"></i> dd</span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch"></i> 6 min</span>
+                    </div>
+                    <button class="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md shadow-brand-orange/20 transition">
+                        <i class="fa-solid fa-play text-xs"></i> Regarder
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-full h-48 bg-gradient-to-br from-blue-300 to-indigo-500 relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                    <i class="fa-solid fa-play text-white text-4xl opacity-80 group-hover:scale-125 group-hover:opacity-100 transition-all drop-shadow-lg z-10"></i>
+                </div>
+                <div class="p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 line-clamp-1">hello</h3>
+                    <div class="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><img src="https://api.iconify.design/twemoji:flag-france.svg" class="w-4 h-4"> Français</span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch"></i> 5 min</span>
+                    </div>
+                    <button class="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md shadow-brand-orange/20 transition">
+                        <i class="fa-solid fa-play text-xs"></i> Regarder
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-full h-48 bg-gradient-to-br from-purple-300 to-fuchsia-500 relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                    <i class="fa-solid fa-play text-white text-4xl opacity-80 group-hover:scale-125 group-hover:opacity-100 transition-all drop-shadow-lg z-10"></i>
+                </div>
+                <div class="p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 line-clamp-1">ahla</h3>
+                    <div class="flex items-center gap-3 text-xs font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-language text-slate-400"></i> ahla</span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch"></i> 5 min</span>
+                    </div>
+                    <button class="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md shadow-brand-orange/20 transition">
+                        <i class="fa-solid fa-play text-xs"></i> Regarder
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sequences-page" class="hidden space-y-8">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900"><i class="fa-solid fa-clipboard-list mr-2 text-slate-700"></i> Séquences guidées</h2>
+            <p class="text-slate-500 mt-1">Des activités étape par étape pour apprendre à ton rythme</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+
+            <div class="bg-white border border-slate-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-20 h-20 bg-sky-50 rounded-2xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <img src="https://api.iconify.design/twemoji:sun-with-face.svg" alt="Matin" class="w-12 h-12">
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-slate-800">Routine du matin</h3>
+                    <p class="text-sm text-slate-500 line-clamp-2">Apprendre la routine du matin étape par étape</p>
+                </div>
+                <div class="flex gap-2 text-xs font-bold">
+                    <span class="bg-slate-100 text-slate-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> 10 min</span>
+                    <span class="bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg">Facile</span>
+                </div>
+                <button class="w-full bg-brand-green hover:bg-emerald-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-2 shadow-lg shadow-brand-green/20 transition mt-2">
+                    Commencer <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-20 h-20 bg-teal-50 rounded-2xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <img src="https://api.iconify.design/twemoji:soap.svg" alt="Savon" class="w-12 h-12">
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-slate-800">Lavage des mains</h3>
+                    <p class="text-sm text-slate-500 line-clamp-2">Comment bien se laver les mains</p>
+                </div>
+                <div class="flex gap-2 text-xs font-bold">
+                    <span class="bg-slate-100 text-slate-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> 5 min</span>
+                    <span class="bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg">Facile</span>
+                </div>
+                <button class="w-full bg-brand-green hover:bg-emerald-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-2 shadow-lg shadow-brand-green/20 transition mt-2">
+                    Commencer <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                <div class="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <img src="https://api.iconify.design/twemoji:smiling-face-with-smiling-eyes.svg" alt="Sourire" class="w-12 h-12">
+                </div>
+                <div class="flex-1 space-y-2">
+                    <h3 class="text-xl font-bold text-slate-800">Gestion des émotions</h3>
+                    <p class="text-sm text-slate-500 line-clamp-2">Reconnaître et exprimer ses émotions</p>
+                </div>
+                <div class="flex gap-2 text-xs font-bold">
+                    <span class="bg-slate-100 text-slate-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> 15 min</span>
+                    <span class="bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg">Facile</span>
+                </div>
+                <button class="w-full bg-brand-green hover:bg-emerald-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-2 shadow-lg shadow-brand-green/20 transition mt-2">
+                    Commencer <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="aac-page" class="hidden space-y-10">
+        <section class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900"><i class="fa-regular fa-comment-dots mr-2 text-blue-500"></i> Communication alternative</h2>
+                <p class="text-slate-500 mt-1">Clique sur les pictogrammes pour t'exprimer</p>
+            </div>
+
+            <div class="bg-white border-2 border-slate-200 border-dashed rounded-3xl p-8 flex items-center shadow-sm">
+                <div class="flex-1 space-y-4">
+                    <p class="text-sm font-medium text-slate-500 flex items-center gap-2"><i class="fa-solid fa-hand-point-right text-brand-green"></i> Clique sur un pictogramme pour construire ta phrase...</p>
+                    <input type="text" class="w-full bg-slate-50 border border-slate-200 text-brand-blue rounded-xl p-4 text-lg font-medium shadow-inner placeholder:text-slate-400" placeholder="Ex: 'Je veux... jouer !'">
+                </div>
+                <button class="bg-brand-green hover:bg-emerald-600 text-white rounded-xl px-6 py-4.5 flex items-center gap-3 ml-6 shadow-lg shadow-brand-green/20 transition shrink-0 h-[60px] mt-8">
+                    <i class="fa-solid fa-paper-plane text-sm"></i> Parler !
+                </button>
+            </div>
+        </section>
+
+        <section class="space-y-6">
+            <div class="flex gap-2">
+                <button class="bg-slate-800 text-white rounded-full px-5 py-2 text-sm font-medium shadow-md transition">Actions</button>
+                <button class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full px-5 py-2 text-sm font-medium transition">Aliments</button>
+                <button class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full px-5 py-2 text-sm font-medium transition">Besoins</button>
+                <button class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full px-5 py-2 text-sm font-medium transition">Émotions</button>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition group cursor-pointer">
+                    <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center group-hover:scale-110 transition-transform"><img src="https://api.iconify.design/twemoji:raised-hand.svg" class="w-10 h-10"></div>
+                    <p class="text-sm font-bold text-slate-800">Arrêter</p>
+                </div>
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition group cursor-pointer">
+                    <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform"><img src="https://api.iconify.design/twemoji:clapping-hands.svg" class="w-10 h-10"></div>
+                    <p class="text-sm font-bold text-slate-800">Venir</p>
+                </div>
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition group cursor-pointer">
+                    <div class="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center group-hover:scale-110 transition-transform"><img src="https://api.iconify.design/twemoji:handshake.svg" class="w-10 h-10"></div>
+                    <p class="text-sm font-bold text-slate-800">Aider</p>
+                </div>
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition group cursor-pointer">
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform"><img src="https://api.iconify.design/twemoji:backhand-index-pointing-right.svg" class="w-10 h-10"></div>
+                    <p class="text-sm font-bold text-slate-800">Montrer</p>
+                </div>
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition group cursor-pointer">
+                    <div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center group-hover:scale-110 transition-transform"><img src="https://api.iconify.design/twemoji:wrapped-gift.svg" class="w-10 h-10"></div>
+                    <p class="text-sm font-bold text-slate-800">Donner</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="games-page" class="hidden space-y-10">
+        <section class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold tracking-tight text-slate-900"><i class="fa-solid fa-gamepad mr-2 text-brand-orange"></i> Mini-jeux</h2>
+                <p class="text-slate-500 mt-1">Joue et gagne des points !</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                    <div class="w-full h-32 flex items-center justify-center">
+                        <img src="https://api.iconify.design/twemoji:brain.svg" class="w-24 h-24 group-hover:scale-110 transition-transform">
+                    </div>
+                    <div class="flex-1 space-y-3">
+                        <h3 class="text-xl font-bold text-slate-800">Jeu de mémoire</h3>
+                        <p class="text-sm text-slate-600">Retourne les cartes et trouve les paires.</p>
+                        <div class="flex gap-4 text-xs font-semibold text-brand-green bg-white p-3 rounded-xl shadow-inner">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-clone"></i> 18 cartes</span>
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-star"></i> 100 pts</span>
+                        </div>
+                    </div>
+                    <button class="w-full bg-brand-green hover:bg-emerald-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-brand-green/20 transition">
+                        <i class="fa-solid fa-play text-sm"></i> Jouer !
+                    </button>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                    <div class="w-full h-32 flex items-center justify-center">
+                        <img src="https://api.iconify.design/twemoji:artist-palette.svg" class="w-24 h-24 group-hover:scale-110 transition-transform">
+                    </div>
+                    <div class="flex-1 space-y-3">
+                        <h3 class="text-xl font-bold text-slate-800">Jeu des couleurs</h3>
+                        <p class="text-sm text-slate-600">Lis le mot et clique sur la bonne couleur.</p>
+                        <div class="flex gap-4 text-xs font-semibold text-brand-orange bg-white p-3 rounded-xl shadow-inner">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-redo"></i> 10 tours</span>
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-star"></i> 100 pts</span>
+                        </div>
+                    </div>
+                    <button class="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-brand-orange/20 transition">
+                        <i class="fa-solid fa-play text-sm"></i> Jouer !
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+</main>
+</body>
+</html>

@@ -157,6 +157,7 @@ const update = async (req, res) => {
       age_group,
       level,
       description,
+      participant_category,
     } = req.body;
 
     // Validate required fields
@@ -189,7 +190,8 @@ const update = async (req, res) => {
       emoji_color,
       age_group,
       level,
-      description
+      description,
+      participant_category || content.participant_category || 'enfant'
     );
 
     res.status(200).json({
@@ -209,6 +211,7 @@ const update = async (req, res) => {
         age_group,
         level,
         description,
+        participant_category: participant_category || content.participant_category || 'enfant',
       },
     });
   } catch (error) {
@@ -281,6 +284,7 @@ const uploadContent = async (req, res) => {
       age_group,
       level,
       description,
+      participant_category,
     } = req.body;
 
     // Validate required fields
@@ -316,7 +320,8 @@ const uploadContent = async (req, res) => {
       age_group,
       level,
       fileUrl,
-      description
+      description,
+      participant_category || 'enfant'
     );
 
     res.status(201).json({
@@ -337,6 +342,7 @@ const uploadContent = async (req, res) => {
         level,
         url: fileUrl,
         description,
+        participant_category: participant_category || 'enfant',
         filename: req.file.filename,
         size: req.file.size,
       },

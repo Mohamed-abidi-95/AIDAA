@@ -67,4 +67,24 @@ router.post('/approve-registration/:id', adminController.approveRegistration);
 // ============================================================================
 router.post('/reject-registration/:id', adminController.rejectRegistration);
 
+// ============================================================================
+// GET /admin/relations — toutes les liaisons parent↔professionnel
+// ============================================================================
+router.get('/relations', adminController.getAllRelations);
+
+// ============================================================================
+// DELETE /admin/relations/:id — supprimer définitivement une liaison
+// ============================================================================
+router.delete('/relations/:id', adminController.deleteRelation);
+
+// ============================================================================
+// GET /admin/messages — tous les messages de la plateforme
+// ============================================================================
+router.get('/messages', adminController.getAllMessages);
+
+// ============================================================================
+// GET /admin/notes — toutes les notes cliniques
+// ============================================================================
+router.get('/notes', adminController.getAllNotes);
+
 module.exports = router;

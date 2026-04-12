@@ -15,6 +15,12 @@ const router = express.Router();
 router.use(auth);
 
 // ============================================================================
+// GET /message/unread-count
+// ============================================================================
+// Get count of unread messages for the authenticated user
+router.get('/unread-count', messageController.getUnreadCount);
+
+// ============================================================================
 // GET /message/child/:childId
 // ============================================================================
 // Get all messages for a child (parent can only see their own children)

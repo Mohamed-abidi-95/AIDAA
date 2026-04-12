@@ -13,7 +13,11 @@ const getChildPoints = async (childId) => {
      FROM activity_logs WHERE child_id = ?`,
     [childId]
   );
-  return results[0];
+  const row = results[0];
+  return {
+    total_points:      Number(row.total_points),
+    total_activities:  Number(row.total_activities),
+  };
 };
 
 // Get badges earned by a child

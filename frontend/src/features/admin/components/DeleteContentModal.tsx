@@ -1,7 +1,6 @@
 // ============================================================================
-// DELETE CONTENT MODAL
+// DELETE CONTENT MODAL — Tailwind CSS (cohérent avec AdminPanel)
 // ============================================================================
-// Confirmation modal for deleting content
 
 import React from 'react';
 
@@ -15,72 +14,54 @@ interface DeleteContentModalProps {
 }
 
 export const DeleteContentModal: React.FC<DeleteContentModalProps> = ({
-  contentId,
-  contentTitle,
-  isOpen,
-  onClose,
-  onConfirm,
-  isLoading,
+  contentId, contentTitle, isOpen, onClose, onConfirm, isLoading,
 }) => {
   if (!isOpen || !contentId) return null;
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1001,
-      }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1001] p-4"
       onClick={onClose}
     >
       <div
-        style={{
-          background: '#fff',
-          borderRadius: '12px',
-          padding: '32px',
-          maxWidth: '400px',
-          width: '90%',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-        }}
-        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
+        onClick={e => e.stopPropagation()}
       >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-          <h2 style={{ margin: '0 0 16px', color: '#1e3a5f' }}>Delete Content?</h2>
-          <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '14px' }}>
-            Are you sure you want to delete <strong>{contentTitle}</strong>?
+        {/* Icon + header */}
+        <div className="flex flex-col items-center text-center px-8 pt-8 pb-5">
+          <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center text-red-500 text-3xl mb-4">
+            <i className="fa-regular fa-trash-can" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Supprimer le contenu ?</h2>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            Êtes-vous sûr de vouloir supprimer{' '}
+            <strong className="text-slate-700">{contentTitle}</strong> ?
           </p>
-          <p style={{ margin: '0', color: '#94a3b8', fontSize: '12px' }}>
-            This action cannot be undone.
-          </p>
+          <p className="text-slate-400 text-xs mt-2">Cette action est irréversible.</p>
         </div>
 
-        <div className="admin-premium__modal-actions" style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+        {/* Actions */}
+        <div className="flex gap-3 px-8 pb-7">
           <button
-            className="admin-premium__small-btn admin-premium__small-btn--danger admin-premium__btn-block"
             onClick={onConfirm}
             disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all"
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading
+              ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Suppression…</>
+              : <><i className="fa-solid fa-trash" /> Supprimer</>
+            }
           </button>
           <button
-            className="admin-premium__small-btn admin-premium__btn-block"
             onClick={onClose}
             disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 font-semibold py-3 rounded-xl hover:bg-slate-50 transition"
           >
-            Cancel
+            <i className="fa-solid fa-xmark" /> Annuler
           </button>
         </div>
       </div>
     </div>
   );
 };
-
 

@@ -20,6 +20,9 @@ import { ProfessionalSignupPage } from '../pages/ProfessionalSignupPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 
+// NOTE: key={location.pathname} was removed — it forced full component-tree remounts on
+// every navigation, causing: (1) visual "page reload" effect, (2) login/logout race
+// conditions, (3) laggy animations. Pages handle their own entrance styles.
 export const AppRoutes = (): JSX.Element => {
   return (
     <Routes>
@@ -57,7 +60,7 @@ export const AppRoutes = (): JSX.Element => {
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+      </Routes>
   );
 };
 
