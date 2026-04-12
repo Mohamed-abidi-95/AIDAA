@@ -27,6 +27,7 @@ const sequenceRoutes     = require('./routes/sequence.routes');
 const aacRoutes          = require('./routes/aac.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
 const analyticsRoutes    = require('./routes/analyticsRoutes');
+const chatbotRoutes      = require('./routes/chatbot.routes');
 
 // ============================================================================
 // Import middlewares
@@ -147,6 +148,58 @@ const autoMigrate = async () => {
   // ── messages — colonne is_read pour le compteur de non-lus ───────────────
   await run('messages.is_read', `ALTER TABLE messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`);
 
+  // ── Module Chatbot IA ─────────────────────────────────────────────────────
+  await run('chatbot_consent_log table', `
+    CREATE TABLE IF NOT EXISTS chatbot_consent_log (
+      id           INT AUTO_INCREMENT PRIMARY KEY,
+      parent_id    INT NOT NULL,
+      consent_given TINYINT(1) NOT NULL DEFAULT 1,
+      ip_address   VARCHAR(45) DEFAULT NULL,
+      user_agent   TEXT DEFAULT NULL,
+      created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await run('chatbot_sessions table', `
+    CREATE TABLE IF NOT EXISTS chatbot_sessions (
+      id               INT AUTO_INCREMENT PRIMARY KEY,
+      parent_id        INT NOT NULL,
+      child_id         INT DEFAULT NULL,
+      consent_verified TINYINT(1) NOT NULL DEFAULT 0,
+      started_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ended_at         TIMESTAMP NULL DEFAULT NULL,
+      FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (child_id)  REFERENCES children(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await run('chatbot_messages table', `
+    CREATE TABLE IF NOT EXISTS chatbot_messages (
+      id           INT AUTO_INCREMENT PRIMARY KEY,
+      session_id   INT NOT NULL,
+      sender       ENUM('user','bot') NOT NULL,
+      message_text TEXT NOT NULL,
+      intent       ENUM('faq','recommendation','emergency','greeting','unknown') NOT NULL DEFAULT 'unknown',
+      created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (session_id) REFERENCES chatbot_sessions(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
+  await run('faq_entries table', `
+    CREATE TABLE IF NOT EXISTS faq_entries (
+      id           INT AUTO_INCREMENT PRIMARY KEY,
+      category     VARCHAR(100) NOT NULL,
+      question_fr  TEXT NOT NULL,
+      question_ar  TEXT DEFAULT NULL,
+      answer_fr    TEXT NOT NULL,
+      answer_ar    TEXT DEFAULT NULL,
+      keywords_json JSON DEFAULT NULL,
+      is_active    TINYINT(1) NOT NULL DEFAULT 1,
+      created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   console.log('[DB] ✅ Auto-migration complète');
 };
 autoMigrate();
@@ -229,6 +282,7 @@ app.use('/api/sequences',      sequenceRoutes);
 app.use('/api/aac',            aacRoutes);
 app.use('/api/gamification',   gamificationRoutes);
 app.use('/api/analytics',      analyticsRoutes);
+app.use('/api/chatbot',        chatbotRoutes);
 
 // ============================================================================
 // 404 Error Handler

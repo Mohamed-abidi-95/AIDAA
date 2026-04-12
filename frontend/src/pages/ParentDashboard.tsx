@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { MessagerieView } from './MessagerieView';
+import { ChatbotWidget } from '../features/chatbot/ChatbotWidget';
 
 declare global { interface Window { Chart: any; } }
 
@@ -1002,6 +1003,13 @@ export const ParentDashboard = (): JSX.Element => {
           )}
         </div>
       </div>
+
+      {/* ── Chatbot IA flottant ── */}
+      <ChatbotWidget
+        childId={selectedChild?.id}
+        childName={selectedChild?.name}
+        lang="fr"
+      />
 
       {/* ── Toasts ── */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">

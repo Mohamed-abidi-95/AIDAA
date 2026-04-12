@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed:analytics": "node src/seeders/analyticsSeeder.js"
+    "seed:analytics": "node src/seeders/analyticsSeeder.js",
+    "seed:faq": "node src/seeders/faqData.js"
   },
   "keywords": [
     "aidaa",
