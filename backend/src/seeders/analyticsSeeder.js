@@ -18,7 +18,25 @@ const randomPastDate = (maxDaysBack = 60) => {
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const pick    = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const ACTIVITIES = ['Mémoire', 'Couleurs', 'Séquences', 'AAC', 'Lecture'];
+const ACTIVITIES = ['Memoire', 'Couleurs', 'Sequences', 'AAC', 'Lecture'];
+
+// ── Ajoute les colonnes manquantes si le serveur n'a pas encore tourné ─────────
+async function ensureColumns(conn) {
+  const alters = [
+    "ALTER TABLE users ADD COLUMN status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved'",
+    "ALTER TABLE users ADD COLUMN specialite VARCHAR(100) DEFAULT NULL",
+    "ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) DEFAULT NULL",
+    "ALTER TABLE users ADD COLUMN reset_token_expires DATETIME DEFAULT NULL",
+    "ALTER TABLE activity_logs ADD COLUMN score INT DEFAULT 0",
+    "ALTER TABLE activity_logs ADD COLUMN duration_seconds INT DEFAULT 0",
+    "ALTER TABLE activity_logs ADD COLUMN action VARCHAR(50) DEFAULT 'content_accessed'",
+    "ALTER TABLE activity_logs MODIFY COLUMN content_id INT DEFAULT NULL",
+  ];
+  for (const sql of alters) {
+    try { await conn.execute(sql); } catch (_) { /* colonne deja presente - OK */ }
+  }
+  console.log('  Colonnes verifiees\n');
+}
 
 // ── Upsert user ────────────────────────────────────────────────────────────────
 async function upsertUser(conn, { name, email, password, role }) {
@@ -56,6 +74,9 @@ async function seed() {
       database: process.env.DB_DATABASE || 'aidaa_db',
     });
     console.log('✅ Connexion DB réussie\n');
+
+    // ── Vérification des colonnes manquantes ───────────────────────────────────
+    await ensureColumns(conn);
 
     // ── 1. Hash passwords ────────────────────────────────────────────────────
     console.log('🔐 Hashage des mots de passe...');
@@ -202,4 +223,3 @@ async function seed() {
 }
 
 seed();
-
