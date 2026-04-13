@@ -2,12 +2,13 @@
 // PARENT DASHBOARD — Design identique à ProfessionalPage (Tailwind + FA icons)
 // ============================================================================
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { MessagerieView } from './MessagerieView';
 import { ChatbotWidget } from '../features/chatbot/ChatbotWidget';
+import { StatCard, Section, ScoreBadge, useToast, ToastStack, inputClsGreen as inputCls } from '../components';
 
 declare global { interface Window { Chart: any; } }
 
@@ -29,19 +30,6 @@ interface TimelinePoint    { date: string; minutes: number; }
 interface BreakdownItem    { category: string; count: number; pct: number; }
 interface ScoreByCategory  { category: string; avgScore: number; }
 
-// ── Toast ──────────────────────────────────────────────────────────────────
-interface Toast { id: number; type: 'success' | 'error'; msg: string; }
-let toastId = 0;
-const useToast = () => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    const id = ++toastId;
-    setToasts(p => [...p, { id, type, msg }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
-  }, []);
-  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
-  return { toasts, add, remove };
-};
 
 // ── Nav config ──────────────────────────────────────────────────────────────
 const NAV = [
@@ -55,35 +43,6 @@ const NAV = [
 
 type ViewKey = typeof NAV[number]['key'];
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-const inputCls = 'w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 bg-white text-[14px] focus:outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all';
-
-const StatCard = ({ icon, value, label }: { icon: string; value: number | string; label: string }) => (
-  <div className="bg-white rounded-2xl p-5 flex items-center gap-4 border border-slate-100 shadow-sm">
-    <div className="w-12 h-12 rounded-[14px] bg-emerald-100 text-brand-green flex items-center justify-center text-xl shrink-0">
-      <i className={icon} />
-    </div>
-    <div>
-      <p className="text-[28px] font-bold leading-none text-slate-900 mb-1">{value}</p>
-      <p className="text-sm text-slate-500 font-medium">{label}</p>
-    </div>
-  </div>
-);
-
-const Section = ({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-6">
-    <div className="flex items-center justify-between px-7 py-5 border-b border-slate-100">
-      <h3 className="text-base font-bold text-slate-900">{title}</h3>
-      {badge}
-    </div>
-    <div className="p-7">{children}</div>
-  </div>
-);
-
-const ScoreBadge = ({ score }: { score: number }) => {
-  const cls = score >= 70 ? 'bg-emerald-100 text-emerald-700' : score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
-  return <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${cls}`}>{score} / 100</span>;
-};
 
 // ── Component ───────────────────────────────────────────────────────────────
 export const ParentDashboard = (): JSX.Element => {
@@ -585,9 +544,9 @@ export const ParentDashboard = (): JSX.Element => {
               {/* KPIs */}
               {(view === 'summary' || view === 'activities' || view === 'notes') && (
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-5 mb-8">
-                  <StatCard icon="fa-solid fa-gamepad"   value={stats.games}    label="Activités jouées"  />
-                  <StatCard icon="fa-regular fa-clock"   value={stats.time}     label="Minutes total"     />
-                  <StatCard icon="fa-solid fa-star"      value={stats.avgScore} label="Score moyen"       />
+                  <StatCard icon="fa-solid fa-gamepad"   value={stats.games}    label="Activités jouées"  color="green" />
+                  <StatCard icon="fa-regular fa-clock"   value={stats.time}     label="Minutes total"     color="green" />
+                  <StatCard icon="fa-solid fa-star"      value={stats.avgScore} label="Score moyen"       color="green" />
                 </div>
               )}
 
@@ -1012,18 +971,7 @@ export const ParentDashboard = (): JSX.Element => {
       />
 
       {/* ── Toasts ── */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">
-        {toasts.map(t => (
-          <div key={t.id}
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-sm font-semibold
-              ${t.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
-          >
-            <i className={t.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
-            <span>{t.msg}</span>
-            <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100 text-lg leading-none">×</button>
-          </div>
-        ))}
-      </div>
+      <ToastStack toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

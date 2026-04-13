@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ContentItem, ContentFormData } from '../../content/types/content.types';
+import { inputCls, labelCls } from '../../../components';
 
 interface EditContentModalProps {
   content: ContentItem | null;
@@ -13,8 +14,6 @@ interface EditContentModalProps {
   isLoading: boolean;
 }
 
-const inputCls = 'w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 bg-white text-[14px] focus:outline-none focus:ring-4 focus:ring-brand-orange/10 focus:border-brand-orange transition-all';
-const labelCls = 'block text-sm font-semibold text-slate-700 mb-1.5';
 
 export const EditContentModal: React.FC<EditContentModalProps> = ({
   content, isOpen, onClose, onSave, isLoading,

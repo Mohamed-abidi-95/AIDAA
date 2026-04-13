@@ -2,11 +2,12 @@
 // TELECONSULTATION LIST — Design identique à ProfessionalPage (Tailwind + FA)
 // ============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { mockSessions, STATUS_CONFIG } from '../data/teleconsultation.mock';
+import { useToast, ToastStack } from '../components';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Child {
@@ -14,20 +15,6 @@ interface Child {
   parent_id: number; parent_name?: string; participant_category?: string;
 }
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
-interface Toast { id: number; type: 'success' | 'error'; msg: string; }
-
-// ── Toast hook ─────────────────────────────────────────────────────────────
-let toastId = 0;
-const useToast = () => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    const id = ++toastId;
-    setToasts(p => [...p, { id, type, msg }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
-  }, []);
-  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
-  return { toasts, add, remove };
-};
 
 // ── Nav config (mirrors ProfessionalPage) ──────────────────────────────────
 const NAV = [
@@ -320,18 +307,7 @@ export const TeleconsultationList = (): JSX.Element => {
       </div>
 
       {/* ── Toasts ── */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">
-        {toasts.map(t => (
-          <div key={t.id}
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-sm font-semibold
-              ${t.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
-          >
-            <i className={t.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
-            <span>{t.msg}</span>
-            <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100 text-lg leading-none">×</button>
-          </div>
-        ))}
-      </div>
+      <ToastStack toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

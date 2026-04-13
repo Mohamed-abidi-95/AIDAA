@@ -2,20 +2,20 @@
 // ADMIN PANEL — Design matching adminIndex.html (orange theme + FontAwesome)
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { ContentItem, ContentFormData, User } from '../features/content/types/content.types';
 import { ContentCard } from '../features/admin/components/ContentCard';
 import { EditContentModal } from '../features/admin/components/EditContentModal';
 import { DeleteContentModal } from '../features/admin/components/DeleteContentModal';
+import { StatCard, Section, useToast, ToastStack } from '../components';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type ViewType = 'content' | 'upload' | 'users' | 'registrations' | 'relations' | 'messages' | 'notes';
 type UserRole = 'admin' | 'parent' | 'professional';
 interface UserFormState { name: string; email: string; password: string; role: UserRole; }
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
-interface Toast { id: number; type: 'success' | 'error'; msg: string; }
 
 interface RelationRow {
   id: number; status: string; invited_at: string;
@@ -34,18 +34,6 @@ interface NoteRow {
   child_name: string;
 }
 
-// ── Toast hook ─────────────────────────────────────────────────────────────
-let toastId = 0;
-const useToast = () => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const add = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    const id = ++toastId;
-    setToasts(p => [...p, { id, type, msg }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
-  }, []);
-  const remove = (id: number) => setToasts(p => p.filter(t => t.id !== id));
-  return { toasts, add, remove };
-};
 
 // ── Nav config ─────────────────────────────────────────────────────────────
 const NAV = [
@@ -69,35 +57,7 @@ const ROLE_COLOR: Record<string, string> = {
   professional: 'bg-blue-100 text-blue-700',
 };
 
-// ── StatCard sub-component ─────────────────────────────────────────────────
-const StatCard = ({ icon, color, value, label, onClick }: {
-  icon: string; color: 'orange' | 'blue' | 'green' | 'gray';
-  value: number; label: string; onClick?: () => void;
-}) => {
-  const bg = { orange: 'bg-orange-100 text-brand-orange', blue: 'bg-blue-100 text-blue-600', green: 'bg-emerald-100 text-emerald-600', gray: 'bg-slate-100 text-slate-500' }[color];
-  return (
-    <div onClick={onClick} className={`bg-white rounded-2xl p-6 flex items-center gap-5 border border-slate-100 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${onClick ? 'cursor-pointer' : ''}`}>
-      <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center text-2xl shrink-0 ${bg}`}>
-        <i className={icon} />
-      </div>
-      <div>
-        <p className="text-[32px] font-bold leading-none text-slate-900 mb-1">{value}</p>
-        <p className="text-sm text-slate-500 font-medium">{label}</p>
-      </div>
-    </div>
-  );
-};
-
-// ── Section wrapper ────────────────────────────────────────────────────────
-const Section = ({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm mb-8">
-    <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100">
-      <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-      {badge}
-    </div>
-    <div className="p-8">{children}</div>
-  </div>
-);
+// ── Section wrapper (uses shared Section from components) ───────────────
 
 // ── Input / Select helpers ─────────────────────────────────────────────────
 const inputCls = 'w-full px-4 py-3.5 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 bg-white text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-orange/10 focus:border-brand-orange transition-all';
@@ -811,17 +771,7 @@ export const AdminPanel = (): JSX.Element => {
       <DeleteContentModal contentId={deletingContentId} contentTitle={deletingTitle} isOpen={!!deletingContentId} onClose={() => { setDeletingContentId(null); setDeletingTitle(''); }} onConfirm={handleDeleteConfirm} isLoading={loading} />
 
       {/* ── Toasts ── */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[200]">
-        {toasts.map(t => (
-          <div key={t.id}
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-sm font-semibold animate-page-in
-              ${t.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
-            <i className={t.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
-            <span>{t.msg}</span>
-            <button onClick={() => removeToast(t.id)} className="ml-2 opacity-70 hover:opacity-100 text-lg leading-none">×</button>
-          </div>
-        ))}
-      </div>
+      <ToastStack toasts={toasts} onRemove={removeToast} />
 
     </div>
   );
