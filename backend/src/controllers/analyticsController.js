@@ -82,12 +82,13 @@ exports.getSessionsTimeline = async (req, res) => {
 exports.getActivityBreakdown = async (req, res) => {
   try {
     const { childId } = req.params;
+    // Use content.category when linked, otherwise fallback to action column
     const rows = await query(
-      `SELECT c.category, COUNT(*) as count
+      `SELECT COALESCE(c.category, al.action) as category, COUNT(*) as count
        FROM activity_logs al
        LEFT JOIN content c ON al.content_id = c.id
-       WHERE al.child_id = ? AND c.category IS NOT NULL
-       GROUP BY c.category
+       WHERE al.child_id = ? AND COALESCE(c.category, al.action) IS NOT NULL
+       GROUP BY COALESCE(c.category, al.action)
        ORDER BY count DESC`,
       [childId]
     );
@@ -108,12 +109,13 @@ exports.getActivityBreakdown = async (req, res) => {
 exports.getScoresByCategory = async (req, res) => {
   try {
     const { childId } = req.params;
+    // Use content.category when linked, otherwise fallback to action column
     const rows = await query(
-      `SELECT c.category, ROUND(AVG(al.score), 1) as avgScore
+      `SELECT COALESCE(c.category, al.action) as category, ROUND(AVG(al.score), 1) as avgScore
        FROM activity_logs al
        LEFT JOIN content c ON al.content_id = c.id
-       WHERE al.child_id = ? AND c.category IS NOT NULL
-       GROUP BY c.category
+       WHERE al.child_id = ? AND COALESCE(c.category, al.action) IS NOT NULL
+       GROUP BY COALESCE(c.category, al.action)
        ORDER BY avgScore DESC`,
       [childId]
     );

@@ -59,8 +59,15 @@ const query = async (sql, values = []) => {
       connection.release();
     }
   } catch (error) {
-    // Log error to console for debugging
-    console.error('Database Query Error:', error);
+    // Suppress noisy migration errors (columns/tables that already exist)
+    const msg = error.sqlMessage || error.message || '';
+    const isMigrationNoise =
+      msg.includes('Duplicate column') ||
+      msg.includes('already exists') ||
+      msg.includes('Duplicate entry');
+    if (!isMigrationNoise) {
+      console.error('Database Query Error:', error);
+    }
     // Re-throw error for caller to handle
     throw error;
   }
