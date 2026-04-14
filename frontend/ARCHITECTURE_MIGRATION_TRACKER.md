@@ -52,7 +52,17 @@ Mettre en place une architecture modulaire claire avec:
 ### A faire (prochain lot)
 - [ ] Ranger les types metier vers `src/features/*/types` quand utile
 - [ ] Decoupler les classes globales dashboard en classes scopees par page/feature
-- [ ] Supprimer les selecteurs globaux de `src/styles/ProgressDashboard.css` (ou les scoper)
+
+### Termines (2026-04-13 — Téléconsultation + Sécurité backend)
+- [x] Réécrire `TeleconsultationSchedule.tsx` : mock `setTimeout` → appel réel `POST /api/teleconsult` + migration inline CSS → Tailwind orange
+- [x] Réécrire `TeleconsultationList.tsx` : `mockSessions` → appel réel `GET /api/teleconsult/my` + dérivation du statut depuis `date_time`
+- [x] Réécrire `TeleconsultationRoom.tsx` : `mockSessions.find()` → appel réel `GET /api/teleconsult/:id` + Tailwind + FontAwesome
+- [x] Ajouter `helmet` au backend Express (`app.js`) — en-têtes de sécurité HTTP
+- [x] Ajouter `express-rate-limit` au backend — rate limiting global (200 req/15min) + auth strict (20 req/15min)
+- [x] Installer les packages npm `helmet` et `express-rate-limit` dans `backend/package.json`
+- [x] Réécrire `ProgressDashboard.tsx` : données mock hard-codées → API réelles (`overview`, `sessions-timeline`, `activity-breakdown`, `scores-by-category`, `activity-log`)
+- [x] Supprimer `src/styles/ProgressDashboard.css` — remplacé par Tailwind dans le composant
+- [x] Supprimer `src/data/teleconsultation.mock.ts` — plus aucun import
 
 ## Mapping rapide
 - `Admin content UI` -> `src/features/admin/components/`

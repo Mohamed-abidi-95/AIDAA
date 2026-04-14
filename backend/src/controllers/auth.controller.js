@@ -14,6 +14,8 @@ const jwt = require('jsonwebtoken');
 const bcryptjs = require('bcryptjs');
 // Import user model for database operations
 const userModel = require('../models/user.model');
+// Import query helper for direct DB operations
+const { query } = require('../config/db');
 
 // ============================================================================
 // LOGIN CONTROLLER
@@ -313,6 +315,26 @@ const setPassword = async (req, res) => {
         // Message indicating database operation failed
         message: 'Failed to set password',
       });
+    }
+
+    // ====================================================================
+    // ACTIVATE PENDING PROFESSIONAL INVITATIONS
+    // ====================================================================
+    // If this user is a professional, mark all their pending invitations as
+    // 'active' now that their account is fully configured.
+    if (user.role === 'professional') {
+      try {
+        await query(
+          `UPDATE professional_invitations
+           SET status = 'active'
+           WHERE professional_id = ? AND status = 'pending'`,
+          [userId]
+        );
+        console.log(`[auth.controller] ✅ Invitations activées pour le professionnel #${userId}`);
+      } catch (invErr) {
+        // Non-blocking: log but don't fail the whole request
+        console.warn(`[auth.controller] ⚠️  Impossible d'activer les invitations : ${invErr.message}`);
+      }
     }
 
     // ====================================================================

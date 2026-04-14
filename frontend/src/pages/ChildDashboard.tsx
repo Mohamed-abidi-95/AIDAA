@@ -7,6 +7,12 @@ import { useAuth } from '../features/auth/hooks/useAuth';
 import { Video, Activity } from '../features/content/types/content.types';
 import { MemoryGame } from '../features/games/MemoryGame';
 import { ColorMatchGame } from '../features/games/ColorMatchGame';
+import { EmotionGame } from '../features/games/EmotionGame';
+import { SortingGame } from '../features/games/SortingGame';
+import { CountingGame } from '../features/games/CountingGame';
+import { PatternGame } from '../features/games/PatternGame';
+import { PuzzleWordGame } from '../features/games/PuzzleWordGame';
+import { SoundGame } from '../features/games/SoundGame';
 import api from '../lib/api';
 
 const BACKEND_BASE = 'http://localhost:5000';
@@ -136,7 +142,7 @@ export const ChildDashboard = (): JSX.Element => {
   const [activeAACCat,  setActiveAACCat]  = useState<string>('Besoins');
   const [aacPhrase,     setAACPhrase]     = useState<AACSymbol[]>([]);
   const [loadingAAC,    setLoadingAAC]    = useState(false);
-  const [activeGame, setActiveGame]       = useState<'memory' | 'color' | null>(null);
+  const [activeGame, setActiveGame]       = useState<'memory' | 'color' | 'emotion' | 'sorting' | 'counting' | 'pattern' | 'puzzle_word' | 'sound' | null>(null);
   const [stats,  setStats]  = useState<Stats>({ total_points: 0, total_activities: 0 });
   const [badges, setBadges] = useState<Badge[]>([]);
 
@@ -567,7 +573,7 @@ export const ChildDashboard = (): JSX.Element => {
                 <p className="text-slate-500 mt-1">Joue et gagne des points !</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {/* Memory game */}
                 <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
                   <div className="w-full h-32 flex items-center justify-center text-8xl">
@@ -605,6 +611,120 @@ export const ChildDashboard = (): JSX.Element => {
                     <i className="fa-solid fa-play text-sm"></i> Jouer !
                   </button>
                 </div>
+
+                {/* Emotion recognition game */}
+                <div className="bg-purple-50 border border-purple-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🎭</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Devine l'émotion</h3>
+                    <p className="text-sm text-slate-600">Lis la situation et choisis l'émotion qui correspond.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-purple-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-heart"></i> 8 tours</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 80+ pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('emotion')}
+                    className="w-full bg-purple-500 hover:bg-purple-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-purple-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
+
+                {/* Sorting game */}
+                <div className="bg-teal-50 border border-teal-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🗂️</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Jeu de tri</h3>
+                    <p className="text-sm text-slate-600">Classe les éléments dans la bonne catégorie.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-teal-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-layer-group"></i> 9 objets</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 90 pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('sorting')}
+                    className="w-full bg-teal-500 hover:bg-teal-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-teal-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
+
+                {/* Counting game */}
+                <div className="bg-cyan-50 border border-cyan-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🔢</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Combien y en a-t-il ?</h3>
+                    <p className="text-sm text-slate-600">Compte les objets et choisis le bon nombre.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-cyan-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-calculator"></i> 8 tours</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 80 pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('counting')}
+                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
+
+                {/* Pattern game */}
+                <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🧩</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Complète le motif</h3>
+                    <p className="text-sm text-slate-600">Trouve l'élément manquant dans la séquence.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-indigo-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-puzzle-piece"></i> 8 tours</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 80 pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('pattern')}
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
+
+                {/* Puzzle word game */}
+                <div className="bg-rose-50 border border-rose-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🔤</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Mot mystère</h3>
+                    <p className="text-sm text-slate-600">Reconstitue le mot en cliquant sur les lettres.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-rose-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-spell-check"></i> 6 mots</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 90 pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('puzzle_word')}
+                    className="w-full bg-rose-500 hover:bg-rose-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-rose-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
+
+                {/* Sound imitation game */}
+                <div className="bg-orange-50 border border-orange-100 rounded-3xl p-8 flex flex-col gap-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                  <div className="w-full h-32 flex items-center justify-center text-8xl">
+                    <span className="group-hover:scale-110 transition-transform block">🔊</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <h3 className="text-xl font-bold text-slate-800">Qui fait ce bruit ?</h3>
+                    <p className="text-sm text-slate-600">Écoute le son et trouve l'animal correspondant.</p>
+                    <div className="flex gap-4 text-xs font-semibold text-orange-600 bg-white p-3 rounded-xl shadow-inner">
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-volume-high"></i> 10 tours</span>
+                      <span className="flex items-center gap-1.5"><i className="fa-solid fa-star"></i> 100 pts</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveGame('sound')}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 transition">
+                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                  </button>
+                </div>
               </div>
 
               {/* Badges showcase */}
@@ -637,6 +757,42 @@ export const ChildDashboard = (): JSX.Element => {
       {activeGame === 'color' && (
         <ColorMatchGame
           onComplete={(score, dur) => { logGameScore('color_match', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'emotion' && (
+        <EmotionGame
+          onComplete={(score, dur) => { logGameScore('emotion', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'sorting' && (
+        <SortingGame
+          onComplete={(score, dur) => { logGameScore('sorting', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'counting' && (
+        <CountingGame
+          onComplete={(score, dur) => { logGameScore('counting', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'pattern' && (
+        <PatternGame
+          onComplete={(score, dur) => { logGameScore('pattern', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'puzzle_word' && (
+        <PuzzleWordGame
+          onComplete={(score, dur) => { logGameScore('puzzle_word', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
+          onClose={() => setActiveGame(null)}
+        />
+      )}
+      {activeGame === 'sound' && (
+        <SoundGame
+          onComplete={(score, dur) => { logGameScore('sound', score, dur); setTimeout(() => setActiveGame(null), 2000); }}
           onClose={() => setActiveGame(null)}
         />
       )}

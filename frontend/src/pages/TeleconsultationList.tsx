@@ -1,12 +1,12 @@
 // ============================================================================
 // TELECONSULTATION LIST — Design identique à ProfessionalPage (Tailwind + FA)
 // ============================================================================
+// Données chargées depuis GET /api/teleconsult/my (plus de mock)
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
-import { mockSessions, STATUS_CONFIG } from '../data/teleconsultation.mock';
 import { useToast, ToastStack } from '../components';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -14,7 +14,40 @@ interface Child {
   id: number; name: string; age: number;
   parent_id: number; parent_name?: string; participant_category?: string;
 }
+
+/** Shape returned by GET /api/teleconsult/my */
+interface Teleconsult {
+  id: number;
+  parent_id: number;
+  professional_id: number;
+  date_time: string;        // ISO datetime
+  meeting_link: string | null;
+  notes: string | null;
+  parent_name?: string;
+  parent_email?: string;
+  created_at?: string;
+}
+
+type SessionStatus = 'planned' | 'ongoing' | 'done';
+
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
+
+/** Derive status from date_time: past → done, today within 1h → ongoing, future → planned */
+const deriveStatus = (dt: string): SessionStatus => {
+  const d = new Date(dt);
+  const now = new Date();
+  const diffMs = d.getTime() - now.getTime();
+  const diffMin = diffMs / 60000;
+  if (diffMin < -60) return 'done';
+  if (diffMin <= 60) return 'ongoing';
+  return 'planned';
+};
+
+const STATUS_LABELS: Record<SessionStatus, string> = {
+  planned: 'Planifiée',
+  ongoing: 'En cours',
+  done:    'Terminée',
+};
 
 // ── Nav config (mirrors ProfessionalPage) ──────────────────────────────────
 const NAV = [
@@ -25,17 +58,8 @@ const NAV = [
   { id: 'invitations', fa: 'fa-solid fa-envelope-open-text', label: 'Invitations'     },
 ] as const;
 
-// ── Score badge ────────────────────────────────────────────────────────────
-const ScoreBadge = ({ score }: { score: number }) => {
-  const cls = score >= 70
-    ? 'bg-emerald-100 text-emerald-700'
-    : score >= 40 ? 'bg-amber-100 text-amber-700'
-    : 'bg-red-100 text-red-700';
-  return <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${cls}`}>{score} / 100</span>;
-};
-
 // ── Status badge ──────────────────────────────────────────────────────────
-const StatusBadge = ({ status }: { status: 'planned' | 'ongoing' | 'done' }) => {
+const StatusBadge = ({ status }: { status: SessionStatus }) => {
   const cls = status === 'ongoing'
     ? 'bg-emerald-100 text-emerald-700'
     : status === 'planned' ? 'bg-blue-100 text-blue-700'
@@ -43,7 +67,7 @@ const StatusBadge = ({ status }: { status: 'planned' | 'ongoing' | 'done' }) => 
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cls}`}>
       {status === 'ongoing' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-      {STATUS_CONFIG[status].label}
+      {STATUS_LABELS[status]}
     </span>
   );
 };
@@ -56,8 +80,10 @@ export const TeleconsultationList = (): JSX.Element => {
 
   const [patients, setPatients]               = useState<Child[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Child | null>(null);
+  const [sessions, setSessions]               = useState<Teleconsult[]>([]);
   const [search, setSearch]                   = useState('');
   const [loading, setLoading]                 = useState(false);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const profInitial = user?.name?.charAt(0).toUpperCase() ?? 'P';
 
@@ -80,7 +106,36 @@ export const TeleconsultationList = (): JSX.Element => {
     fetchPatients();
   }, []);
 
+  // ── Fetch teleconsultations from real API ────────────────────────────────
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setSessionsLoading(true);
+        const { data } = await api.get<ApiResult<Teleconsult[]>>('/api/teleconsult/my');
+        if (data.success) {
+          setSessions(data.data);
+        }
+      } catch {
+        toast('Erreur lors du chargement des téléconsultations', 'error');
+      } finally {
+        setSessionsLoading(false);
+      }
+    };
+    fetchSessions();
+  }, []);
+
   const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  // Derived stats
+  const sessionsWithStatus = sessions.map(s => ({ ...s, status: deriveStatus(s.date_time) }));
+  const totalCount   = sessionsWithStatus.length;
+  const plannedCount = sessionsWithStatus.filter(s => s.status === 'planned').length;
+  const ongoingCount = sessionsWithStatus.filter(s => s.status === 'ongoing').length;
+  const doneCount    = sessionsWithStatus.filter(s => s.status === 'done').length;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -203,10 +258,10 @@ export const TeleconsultationList = (): JSX.Element => {
           {/* Stats */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
             {[
-              { icon: 'fa-solid fa-calendar-check', value: mockSessions.length,                                       label: 'Sessions totales' },
-              { icon: 'fa-solid fa-circle-play',    value: mockSessions.filter(s => s.status === 'planned').length,  label: 'Planifiées'      },
-              { icon: 'fa-solid fa-circle-dot',     value: mockSessions.filter(s => s.status === 'ongoing').length,  label: 'En cours'        },
-              { icon: 'fa-solid fa-circle-check',   value: mockSessions.filter(s => s.status === 'done').length,     label: 'Terminées'       },
+              { icon: 'fa-solid fa-calendar-check', value: totalCount,   label: 'Sessions totales' },
+              { icon: 'fa-solid fa-circle-play',    value: plannedCount, label: 'Planifiées'      },
+              { icon: 'fa-solid fa-circle-dot',     value: ongoingCount, label: 'En cours'        },
+              { icon: 'fa-solid fa-circle-check',   value: doneCount,    label: 'Terminées'       },
             ].map(s => (
               <div key={s.label} className="bg-white rounded-2xl p-5 flex items-center gap-4 border border-slate-100 shadow-sm">
                 <div className="w-12 h-12 rounded-[14px] bg-orange-100 text-brand-orange flex items-center justify-center text-xl shrink-0">
@@ -227,11 +282,16 @@ export const TeleconsultationList = (): JSX.Element => {
                 <i className="fa-solid fa-calendar-days mr-2 text-brand-orange" /> Mes sessions
               </h3>
               <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">
-                {mockSessions.length} session(s)
+                {totalCount} session(s)
               </span>
             </div>
 
-            {mockSessions.length === 0 ? (
+            {sessionsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4 p-7">
+                <div className="w-10 h-10 border-3 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm">Chargement des sessions…</p>
+              </div>
+            ) : totalCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4 p-7">
                 <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center text-3xl text-brand-orange">
                   <i className="fa-solid fa-video" />
@@ -252,32 +312,29 @@ export const TeleconsultationList = (): JSX.Element => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {['Patient', 'Date', 'Heure', 'Durée', 'Statut', 'Score préc.', 'Action'].map(h => (
+                      {['Parent', 'Date', 'Heure', 'Statut', 'Notes', 'Action'].map(h => (
                         <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {mockSessions.map(session => (
+                    {sessionsWithStatus.map(session => (
                       <tr key={session.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-7 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-brand-orange flex items-center justify-center font-bold text-white text-sm shrink-0">
-                              {session.patientName.charAt(0)}
+                              {(session.parent_name || 'P').charAt(0)}
                             </div>
                             <div>
-                              <p className="font-semibold text-slate-800 text-sm">{session.patientName}</p>
-                              <p className="text-xs text-slate-400">{session.patientAge} ans · {session.participantCategory}</p>
+                              <p className="font-semibold text-slate-800 text-sm">{session.parent_name || `Parent #${session.parent_id}`}</p>
+                              {session.parent_email && <p className="text-xs text-slate-400">{session.parent_email}</p>}
                             </div>
                           </div>
                         </td>
-                        <td className="px-7 py-4 text-slate-600 text-sm">
-                          {new Date(session.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                        </td>
-                        <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{session.time}</td>
-                        <td className="px-7 py-4 text-slate-500 text-sm">{session.duration} min</td>
+                        <td className="px-7 py-4 text-slate-600 text-sm">{fmtDate(session.date_time)}</td>
+                        <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{fmtTime(session.date_time)}</td>
                         <td className="px-7 py-4"><StatusBadge status={session.status} /></td>
-                        <td className="px-7 py-4"><ScoreBadge score={session.lastScore} /></td>
+                        <td className="px-7 py-4 text-slate-500 text-sm max-w-[200px] truncate">{session.notes || '—'}</td>
                         <td className="px-7 py-4">
                           <button
                             onClick={() => navigate(`/professionnel/teleconsultation/${session.id}`)}
@@ -311,10 +368,4 @@ export const TeleconsultationList = (): JSX.Element => {
     </div>
   );
 };
-
-
-
-
-
-
 

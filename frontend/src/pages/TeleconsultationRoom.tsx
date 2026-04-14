@@ -1,10 +1,24 @@
 // ============================================================================
 // TELECONSULTATION ROOM — Salle de vidéo-consultation (Espace Professionnel)
 // ============================================================================
+// Charge les données depuis GET /api/teleconsult/:id (plus de mock)
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { mockSessions } from '../data/teleconsultation.mock';
+import api from '../lib/api';
+
+interface Teleconsult {
+  id: number;
+  parent_id: number;
+  professional_id: number;
+  date_time: string;
+  meeting_link: string | null;
+  notes: string | null;
+  parent_name?: string;
+  professional_name?: string;
+  created_at?: string;
+}
+interface ApiResult<T> { success: boolean; data: T; message?: string; }
 
 interface ChatMessage {
   from: string;
@@ -12,30 +26,24 @@ interface ChatMessage {
   time: string;
 }
 
-// ── Icon control button ──────────────────────────────────────────────────────
+// ── Icon control button (Tailwind) ──────────────────────────────────────────
 const CtrlBtn = ({
-  icon, label, active = true, onClick,
+  icon, label, active = true, danger = false, onClick,
 }: {
-  icon: string; label: string; active?: boolean; onClick: () => void;
+  icon: string; label: string; active?: boolean; danger?: boolean; onClick: () => void;
 }) => (
   <button
     title={label}
     onClick={onClick}
-    style={{
-      width: 48, height: 48,
-      borderRadius: '50%',
-      background: active ? '#2D2D2D' : '#4B4B4B',
-      color: '#fff',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: 18,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      transition: 'background 0.2s, opacity 0.2s',
-      opacity: active ? 1 : 0.65,
-      flexShrink: 0,
-    }}
+    className={`w-12 h-12 rounded-full flex items-center justify-center text-lg text-white shrink-0 transition-all
+      ${danger
+        ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/40'
+        : active
+          ? 'bg-slate-700 hover:bg-slate-600'
+          : 'bg-slate-600/60 opacity-65 hover:opacity-100'
+      }`}
   >
-    {icon}
+    <i className={icon} />
   </button>
 );
 
@@ -44,13 +52,40 @@ export const TeleconsultationRoom = (): JSX.Element => {
   const navigate      = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
 
+  const [session,  setSession]  = useState<Teleconsult | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
   const [micOn,    setMicOn]    = useState(true);
   const [camOn,    setCamOn]    = useState(true);
   const [sharing,  setSharing]  = useState(false);
   const [message,  setMessage]  = useState('');
   const [chatLog,  setChatLog]  = useState<ChatMessage[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const session = mockSessions.find(s => s.id === parseInt(sessionId ?? '0', 10));
+  // ── Fetch session from API ────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get<ApiResult<Teleconsult>>(`/api/teleconsult/${sessionId}`);
+        if (data.success) {
+          setSession(data.data);
+        } else {
+          setError(data.message || 'Session introuvable');
+        }
+      } catch (err: any) {
+        setError(err?.response?.data?.message || 'Erreur de chargement');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (sessionId) fetchSession();
+  }, [sessionId]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatLog]);
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -65,289 +100,178 @@ export const TeleconsultationRoom = (): JSX.Element => {
     setMessage('');
   };
 
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      background: '#111',
-      fontFamily: "'Inter','Segoe UI',sans-serif",
-      overflow: 'hidden',
-    }}>
+    <div className="flex h-screen bg-[#111] font-sans overflow-hidden">
 
       {/* ══ LEFT — Video + Controls ══ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
+      <div className="flex-1 flex flex-col min-w-0 relative">
 
         {/* Session badge */}
         {session && (
-          <div style={{
-            position: 'absolute', top: 18, left: 18, zIndex: 10,
-            background: 'rgba(158,64,0,0.9)',
-            border: '1px solid #E07820',
-            borderRadius: 10,
-            padding: '8px 16px',
-            color: '#fff',
-            fontSize: 12,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}>
-            <span style={{
-              background: '#E07820', borderRadius: '50%',
-              width: 8, height: 8, display: 'inline-block',
-            }} />
-            {session.patientName} · Session #{sessionId}
+          <div className="absolute top-4 left-4 z-10 bg-orange-700/90 border border-orange-500 rounded-xl px-4 py-2 text-white text-xs font-semibold flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-400 inline-block animate-pulse" />
+            {session.parent_name || `Parent #${session.parent_id}`} · Session #{sessionId}
           </div>
         )}
 
         {/* Main video placeholder */}
-        <div style={{
-          flex: 1,
-          background: '#1C1917',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 14,
-        }}>
-          <div style={{ fontSize: 72, opacity: 0.25 }}>📷</div>
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: 500, margin: 0 }}>
-            {camOn
-              ? `Caméra en attente — ${session?.patientName ?? 'Patient'}`
-              : 'Caméra désactivée'}
-          </p>
+        <div className="flex-1 bg-[#1C1917] flex items-center justify-center flex-col gap-4">
+          {loading ? (
+            <>
+              <div className="w-10 h-10 border-3 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-white/40 text-sm">Chargement de la session…</p>
+            </>
+          ) : error ? (
+            <>
+              <div className="text-5xl opacity-30">❌</div>
+              <p className="text-white/50 text-sm font-medium">{error}</p>
+              <button
+                onClick={() => navigate('/professionnel/teleconsultation')}
+                className="mt-2 px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold transition-all"
+              >
+                <i className="fa-solid fa-arrow-left mr-2" /> Retour aux sessions
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="text-7xl opacity-20">
+                <i className={camOn ? 'fa-solid fa-video' : 'fa-solid fa-video-slash'} />
+              </div>
+              <p className="text-white/35 text-sm font-medium">
+                {camOn
+                  ? `Caméra en attente — ${session?.parent_name ?? 'Patient'}`
+                  : 'Caméra désactivée'}
+              </p>
+            </>
+          )}
 
           {/* Self-view mini tile */}
-          <div style={{
-            position: 'absolute',
-            bottom: 88, right: 20,
-            width: 160, height: 90,
-            background: '#2D2D2D',
-            borderRadius: 10,
-            border: '2px solid #3D3D3D',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, color: 'rgba(255,255,255,0.3)',
-          }}>
-            {camOn ? '🙂' : '🚫'}
-          </div>
+          {!loading && !error && (
+            <div className="absolute bottom-24 right-5 w-40 h-[90px] bg-[#2D2D2D] rounded-xl border-2 border-[#3D3D3D] flex items-center justify-center text-2xl text-white/30">
+              {camOn ? '🙂' : <i className="fa-solid fa-video-slash" />}
+            </div>
+          )}
         </div>
 
         {/* Control bar */}
-        <div style={{
-          background: '#1C1917',
-          borderTop: '1px solid #2D2D2D',
-          padding: '16px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-          flexShrink: 0,
-        }}>
-          <CtrlBtn
-            icon={micOn ? '🎙️' : '🔇'}
-            label={micOn ? 'Couper le micro' : 'Activer le micro'}
-            active={micOn}
-            onClick={() => setMicOn(p => !p)}
-          />
-          <CtrlBtn
-            icon={camOn ? '📹' : '🚫'}
-            label={camOn ? 'Désactiver la caméra' : 'Activer la caméra'}
-            active={camOn}
-            onClick={() => setCamOn(p => !p)}
-          />
-          <CtrlBtn
-            icon="🖥️"
-            label={sharing ? "Arrêter le partage" : "Partager l'écran"}
-            active={sharing}
-            onClick={() => setSharing(p => !p)}
-          />
-          <button
-            onClick={() => navigate('/professionnel/teleconsultation')}
-            style={{
-              padding: '10px 28px',
-              background: '#DC2626',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 24,
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(220,38,38,.45)',
-              marginLeft: 8,
-            }}
-          >
-            ⬛ Terminer
-          </button>
-        </div>
+        {!loading && !error && (
+          <div className="bg-[#1C1917] border-t border-[#2D2D2D] py-4 px-8 flex items-center justify-center gap-4 shrink-0">
+            <CtrlBtn
+              icon={micOn ? 'fa-solid fa-microphone' : 'fa-solid fa-microphone-slash'}
+              label={micOn ? 'Couper le micro' : 'Activer le micro'}
+              active={micOn}
+              onClick={() => setMicOn(p => !p)}
+            />
+            <CtrlBtn
+              icon={camOn ? 'fa-solid fa-video' : 'fa-solid fa-video-slash'}
+              label={camOn ? 'Désactiver la caméra' : 'Activer la caméra'}
+              active={camOn}
+              onClick={() => setCamOn(p => !p)}
+            />
+            <CtrlBtn
+              icon="fa-solid fa-display"
+              label={sharing ? "Arrêter le partage" : "Partager l'écran"}
+              active={sharing}
+              onClick={() => setSharing(p => !p)}
+            />
+            <button
+              onClick={() => navigate('/professionnel/teleconsultation')}
+              className="ml-2 px-7 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold text-sm shadow-lg shadow-red-600/40 transition-all flex items-center gap-2"
+            >
+              <i className="fa-solid fa-phone-slash" /> Terminer
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ══ RIGHT — Patient info + Chat ══ */}
-      <div style={{
-        width: 320,
-        background: '#1C1917',
-        borderLeft: '1px solid #2D2D2D',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-      }}>
+      <div className="w-80 bg-[#1C1917] border-l border-[#2D2D2D] flex flex-col shrink-0">
 
         {/* Patient info */}
         {session ? (
-          <div style={{ padding: '18px 16px', borderBottom: '1px solid #2D2D2D' }}>
-
-            {/* Avatar + name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#C45E0A,#E07820)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, color: '#fff', fontSize: 18, flexShrink: 0,
-              }}>
-                {session.patientName.charAt(0)}
+          <div className="p-4 border-b border-[#2D2D2D]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center font-bold text-white text-lg shrink-0">
+                {(session.parent_name || 'P').charAt(0)}
               </div>
               <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
-                  {session.patientName}
-                </div>
-                <div style={{ color: '#8C6840', fontSize: 12 }}>
-                  {session.patientAge} ans · {session.participantCategory}
-                </div>
+                <p className="text-white font-bold text-sm">{session.parent_name || `Parent #${session.parent_id}`}</p>
+                <p className="text-orange-400/70 text-xs">{fmtDate(session.date_time)} · {fmtTime(session.date_time)}</p>
               </div>
             </div>
 
-            {/* Info grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {([
-                { label: 'Durée',       value: `${session.duration} min` },
-                { label: 'Score préc.', value: `${session.lastScore} / 100` },
-              ] as const).map(({ label, value }) => (
-                <div key={label} style={{ background: '#2D2D2D', borderRadius: 8, padding: '8px 10px' }}>
-                  <div style={{
-                    fontSize: 10, color: '#8C6840',
-                    textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 3,
-                  }}>
-                    {label}
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{value}</div>
-                </div>
-              ))}
-            </div>
+            {/* Meeting link */}
+            {session.meeting_link && (
+              <div className="bg-[#2D2D2D] rounded-lg px-3 py-2 mb-2">
+                <p className="text-[10px] text-orange-400/60 uppercase tracking-wider mb-1">Lien de réunion</p>
+                <a href={session.meeting_link} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-orange-400 hover:text-orange-300 underline truncate block">
+                  {session.meeting_link}
+                </a>
+              </div>
+            )}
 
             {/* Notes */}
             {session.notes && (
-              <div style={{
-                marginTop: 10,
-                background: '#2D2D2D',
-                borderRadius: 8,
-                padding: '10px 12px',
-                borderLeft: '3px solid #E07820',
-              }}>
-                <div style={{
-                  fontSize: 10, color: '#8C6840',
-                  letterSpacing: '0.8px', marginBottom: 4,
-                }}>NOTES</div>
-                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
-                  {session.notes}
-                </p>
+              <div className="bg-[#2D2D2D] rounded-lg px-3 py-2 border-l-3 border-orange-500">
+                <p className="text-[10px] text-orange-400/60 uppercase tracking-wider mb-1">Notes</p>
+                <p className="text-xs text-white/75 leading-relaxed">{session.notes}</p>
               </div>
             )}
           </div>
+        ) : loading ? (
+          <div className="p-5 text-center border-b border-[#2D2D2D]">
+            <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-white/40 text-xs">Chargement…</p>
+          </div>
         ) : (
-          <div style={{
-            padding: '20px 16px',
-            color: '#8C6840',
-            textAlign: 'center',
-            borderBottom: '1px solid #2D2D2D',
-            fontSize: 13,
-          }}>
+          <div className="p-5 text-orange-400/60 text-center border-b border-[#2D2D2D] text-sm">
             Session #{sessionId} introuvable
           </div>
         )}
 
         {/* Chat panel */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Chat header */}
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid #2D2D2D',
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            💬 Chat
+          <div className="px-4 py-3 border-b border-[#2D2D2D] text-white text-sm font-semibold flex items-center gap-2">
+            <i className="fa-solid fa-comments text-orange-400" /> Chat
           </div>
 
           {/* Messages list */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}>
+          <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">
             {chatLog.length === 0 ? (
-              <p style={{ color: '#8C6840', fontSize: 12, textAlign: 'center', marginTop: 20 }}>
+              <p className="text-orange-400/40 text-xs text-center mt-5">
                 Aucun message pour le moment
               </p>
             ) : (
               chatLog.map((m, i) => (
-                <div key={i} style={{
-                  background: '#2D2D2D',
-                  borderRadius: 10,
-                  padding: '8px 12px',
-                  borderLeft: '3px solid #E07820',
-                }}>
-                  <div style={{ fontSize: 10, color: '#8C6840', marginBottom: 3 }}>
-                    {m.from} · {m.time}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.4 }}>{m.text}</div>
+                <div key={i} className="bg-[#2D2D2D] rounded-xl px-3 py-2 border-l-3 border-orange-500">
+                  <div className="text-[10px] text-orange-400/60 mb-0.5">{m.from} · {m.time}</div>
+                  <div className="text-sm text-white leading-relaxed">{m.text}</div>
                 </div>
               ))
             )}
+            <div ref={chatEndRef} />
           </div>
 
           {/* Input */}
-          <div style={{
-            padding: '12px 16px',
-            borderTop: '1px solid #2D2D2D',
-            display: 'flex',
-            gap: 8,
-          }}>
+          <div className="px-4 py-3 border-t border-[#2D2D2D] flex gap-2">
             <input
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
               placeholder="Saisissez un message…"
-              style={{
-                flex: 1,
-                padding: '9px 12px',
-                background: '#2D2D2D',
-                border: '1px solid #3D3D3D',
-                borderRadius: 8,
-                color: '#fff',
-                fontSize: 13,
-                outline: 'none',
-                fontFamily: 'inherit',
-              }}
+              className="flex-1 px-3 py-2 bg-[#2D2D2D] border border-[#3D3D3D] rounded-lg text-white text-sm placeholder-white/30 outline-none focus:border-orange-500 transition-colors"
             />
             <button
               onClick={sendMessage}
-              style={{
-                width: 38, height: 38,
-                borderRadius: 8,
-                background: '#E07820',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-                flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
+              className="w-9 h-9 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center justify-center shrink-0 transition-all"
             >
-              →
+              <i className="fa-solid fa-paper-plane text-xs" />
             </button>
           </div>
         </div>

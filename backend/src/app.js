@@ -5,6 +5,8 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
@@ -243,6 +245,35 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
+// ============================================================================
+// SECURITY HEADERS (Helmet)
+// ============================================================================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow /uploads serving
+}));
+
+// ============================================================================
+// RATE LIMITING — protect against brute-force & DDoS
+// ============================================================================
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,                  // max 200 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Trop de requêtes, veuillez réessayer plus tard.' },
+});
+app.use('/api', apiLimiter);
+
+// Stricter limit for auth endpoints (login / signup)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Trop de tentatives, veuillez réessayer dans 15 minutes.' },
+});
+app.use('/api/auth', authLimiter);
 
 // JSON middleware
 app.use(express.json());

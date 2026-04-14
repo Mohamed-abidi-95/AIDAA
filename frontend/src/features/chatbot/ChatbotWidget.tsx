@@ -284,6 +284,10 @@ export const ChatbotWidget = ({ childId, childName, lang: initialLang = 'fr' }: 
         aria-label="Ouvrir le chatbot"
       >
         <i className="fa-solid fa-robot" />
+        {/* Online pulse */}
+        <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white">
+          <span className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75" />
+        </span>
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unread}
@@ -299,12 +303,21 @@ export const ChatbotWidget = ({ childId, childName, lang: initialLang = 'fr' }: 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-emerald-500 rounded-t-2xl">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg relative">
                 🤖
+                {/* Online status indicator */}
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-emerald-500">
+                  <span className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75" />
+                </span>
               </div>
               <div>
                 <p className="text-white font-bold text-sm leading-none">Assistant AIDAA</p>
                 <p className="text-emerald-100 text-[11px] mt-0.5">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-300 rounded-full inline-block" />
+                    {lang === 'ar' ? 'متصل' : 'En ligne'}
+                  </span>
+                  {' · '}
                   {lang === 'ar' ? 'مساعد ذكي للآباء' : 'IA · Chatbot parental'}
                   {' '}
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">

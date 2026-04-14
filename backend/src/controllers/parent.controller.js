@@ -54,13 +54,18 @@ const inviteProfessional = async (req, res) => {
       [inviter.id, profId]
     );
 
+    // Déterminer le statut initial : 'active' si le professionnel a déjà un compte configuré
+    const profRecord = await query('SELECT password, is_active FROM users WHERE id = ?', [profId]);
+    const alreadyActive = profRecord.length > 0 && profRecord[0].password && profRecord[0].is_active;
+    const initialStatus = alreadyActive ? 'active' : 'pending';
+
     if (existingRows.length > 0) {
       const existing = existingRows[0];
       if (existing.status === 'revoked') {
         // Réactiver l'invitation révoquée
         await query(
           'UPDATE professional_invitations SET status = ? WHERE parent_id = ? AND professional_id = ?',
-          ['pending', inviter.id, profId]
+          [initialStatus, inviter.id, profId]
         );
       } else {
         return res.status(409).json({ success: false, message: 'Ce professionnel a déjà été invité.' });
@@ -68,7 +73,7 @@ const inviteProfessional = async (req, res) => {
     } else {
       await query(
         'INSERT INTO professional_invitations (parent_id, professional_id, status) VALUES (?, ?, ?)',
-        [inviter.id, profId, 'pending']
+        [inviter.id, profId, initialStatus]
       );
     }
 
@@ -96,8 +101,10 @@ const inviteProfessional = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: emailSent ? `Invitation envoyée à ${profName}` : `Invitation créée pour ${profName} (email non envoyé)`,
-      data: { id: profId, name: profName, email: email.toLowerCase(), role: 'professional', inviteLink, previewUrl, emailSent, emailError },
+      message: alreadyActive
+        ? `${profName} a été lié à votre compte (compte déjà actif).`
+        : emailSent ? `Invitation envoyée à ${profName}` : `Invitation créée pour ${profName} (email non envoyé)`,
+      data: { id: profId, name: profName, email: email.toLowerCase(), role: 'professional', inviteLink, previewUrl, emailSent, emailError, status: initialStatus },
     });
   } catch (error) {
     console.error('[parent.controller] inviteProfessional:', error);

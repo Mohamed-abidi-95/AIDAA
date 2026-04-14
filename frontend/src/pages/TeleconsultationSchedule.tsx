@@ -1,20 +1,24 @@
 // ============================================================================
 // TELECONSULTATION SCHEDULE — Formulaire de planification d'une session
 // ============================================================================
+// Appelle POST /api/teleconsult pour créer une vraie session en BDD.
 
 import { useState, useEffect } from 'react';
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import { useToast, ToastStack } from '../components';
 import api from '../lib/api';
 
 interface Patient {
   id: number;
   name: string;
   age: number;
+  parent_id: number;
+  parent_name?: string;
   participant_category?: string;
 }
 
-interface ApiResult<T> { success: boolean; data: T; }
+interface ApiResult<T> { success: boolean; data: T; message?: string; }
 
 interface FormState {
   patientId: string;
@@ -24,32 +28,11 @@ interface FormState {
   notes: string;
 }
 
-const FIELD_LABEL: React.CSSProperties = {
-  display: 'block',
-  fontSize: 11,
-  fontWeight: 700,
-  color: '#8C6840',
-  textTransform: 'uppercase',
-  letterSpacing: '0.9px',
-  marginBottom: 7,
-};
-
-const INPUT_STYLE: React.CSSProperties = {
-  width: '100%',
-  padding: '11px 14px',
-  border: '1.5px solid #F0E6D8',
-  borderRadius: 10,
-  fontSize: 14,
-  fontFamily: 'inherit',
-  color: '#1A0D00',
-  background: '#fff',
-  outline: 'none',
-  transition: 'border-color 0.2s',
-};
-
 // ============================================================================
 export const TeleconsultationSchedule = (): JSX.Element => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toasts, add: toast, remove: removeToast } = useToast();
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [form, setForm]         = useState<FormState>({
@@ -61,6 +44,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
   });
   const [loading,  setLoading]  = useState(false);
   const [success,  setSuccess]  = useState(false);
+  const [error,    setError]    = useState('');
 
   // ── Load patients ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -84,103 +68,96 @@ export const TeleconsultationSchedule = (): JSX.Element => {
     load();
   }, []);
 
-  // ── Submit (mock) ──────────────────────────────────────────────────────────
+  // ── Submit — real API ─────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    const selectedPatient = patients.find(p => p.id === Number(form.patientId));
+    if (!selectedPatient) { setError('Veuillez sélectionner un patient.'); return; }
+
+    const parentId = selectedPatient.parent_id;
+    const professionalId = user?.id;
+    if (!professionalId) { setError('Utilisateur non authentifié.'); return; }
+
+    const date_time = `${form.date}T${form.time}:00`;
+    const meeting_link = `https://meet.aidaa.tn/session-${Date.now()}`;
+
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900)); // simulate API
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => navigate('/professionnel/teleconsultation'), 2000);
+    try {
+      const { data } = await api.post<ApiResult<{ id: number }>>('/api/teleconsult', {
+        parentId,
+        professionalId,
+        date_time,
+        meeting_link,
+        notes: form.notes || `Session de ${form.duration} min`,
+      });
+
+      if (data.success) {
+        setSuccess(true);
+        toast('Session planifiée avec succès !', 'success');
+        setTimeout(() => navigate('/professionnel/teleconsultation'), 2000);
+      } else {
+        setError(data.message || 'Erreur lors de la création.');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Erreur serveur. Veuillez réessayer.';
+      setError(msg);
+      toast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const durations: FormState['duration'][] = ['30', '45', '60'];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(160deg, #9E4000 0%, #C45E0A 50%, #E07820 100%)',
-      fontFamily: "'Inter','Segoe UI',sans-serif",
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-    }}>
-      <div style={{
-        background: '#fff',
-        borderRadius: 16,
-        boxShadow: '0 4px 28px rgba(224,120,32,.18)',
-        border: '1px solid #F0E6D8',
-        width: '100%',
-        maxWidth: 520,
-        overflow: 'hidden',
-      }}>
+    <div className="min-h-screen bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 font-sans flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-2xl border border-orange-100 w-full max-w-xl overflow-hidden">
 
         {/* ── Card header ── */}
-        <div style={{
-          background: 'linear-gradient(135deg, #9E4000 0%, #C45E0A 60%, #E07820 100%)',
-          padding: '26px 28px 24px',
-          color: '#fff',
-        }}>
+        <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-7 py-6 text-white">
           <button
             type="button"
             onClick={() => navigate('/professionnel/teleconsultation')}
-            style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: 'none',
-              borderRadius: 8,
-              color: '#fff',
-              padding: '5px 12px',
-              fontSize: 12,
-              cursor: 'pointer',
-              marginBottom: 16,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: 'inherit',
-              fontWeight: 600,
-            }}
+            className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-semibold mb-4 transition-all"
           >
-            ← Retour
+            <i className="fa-solid fa-arrow-left text-[10px]" /> Retour
           </button>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🗓️ Planifier une session</h1>
-          <p style={{ margin: '6px 0 0', fontSize: 13, opacity: 0.82 }}>
-            Choisissez un patient et un créneau horaire
-          </p>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <i className="fa-solid fa-calendar-plus" /> Planifier une session
+          </h1>
+          <p className="text-sm text-white/80 mt-1">Choisissez un patient et un créneau horaire</p>
         </div>
 
         {/* ── Form ── */}
-        <form onSubmit={handleSubmit} style={{ padding: '28px' }}>
+        <form onSubmit={handleSubmit} className="p-7">
 
           {/* Success banner */}
           {success && (
-            <div style={{
-              background: '#FEF3E7',
-              border: '1px solid #F5A94E',
-              borderRadius: 10,
-              padding: '12px 16px',
-              marginBottom: 20,
-              color: '#C45E0A',
-              fontWeight: 600,
-              fontSize: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}>
-              ✅ Session planifiée avec succès ! Redirection…
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-emerald-700 font-semibold text-sm">
+              <i className="fa-solid fa-circle-check" /> Session planifiée avec succès ! Redirection…
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Error banner */}
+          {error && !success && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-red-700 font-semibold text-sm">
+              <i className="fa-solid fa-circle-exclamation" /> {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-5">
 
             {/* Patient */}
             <div>
-              <label style={FIELD_LABEL}>Patient *</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Patient *</label>
               <select
                 required
                 value={form.patientId}
                 onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))}
-                style={INPUT_STYLE}
+                className="w-full px-3.5 py-2.5 border-2 border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
               >
                 {patients.length === 0
                   ? <option value="">Aucun patient disponible</option>
@@ -194,53 +171,60 @@ export const TeleconsultationSchedule = (): JSX.Element => {
             </div>
 
             {/* Date + Heure */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label style={FIELD_LABEL}>Date *</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Date *</label>
                 <input
                   type="date"
                   required
                   min={today}
                   value={form.date}
                   onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  style={INPUT_STYLE}
+                  className="w-full px-3.5 py-2.5 border-2 border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                 />
               </div>
               <div>
-                <label style={FIELD_LABEL}>Heure *</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Heure *</label>
                 <input
                   type="time"
                   required
                   value={form.time}
                   onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-                  style={INPUT_STYLE}
+                  className="w-full px-3.5 py-2.5 border-2 border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                 />
               </div>
             </div>
 
-            {/* Durée */}
+            {/* Durée — button group */}
             <div>
-              <label style={FIELD_LABEL}>Durée</label>
-              <select
-                value={form.duration}
-                onChange={e => setForm(f => ({ ...f, duration: e.target.value as FormState['duration'] }))}
-                style={INPUT_STYLE}
-              >
-                <option value="30">30 minutes</option>
-                <option value="45">45 minutes</option>
-                <option value="60">60 minutes</option>
-              </select>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Durée</label>
+              <div className="flex gap-2">
+                {durations.map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, duration: d }))}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                      form.duration === d
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                  >
+                    {d} min
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Notes */}
             <div>
-              <label style={FIELD_LABEL}>Notes (optionnel)</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Notes (optionnel)</label>
               <textarea
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                 placeholder="Objectifs de la session, points à aborder…"
                 rows={3}
-                style={{ ...INPUT_STYLE, resize: 'vertical', lineHeight: 1.6 }}
+                className="w-full px-3.5 py-2.5 border-2 border-slate-200 rounded-xl text-sm text-slate-800 bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-y leading-relaxed"
               />
             </div>
 
@@ -248,53 +232,30 @@ export const TeleconsultationSchedule = (): JSX.Element => {
             <button
               type="submit"
               disabled={loading || success || !form.patientId || !form.date || !form.time}
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: '#E07820',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 10,
-                fontWeight: 700,
-                fontSize: 15,
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(224,120,32,.3)',
-                opacity: (loading || success || !form.patientId || !form.date || !form.time) ? 0.65 : 1,
-                transition: 'opacity 0.15s',
-                fontFamily: 'inherit',
-              }}
+              className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-[15px] rounded-xl shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2"
             >
-              {loading ? '⏳ Planification en cours…' : '✅ Confirmer la session'}
+              {loading
+                ? <><i className="fa-solid fa-spinner fa-spin" /> Planification en cours…</>
+                : <><i className="fa-solid fa-check" /> Confirmer la session</>}
             </button>
           </div>
 
           {/* Cancel */}
-          <p style={{ textAlign: 'center', marginTop: 18, marginBottom: 0 }}>
+          <p className="text-center mt-5 mb-0">
             <button
               type="button"
               onClick={() => navigate('/professionnel/teleconsultation')}
-              style={{
-                background: 'none',
-                border: 'none',
-              color: '#8C6840',
-              cursor: 'pointer',
-              fontSize: 13,
-              textDecoration: 'underline',
-              fontFamily: 'inherit',
-              }}
+              className="text-slate-400 hover:text-slate-600 text-sm underline transition-colors"
             >
               Annuler
             </button>
           </p>
         </form>
       </div>
+
+      {/* ── Toasts ── */}
+      <ToastStack toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
-
-
-
-
-
-
 
