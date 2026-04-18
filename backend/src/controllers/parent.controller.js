@@ -24,37 +24,45 @@ const computeStatus = (inviteStatus, hasPassword, isActive) => {
 // ============================================================================
 const inviteProfessional = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { professionalId, name, email } = req.body;
     const inviter = req.user;
 
-    if (!name?.trim())  return res.status(400).json({ success: false, message: 'Le nom est requis.' });
-    if (!email?.trim()) return res.status(400).json({ success: false, message: 'L\'email est requis.' });
-    if (!EMAIL_REGEX.test(email.trim())) return res.status(400).json({ success: false, message: 'Format d\'email invalide.' });
+    let profId, profName, profEmail;
 
-    // Vérifier si un compte existe déjà avec cet email
-    let professional = await userModel.findByEmail(email.toLowerCase());
-    let profId;
-    let profName;
-
-    if (professional) {
-      if (professional.role !== 'professional') {
-        return res.status(409).json({ success: false, message: 'Cet email appartient à un compte non-professionnel.' });
-      }
-      profId   = professional.id;
-      profName = professional.name;
+    if (professionalId) {
+      // Nouveau flux : sélection d'un professionnel existant par ID
+      const rows = await query('SELECT id, name, email, role, is_active FROM users WHERE id = ?', [professionalId]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Professionnel introuvable.' });
+      const prof = rows[0];
+      if (prof.role !== 'professional') return res.status(400).json({ success: false, message: 'Cet utilisateur n\'est pas un professionnel.' });
+      profId    = prof.id;
+      profName  = prof.name;
+      profEmail = prof.email;
     } else {
-      // Créer un nouveau compte professionnel (password = NULL)
-      profId   = await userModel.createUser(name.trim(), email.toLowerCase(), 'professional');
-      profName = name.trim();
+      // Ancien flux (email/nom) — maintenu pour compatibilité
+      if (!name?.trim())  return res.status(400).json({ success: false, message: 'Le nom est requis.' });
+      if (!email?.trim()) return res.status(400).json({ success: false, message: 'L\'email est requis.' });
+      if (!EMAIL_REGEX.test(email.trim())) return res.status(400).json({ success: false, message: 'Format d\'email invalide.' });
+
+      let professional = await userModel.findByEmail(email.toLowerCase());
+      if (professional) {
+        if (professional.role !== 'professional') return res.status(409).json({ success: false, message: 'Cet email appartient à un compte non-professionnel.' });
+        profId    = professional.id;
+        profName  = professional.name;
+        profEmail = email.toLowerCase();
+      } else {
+        profId    = await userModel.createUser(name.trim(), email.toLowerCase(), 'professional');
+        profName  = name.trim();
+        profEmail = email.toLowerCase();
+      }
     }
 
-    // Vérifier si une invitation existe déjà entre ce parent et ce professionnel
+    // Vérifier si une invitation existe déjà
     const existingRows = await query(
       'SELECT * FROM professional_invitations WHERE parent_id = ? AND professional_id = ?',
       [inviter.id, profId]
     );
 
-    // Déterminer le statut initial : 'active' si le professionnel a déjà un compte configuré
     const profRecord = await query('SELECT password, is_active FROM users WHERE id = ?', [profId]);
     const alreadyActive = profRecord.length > 0 && profRecord[0].password && profRecord[0].is_active;
     const initialStatus = alreadyActive ? 'active' : 'pending';
@@ -62,13 +70,12 @@ const inviteProfessional = async (req, res) => {
     if (existingRows.length > 0) {
       const existing = existingRows[0];
       if (existing.status === 'revoked') {
-        // Réactiver l'invitation révoquée
         await query(
           'UPDATE professional_invitations SET status = ? WHERE parent_id = ? AND professional_id = ?',
           [initialStatus, inviter.id, profId]
         );
       } else {
-        return res.status(409).json({ success: false, message: 'Ce professionnel a déjà été invité.' });
+        return res.status(409).json({ success: false, message: 'Ce professionnel est déjà lié à votre compte.' });
       }
     } else {
       await query(
@@ -77,34 +84,32 @@ const inviteProfessional = async (req, res) => {
       );
     }
 
-    // Envoyer l'email
+    // Envoyer un email uniquement si le professionnel n'a pas encore de mot de passe
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const inviteLink  = `${frontendUrl}/set-password?userId=${profId}`;
     let previewUrl = null;
     let emailSent  = false;
     let emailError = null;
 
-    try {
-      const mail = await sendInviteEmail(email.toLowerCase(), profName, inviter.name, inviteLink);
-      previewUrl = mail.previewUrl;
-      emailSent  = true;
-    } catch (mailErr) {
-      emailError = mailErr.message;
-      console.error('[parent.controller] Email error:', mailErr.message);
+    if (!alreadyActive) {
+      try {
+        const mail = await sendInviteEmail(profEmail, profName, inviter.name, inviteLink);
+        previewUrl = mail.previewUrl;
+        emailSent  = true;
+      } catch (mailErr) {
+        emailError = mailErr.message;
+        console.error('[parent.controller] Email error:', mailErr.message);
+      }
     }
 
-    // Toujours afficher le lien dans les logs (utile si l'email échoue)
-    console.log(`[parent.controller] ✅ Invitation créée pour ${email}`);
-    console.log(`[parent.controller] 🔗 Lien d'activation : ${inviteLink}`);
-    if (previewUrl) console.log(`[parent.controller] 📧 Aperçu Ethereal : ${previewUrl}`);
-    if (emailError) console.warn(`[parent.controller] ⚠️  Email non envoyé : ${emailError}`);
+    console.log(`[parent.controller] ✅ Liaison créée avec ${profName} (${profEmail})`);
 
     return res.status(201).json({
       success: true,
       message: alreadyActive
-        ? `${profName} a été lié à votre compte (compte déjà actif).`
-        : emailSent ? `Invitation envoyée à ${profName}` : `Invitation créée pour ${profName} (email non envoyé)`,
-      data: { id: profId, name: profName, email: email.toLowerCase(), role: 'professional', inviteLink, previewUrl, emailSent, emailError, status: initialStatus },
+        ? `${profName} a été ajouté à vos professionnels.`
+        : emailSent ? `Invitation envoyée à ${profName}` : `Liaison créée avec ${profName}`,
+      data: { id: profId, name: profName, email: profEmail, role: 'professional', inviteLink, previewUrl, emailSent, emailError, status: initialStatus },
     });
   } catch (error) {
     console.error('[parent.controller] inviteProfessional:', error);
@@ -221,6 +226,32 @@ const resendInvitation = async (req, res) => {
 };
 
 // ============================================================================
+// GET /api/parent/available-professionals
+// Liste tous les professionnels actifs NON encore liés à ce parent
+// ============================================================================
+const getAvailableProfessionals = async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT u.id, u.name, u.email
+       FROM   users u
+       WHERE  u.role = 'professional'
+         AND  u.is_active = 1
+         AND  u.password IS NOT NULL
+         AND  u.id NOT IN (
+           SELECT professional_id FROM professional_invitations
+           WHERE  parent_id = ? AND status != 'revoked'
+         )
+       ORDER BY u.name ASC`,
+      [req.user.id]
+    );
+    return res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error('[parent.controller] getAvailableProfessionals:', error);
+    return res.status(500).json({ success: false, message: 'Erreur lors de la récupération des professionnels.' });
+  }
+};
+
+// ============================================================================
 // DELETE PERMANENT /api/parent/invitation/:professionalId/delete
 // Supprime définitivement la ligne de professional_invitations
 // ============================================================================
@@ -244,4 +275,4 @@ const deleteInvitation = async (req, res) => {
   }
 };
 
-module.exports = { inviteProfessional, getMyProfessionals, revokeInvitation, resendInvitation, deleteInvitation };
+module.exports = { inviteProfessional, getMyProfessionals, getAvailableProfessionals, revokeInvitation, resendInvitation, deleteInvitation };

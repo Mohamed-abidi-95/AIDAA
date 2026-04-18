@@ -17,6 +17,9 @@ const router = express.Router();
 router.use(auth);
 router.use(roleCheck('parent'));
 
+// ── GET /api/parent/available-professionals ────────────────────────────────
+router.get('/available-professionals', parentController.getAvailableProfessionals);
+
 // ── POST /api/parent/invite-professional ──────────────────────────────────
 // Body: { name: string, email: string }
 router.post('/invite-professional', parentController.inviteProfessional);

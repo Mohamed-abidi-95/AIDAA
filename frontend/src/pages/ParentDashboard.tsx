@@ -14,7 +14,7 @@ declare global { interface Window { Chart: any; } }
 
 // ── Interfaces ─────────────────────────────────────────────────────────────
 interface Child { id: number; name: string; age: number; participant_category?: 'enfant' | 'jeune' | 'adulte'; }
-interface Activity { id: number; child_id: number; content_title: string; score: number; duration_seconds: number; date: string; }
+interface Activity { id: number; child_id: number; content_title: string; activity_name?: string; action?: string; score: number; duration_seconds: number; date: string; }
 interface Note { id: number; child_id: number; content: string; professional_name: string; date: string; }
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
 interface InviteResult { id: number; name: string; email: string; inviteLink: string; previewUrl?: string; emailSent?: boolean; emailError?: string; }
@@ -44,6 +44,31 @@ const NAV = [
 type ViewKey = typeof NAV[number]['key'];
 
 
+// ── Helpers ─────────────────────────────────────────────────────────────────
+const formatDuration = (seconds: number): string => {
+  if (!seconds || seconds === 0) return "—";
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}min ${s}s` : `${m}min`;
+};
+
+const groupActivities = (activities: any[], groupBy: string) => {
+  if (groupBy === "none") return { "Toutes les activités": activities };
+  return activities.reduce((groups: any, activity: any) => {
+    let key = "";
+    if (groupBy === "activity_name") key = activity.activity_name || activity.content_title || "Sans nom";
+    if (groupBy === "date") key = new Date(activity.date).toLocaleDateString("fr-FR");
+    if (groupBy === "score") {
+      const s = activity.score;
+      key = s >= 80 ? "Excellent (≥80)" : s >= 60 ? "Bien (60–79)" : "À améliorer (<60)";
+    }
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(activity);
+    return groups;
+  }, {});
+};
+
 // ── Component ───────────────────────────────────────────────────────────────
 export const ParentDashboard = (): JSX.Element => {
   const { logout, user } = useAuth();
@@ -55,6 +80,7 @@ export const ParentDashboard = (): JSX.Element => {
   const [activities, setActivities]         = useState<Activity[]>([]);
   const [notes, setNotes]                   = useState<Note[]>([]);
   const [view, setView]                     = useState<ViewKey>('summary');
+  const [groupBy, setGroupBy]               = useState<string>("none");
 
   // Analytics state
   const [analyticsOverview,  setAnalyticsOverview]  = useState<AnalyticsOverview | null>(null);
@@ -81,13 +107,15 @@ export const ParentDashboard = (): JSX.Element => {
   const [editParticipantCategory, setEditParticipantCategory] = useState<'enfant' | 'jeune' | 'adulte'>('enfant');
   const [childActionLoading, setChildActionLoading]       = useState(false);
 
-  // Invite professional
-  const [inviteName,    setInviteName]    = useState('');
-  const [inviteEmail,   setInviteEmail]   = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteResult,  setInviteResult]  = useState<InviteResult | null>(null);
-  const [inviteError,   setInviteError]   = useState('');
-  const [showInviteForm, setShowInviteForm] = useState(false);
+  // Invite professional — new: select from platform list
+  const [availableProfessionals, setAvailableProfessionals]   = useState<{id:number;name:string;email:string}[]>([]);
+  const [availableLoading,       setAvailableLoading]         = useState(false);
+  const [selectedProfId,         setSelectedProfId]           = useState<number | null>(null);
+  const [profSearch,             setProfSearch]               = useState('');
+  const [inviteLoading,          setInviteLoading]            = useState(false);
+  const [inviteResult,           setInviteResult]             = useState<InviteResult | null>(null);
+  const [inviteError,            setInviteError]              = useState('');
+  const [showInvitePanel,        setShowInvitePanel]          = useState(false);
 
   // My professionals list
   const [myProfessionals,        setMyProfessionals]        = useState<ProfessionalRecord[]>([]);
@@ -167,26 +195,66 @@ export const ParentDashboard = (): JSX.Element => {
       }
 
       // ── Donut chart: activity breakdown ───────────────────────────────────
-      const donutCtx = document.getElementById('donutChart') as HTMLCanvasElement | null;
+      const donutCtx = document.getElementById('activityDonut') as HTMLCanvasElement | null;
       if (donutCtx) {
         if (donutChartRef.current) { donutChartRef.current.destroy(); donutChartRef.current = null; }
-        const PALETTE = ['#00A651','#007A3A','#00C853','#00572A','#33CC77','#009944','#C2EAD4','#00E676'];
-        const bdLabels = analyticsBreakdown.map(b => b.category);
-        const bdData   = analyticsBreakdown.map(b => b.count);
         donutChartRef.current = new window.Chart(donutCtx, {
-          type: 'doughnut',
+          type: "doughnut",
           data: {
-            labels: bdLabels.length ? bdLabels : ['Aucune activité'],
+            labels: analyticsBreakdown.length ? analyticsBreakdown.map((d: any) => d.category) : ['Aucune activité'],
             datasets: [{
-              data: bdData.length ? bdData : [1],
-              backgroundColor: bdLabels.length ? PALETTE.slice(0, bdLabels.length) : ['#e2e8f0'],
-              borderWidth: 2, borderColor: '#fff',
-            }],
+              data: analyticsBreakdown.length ? analyticsBreakdown.map((d: any) => d.count) : [1],
+              backgroundColor: analyticsBreakdown.length
+                ? ["#E07820","#22C55E","#3B82F6","#F59A30","#A855F7","#EF4444","#14B8A6"]
+                : ['#e2e8f0'],
+              borderWidth: 2,
+              borderColor: "#ffffff",
+              hoverOffset: 8
+            }]
           },
           options: {
-            responsive: true, maintainAspectRatio: false, cutout: '64%',
-            plugins: { legend: { display: false } },
-          },
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: {
+                display: true,
+                position: "right",
+                labels: {
+                  font: { size: 12, family: "Inter, sans-serif" },
+                  color: "#1C1917",
+                  padding: 16,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                  generateLabels: (chart: any) => {
+                    const data = chart.data;
+                    return data.labels.map((label: string, i: number) => {
+                      const value = data.datasets[0].data[i];
+                      const total = data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
+                      const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                      return {
+                        text: `${label}  ${value} sessions (${pct}%)`,
+                        fillStyle: data.datasets[0].backgroundColor[i],
+                        strokeStyle: "#ffffff",
+                        lineWidth: 2,
+                        hidden: false,
+                        index: i
+                      };
+                    });
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context: any) => {
+                    const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                    const pct = Math.round((context.parsed / total) * 100);
+                    return ` ${context.label}: ${context.parsed} sessions (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
         });
       }
     }, 80);
@@ -280,26 +348,36 @@ export const ParentDashboard = (): JSX.Element => {
     finally { setMyProfessionalsLoading(false); }
   };
 
+  const fetchAvailableProfessionals = async () => {
+    try {
+      setAvailableLoading(true);
+      const { data } = await api.get<ApiResult<{id:number;name:string;email:string}[]>>('/api/parent/available-professionals');
+      if (data.success) setAvailableProfessionals(data.data);
+    } catch { /* silent */ }
+    finally { setAvailableLoading(false); }
+  };
+
   useEffect(() => {
-    if (view === 'professional') fetchMyProfessionals();
+    if (view === 'professional') {
+      fetchMyProfessionals();
+      fetchAvailableProfessionals();
+    }
   }, [view]);
 
-  const handleInviteProfessional = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleInviteProfessional = async (profId: number) => {
     setInviteError('');
     setInviteResult(null);
-    if (!inviteName.trim() || !inviteEmail.trim()) { setInviteError('Nom et email sont obligatoires.'); return; }
+    if (!profId) { setInviteError('Veuillez sélectionner un professionnel.'); return; }
     try {
       setInviteLoading(true);
-      const { data } = await api.post<ApiResult<InviteResult>>('/api/parent/invite-professional', {
-        name: inviteName.trim(),
-        email: inviteEmail.trim().toLowerCase(),
-      });
-      if (!data.success) { setInviteError(data.message || 'Erreur lors de l\'invitation.'); return; }
+      const { data } = await api.post<ApiResult<InviteResult>>('/api/parent/invite-professional', { professionalId: profId });
+      if (!data.success) { setInviteError(data.message || 'Erreur lors de l\'ajout.'); return; }
       setInviteResult(data.data);
-      setInviteName(''); setInviteEmail('');
-      setShowInviteForm(false);
+      setSelectedProfId(null);
+      setProfSearch('');
+      setShowInvitePanel(false);
       await fetchMyProfessionals();
+      await fetchAvailableProfessionals();
     } catch (err: any) {
       setInviteError(err?.response?.data?.message || 'Erreur réseau. Veuillez réessayer.');
     } finally {
@@ -377,13 +455,26 @@ export const ParentDashboard = (): JSX.Element => {
         }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-4 px-6 py-8 shrink-0">
+        <div className="flex items-center gap-4 px-6 py-4 shrink-0">
           <div className="w-12 h-12 bg-white text-brand-green rounded-xl flex items-center justify-center text-2xl shadow-sm shrink-0">
             <i className="fa-solid fa-puzzle-piece" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
             <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Espace Famille</span>
+          </div>
+        </div>
+
+        {/* User profile card — top of sidebar */}
+        <div className="px-5 pb-2 shrink-0">
+          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center font-bold text-brand-green text-sm shrink-0">
+              {parentInit}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Parent'}</p>
+              <p className="text-xs text-white/70">Espace famille</p>
+            </div>
           </div>
         </div>
 
@@ -484,17 +575,8 @@ export const ParentDashboard = (): JSX.Element => {
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="p-6 shrink-0">
-          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-brand-green text-base shrink-0">
-              {parentInit}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Parent'}</p>
-              <p className="text-xs text-white/70">Espace famille</p>
-            </div>
-          </div>
+        {/* Footer — logout only */}
+        <div className="px-5 pb-5 shrink-0">
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
             Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
@@ -507,9 +589,14 @@ export const ParentDashboard = (): JSX.Element => {
 
         {/* Top header */}
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-500 font-medium">Espace Famille /</span>
-            <span className="text-xl font-bold text-slate-900">{currentNav?.label}</span>
+          <div className="flex flex-col gap-0.5">
+            <span style={{ fontSize: '18px', fontWeight: 700, color: '#C45E0A' }}>
+              Bonjour, {user?.name || 'Parent'}
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm text-slate-500 font-medium">Espace Famille /</span>
+              <span className="text-xl font-bold text-slate-900">{currentNav?.label}</span>
+            </div>
           </div>
           {children.length > 0 && (
             <div className="flex items-center gap-3">
@@ -526,10 +613,10 @@ export const ParentDashboard = (): JSX.Element => {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-10">
+        <div className="flex-1 overflow-y-auto p-5">
 
-          {/* No children */}
-          {children.length === 0 && (
+          {/* No children — only show for views that need a child */}
+          {children.length === 0 && !['professional', 'messages'].includes(view) && (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 gap-4">
               <i className="fa-solid fa-magnifying-glass text-5xl" />
               <div className="text-center">
@@ -543,7 +630,7 @@ export const ParentDashboard = (): JSX.Element => {
             <>
               {/* KPIs */}
               {(view === 'summary' || view === 'activities' || view === 'notes') && (
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-5 mb-8">
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 mb-3">
                   <StatCard icon="fa-solid fa-gamepad"   value={stats.games}    label="Activités jouées"  color="green" />
                   <StatCard icon="fa-regular fa-clock"   value={stats.time}     label="Minutes total"     color="green" />
                   <StatCard icon="fa-solid fa-star"      value={stats.avgScore} label="Score moyen"       color="green" />
@@ -590,28 +677,69 @@ export const ParentDashboard = (): JSX.Element => {
                       <p className="font-medium">Aucune activité enregistrée pour ce participant.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto -mx-7 -mb-7">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-slate-100">
-                            {['#', 'Activité', 'Score', 'Durée', 'Date'].map(h => (
-                              <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activities.map((act, i) => (
-                            <tr key={act.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                              <td className="px-7 py-4 text-brand-green font-bold text-sm">{i + 1}</td>
-                              <td className="px-7 py-4 font-semibold text-slate-800">{act.content_title}</td>
-                              <td className="px-7 py-4"><ScoreBadge score={act.score} /></td>
-                              <td className="px-7 py-4 text-slate-500 text-sm">{Math.round((act.duration_seconds || 0) / 60)} min</td>
-                              <td className="px-7 py-4 text-slate-500 text-sm">{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <>
+                      {/* Group By dropdown */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Grouper par :</span>
+                        <select
+                          value={groupBy}
+                          onChange={e => setGroupBy(e.target.value)}
+                          style={{
+                            padding: "8px 12px", borderRadius: "8px",
+                            border: "1px solid #F5A94E", fontSize: "13px",
+                            color: "#C45E0A", background: "#FEF3E7", cursor: "pointer"
+                          }}
+                        >
+                          <option value="none">Aucun groupement</option>
+                          <option value="activity_name">Par activité</option>
+                          <option value="date">Par date</option>
+                          <option value="score">Par score</option>
+                        </select>
+                      </div>
+
+                      <div className="overflow-x-auto -mx-7 -mb-7">
+                        {Object.entries(groupActivities(activities, groupBy)).map(([groupName, items]) => (
+                          <div key={groupName} style={{ marginBottom: "16px" }}>
+                            {groupBy !== "none" && (
+                              <div style={{
+                                fontSize: "12px", fontWeight: 700,
+                                color: "#A0520A", textTransform: "uppercase",
+                                letterSpacing: "0.8px", padding: "6px 28px",
+                                borderBottom: "1px solid #F0E6D8", marginBottom: "8px"
+                              }}>
+                                {groupName} ({(items as any[]).length})
+                              </div>
+                            )}
+                            <table className="w-full">
+                              {groupBy === "none" && (
+                                <thead>
+                                  <tr className="border-b border-slate-100">
+                                    {['#', 'Activité', 'Score', 'Durée', 'Date'].map(h => (
+                                      <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                              )}
+                              <tbody>
+                                {(items as any[]).map((act, i) => (
+                                  <tr key={act.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                    <td className="px-7 py-4 text-brand-green font-bold text-sm">{i + 1}</td>
+                                    <td className="px-7 py-4">
+                                      <span style={{ fontSize: "14px", fontWeight: 600, color: "#1C1917" }}>
+                                        {act.activity_name || act.content_title || act.action || '—'}
+                                      </span>
+                                    </td>
+                                    <td className="px-7 py-4"><ScoreBadge score={act.score} /></td>
+                                    <td className="px-7 py-4 text-slate-500 text-sm">{formatDuration(act.duration_seconds)}</td>
+                                    <td className="px-7 py-4 text-slate-500 text-sm">{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </Section>
               )}
@@ -632,7 +760,7 @@ export const ParentDashboard = (): JSX.Element => {
                   ) : (
                     <>
                       {/* KPI cards */}
-                      <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
                         {[
                           { icon: 'fa-solid fa-gamepad',      value: analyticsOverview?.totalSessions ?? '—',                                                             label: 'Sessions jouées'   },
                           { icon: 'fa-regular fa-clock',      value: analyticsOverview != null ? `${(analyticsOverview.totalMinutes / 60).toFixed(1)} h` : '—',          label: 'Temps total'       },
@@ -652,7 +780,7 @@ export const ParentDashboard = (): JSX.Element => {
                       </div>
 
                       {/* Charts row */}
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-3">
                         <Section title="Temps de session quotidien (min)">
                           <div style={{ height: 200 }}>
                             {analyticsTimeline.length === 0
@@ -662,10 +790,10 @@ export const ParentDashboard = (): JSX.Element => {
                           </div>
                         </Section>
                         <Section title="Répartition par type d'activité">
-                          <div style={{ height: 200 }}>
+                          <div style={{ position: "relative", height: "280px", width: "100%" }}>
                             {analyticsBreakdown.length === 0
                               ? <div className="flex items-center justify-center h-full text-slate-400 text-sm">Aucune activité catégorisée</div>
-                              : <canvas id="donutChart" />
+                              : <canvas id="activityDonut"></canvas>
                             }
                           </div>
                         </Section>
@@ -729,236 +857,218 @@ export const ParentDashboard = (): JSX.Element => {
                 </Section>
               )}
 
-              {/* ── Mon Professionnel ── */}
-              {view === 'professional' && (
-                <>
-                  {/* Message d'action */}
-                  {profActionMsg && (
-                    <div className={`mb-6 flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-semibold border
-                      ${profActionMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
-                      <i className={profActionMsg.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
-                      {profActionMsg.text}
-                    </div>
-                  )}
-
-                  {/* Header + invite button */}
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-slate-600 text-sm font-medium">
-                      {myProfessionals.length} professionnel{myProfessionals.length !== 1 ? 's' : ''} invité{myProfessionals.length !== 1 ? 's' : ''}
-                    </p>
-                    <button
-                      onClick={() => { setShowInviteForm(f => !f); setInviteResult(null); setInviteError(''); }}
-                      className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-brand-green/20 transition-all"
-                    >
-                      <i className={showInviteForm ? 'fa-solid fa-xmark' : 'fa-solid fa-plus'} />
-                      {showInviteForm ? 'Annuler' : 'Inviter un professionnel'}
-                    </button>
-                  </div>
-
-                  {/* Invite form */}
-                  {(showInviteForm || myProfessionals.length === 0) && !inviteResult && (
-                    <Section title="Inviter un professionnel de santé">
-                      <p className="text-slate-500 text-sm mb-5 leading-relaxed">
-                        Invitez un médecin, orthophoniste ou psychologue à suivre l'évolution de vos enfants.
-                        Il recevra un email avec un lien pour créer son compte.
-                      </p>
-                      <form onSubmit={handleInviteProfessional} className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nom complet *</label>
-                            <input type="text" value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Dr. Prénom Nom" maxLength={100} className={inputCls} required />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Adresse email *</label>
-                            <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="docteur@exemple.com" className={inputCls} required />
-                          </div>
-                        </div>
-                        {inviteError && (
-                          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm flex items-center gap-2">
-                            <i className="fa-solid fa-circle-xmark" />{inviteError}
-                          </div>
-                        )}
-                        <div>
-                          <button type="submit" disabled={inviteLoading}
-                            className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-brand-green/20 transition-all">
-                            {inviteLoading
-                              ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Envoi en cours…</>
-                              : <><i className="fa-solid fa-paper-plane" /> Envoyer l'invitation</>
-                            }
-                          </button>
-                        </div>
-                      </form>
-                    </Section>
-                  )}
-
-                  {/* Invite result */}
-                  {inviteResult && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 mb-6">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shrink-0 ${inviteResult.emailSent === false ? 'bg-amber-500' : 'bg-emerald-500'}`}>
-                          <i className={`fa-solid ${inviteResult.emailSent === false ? 'fa-triangle-exclamation' : 'fa-circle-check'}`} />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-bold text-emerald-800 mb-1">
-                            {inviteResult.emailSent === false
-                              ? <>Compte créé — email non envoyé</>
-                              : <>Invitation envoyée à <strong>{inviteResult.name}</strong></>
-                            }
-                          </h4>
-
-                          {/* Warning si email non envoyé */}
-                          {inviteResult.emailSent === false && (
-                            <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
-                              <p className="font-semibold mb-1">⚠️ L'email n'a pas pu être envoyé</p>
-                              <p className="text-xs">Configurez un SMTP dans le <code className="bg-amber-100 px-1 rounded">.env</code> du backend, ou partagez le lien ci-dessous manuellement.</p>
-                            </div>
-                          )}
-
-                          {inviteResult.emailSent !== false && (
-                            <p className="text-emerald-700 text-sm mb-3">
-                              Email envoyé à <strong>{inviteResult.email}</strong>. Le professionnel créera son mot de passe via le lien reçu.
-                            </p>
-                          )}
-
-                          {/* Lien toujours visible + bouton copier */}
-                          <div className="bg-white border border-emerald-200 rounded-xl p-3 mb-2">
-                            <p className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-1.5">
-                              <i className="fa-solid fa-link" /> Lien d'activation
-                              <span className="ml-auto">
-                                <button
-                                  onClick={() => { navigator.clipboard.writeText(inviteResult.inviteLink); }}
-                                  className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-lg font-bold transition-all flex items-center gap-1"
-                                >
-                                  <i className="fa-solid fa-copy" /> Copier
-                                </button>
-                              </span>
-                            </p>
-                            <p className="text-xs text-emerald-700 break-all font-mono bg-emerald-50 px-2 py-1 rounded-lg">
-                              {inviteResult.inviteLink}
-                            </p>
-                          </div>
-
-                          {inviteResult.previewUrl && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-3">
-                              <p className="text-xs font-bold text-yellow-700 mb-1"><i className="fa-solid fa-envelope mr-1" /> Aperçu email Ethereal (mode démo)</p>
-                              <a href={inviteResult.previewUrl} target="_blank" rel="noreferrer" className="text-xs text-yellow-700 break-all hover:underline">{inviteResult.previewUrl}</a>
-                            </div>
-                          )}
-
-                          <button type="button" onClick={() => { setInviteResult(null); setShowInviteForm(true); }}
-                            className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all">
-                            <i className="fa-solid fa-plus" /> Inviter un autre
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Professionals list */}
-                  {myProfessionalsLoading ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
-                      <span className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-brand-green animate-spin" />
-                      <p>Chargement…</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      {myProfessionals.map(prof => {
-                        const isPending = prof.status === 'pending';
-                        const isActive  = prof.status === 'active';
-                        const isRevoked = prof.status === 'revoked';
-                        return (
-                          <div key={prof.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                            {/* Header */}
-                            <div className="flex items-center gap-4 p-5 bg-slate-50 border-b border-slate-100">
-                              <div className="w-12 h-12 rounded-full bg-brand-green flex items-center justify-center font-bold text-white text-lg shrink-0">
-                                {prof.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900">{prof.name}</p>
-                                <p className="text-sm text-slate-500">{prof.email}</p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold
-                                  ${isActive ? 'bg-emerald-100 text-emerald-700' : isPending ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                                  <i className={`fa-solid ${isActive ? 'fa-circle-check' : isPending ? 'fa-clock' : 'fa-circle-xmark'} text-[10px]`} />
-                                  {isActive ? 'Actif' : isPending ? 'En attente' : 'Révoqué'}
-                                </span>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  depuis le {new Date(prof.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </p>
-                              </div>
-                            </div>
-                            {/* Steps */}
-                            <div className="p-5 flex flex-col gap-2">
-                              {[
-                                { label: 'Invitation envoyée',                          desc: 'Le professionnel a reçu un lien d\'activation par email',                                                               done: true,                            },
-                                { label: isActive || isRevoked ? 'Compte configuré' : 'En attente de configuration', desc: isActive || isRevoked ? 'Le professionnel a créé son mot de passe' : 'Le professionnel n\'a pas encore défini son mot de passe', done: isActive || isRevoked, },
-                                { label: isActive ? 'Suivi actif ✅' : isRevoked ? 'Accès révoqué' : 'Suivi en attente', desc: isActive ? 'Ce professionnel suit l\'évolution de vos enfants' : isRevoked ? 'Vous avez révoqué l\'accès à ce professionnel' : 'En attente de configuration du compte', done: isActive, danger: isRevoked },
-                              ].map((step, idx) => (
-                                <div key={idx} className={`flex items-start gap-3 rounded-xl px-4 py-3 border
-                                  ${step.done ? 'bg-emerald-50 border-emerald-100' : step.danger ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5
-                                    ${step.done ? 'bg-brand-green' : step.danger ? 'bg-red-400' : 'bg-slate-300'}`}>
-                                    {step.done ? <i className="fa-solid fa-check text-[10px]" /> : step.danger ? <i className="fa-solid fa-xmark text-[10px]" /> : <span className="text-[10px]">{idx + 1}</span>}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-bold text-slate-800">{step.label}</p>
-                                    <p className="text-xs text-slate-500">{step.desc}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {/* Actions */}
-                            <div className="px-5 pb-5 flex gap-3 flex-wrap">
-                              {isPending && (
-                                <button onClick={() => handleResendInvitation(prof.id)} disabled={profActionLoading}
-                                  className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                                  <i className="fa-solid fa-paper-plane" /> Renvoyer l'invitation
-                                </button>
-                              )}
-                              {isPending && (
-                                <button onClick={() => handleCancelInvitation(prof.id, prof.name)} disabled={profActionLoading}
-                                  className="flex items-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                                  <i className="fa-solid fa-ban" /> Annuler l'invitation
-                                </button>
-                              )}
-                              {isActive && (
-                                <button onClick={() => handleRevokeInvitation(prof.id)} disabled={profActionLoading}
-                                  className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                                  <i className="fa-solid fa-ban" /> Révoquer l'accès
-                                </button>
-                              )}
-                              {isRevoked && (
-                                <button onClick={() => handleResendInvitation(prof.id)} disabled={profActionLoading}
-                                  className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                                  <i className="fa-solid fa-rotate-right" /> Réactiver l'accès
-                                </button>
-                              )}
-                              {/* Suppression définitive — visible pour tous les statuts */}
-                              <button onClick={() => handleDeleteInvitation(prof.id, prof.name)} disabled={profActionLoading}
-                                className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                                <i className="fa-regular fa-trash-can" /> Supprimer
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {myProfessionals.length === 0 && !showInviteForm && (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3 bg-white rounded-2xl border border-dashed border-slate-200">
-                          <i className="fa-solid fa-stethoscope text-4xl" />
-                          <p className="font-medium">Aucun professionnel invité pour le moment.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
               {/* ── Messages ── */}
               {view === 'messages' && user?.id && (
                 <MessagerieView role="parent" myId={user.id} accent="green" />
               )}
             </>
+          )}
+
+          {/* ── Mon Professionnel — accessible même sans participant ── */}
+          {view === 'professional' && (
+            <>
+              {/* Message d'action */}
+              {profActionMsg && (
+                <div className={`mb-4 flex items-center gap-3 px-5 py-4 rounded-2xl text-sm font-semibold border
+                  ${profActionMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                  <i className={profActionMsg.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'} />
+                  {profActionMsg.text}
+                </div>
+              )}
+
+              {/* Header + bouton ajouter */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-slate-600 text-sm font-medium">
+                  {myProfessionals.length} professionnel{myProfessionals.length !== 1 ? 's' : ''} lié{myProfessionals.length !== 1 ? 's' : ''}
+                </p>
+                <button
+                  onClick={() => { setShowInvitePanel(f => !f); setInviteResult(null); setInviteError(''); setSelectedProfId(null); setProfSearch(''); }}
+                  className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-brand-green/20 transition-all"
+                >
+                  <i className={showInvitePanel ? 'fa-solid fa-xmark' : 'fa-solid fa-plus'} />
+                  {showInvitePanel ? 'Fermer' : 'Ajouter un professionnel'}
+                </button>
+              </div>
+
+              {/* ── Panel sélection professionnel ── */}
+              {(showInvitePanel || myProfessionals.length === 0) && !inviteResult && (
+                <Section title="Choisir un professionnel de la plateforme">
+                  <p className="text-slate-500 text-sm mb-4 leading-relaxed">
+                    Sélectionnez un professionnel déjà inscrit sur AIDAA pour lui donner accès au suivi de vos enfants.
+                  </p>
+
+                  {/* Erreur */}
+                  {inviteError && (
+                    <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm flex items-center gap-2">
+                      <i className="fa-solid fa-circle-xmark" />{inviteError}
+                    </div>
+                  )}
+
+                  {/* Barre de recherche */}
+                  <div className="relative mb-3">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                    <input
+                      type="text"
+                      value={profSearch}
+                      onChange={e => setProfSearch(e.target.value)}
+                      placeholder="Rechercher par nom ou email…"
+                      className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green transition"
+                    />
+                  </div>
+
+                  {/* Liste des professionnels disponibles */}
+                  {availableLoading ? (
+                    <div className="flex items-center justify-center py-10 gap-3 text-slate-400">
+                      <span className="w-6 h-6 rounded-full border-4 border-slate-200 border-t-brand-green animate-spin" />
+                      <p className="text-sm">Chargement des professionnels…</p>
+                    </div>
+                  ) : availableProfessionals.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
+                      <i className="fa-solid fa-stethoscope text-3xl opacity-40" />
+                      <p className="text-sm font-medium">Aucun professionnel disponible pour le moment.</p>
+                      <p className="text-xs text-center">Tous les professionnels inscrits sont déjà liés à votre compte.</p>
+                    </div>
+                  ) : (() => {
+                    const filtered = availableProfessionals.filter(p =>
+                      p.name.toLowerCase().includes(profSearch.toLowerCase()) ||
+                      p.email.toLowerCase().includes(profSearch.toLowerCase())
+                    );
+                    return filtered.length === 0 ? (
+                      <p className="text-center text-sm text-slate-400 py-6">Aucun résultat pour « {profSearch} »</p>
+                    ) : (
+                      <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                        {filtered.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setSelectedProfId(prev => prev === p.id ? null : p.id)}
+                            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left transition-all
+                              ${selectedProfId === p.id
+                                ? 'bg-emerald-50 border-brand-green shadow-sm'
+                                : 'bg-slate-50 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-brand-green flex items-center justify-center font-bold text-white text-sm shrink-0">
+                              {p.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-800 text-sm truncate">{p.name}</p>
+                              <p className="text-xs text-slate-400 truncate">{p.email}</p>
+                            </div>
+                            {selectedProfId === p.id && (
+                              <div className="w-6 h-6 rounded-full bg-brand-green flex items-center justify-center shrink-0">
+                                <i className="fa-solid fa-check text-white text-[10px]" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Bouton confirmer */}
+                  {selectedProfId && (
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        disabled={inviteLoading}
+                        onClick={() => handleInviteProfessional(selectedProfId)}
+                        className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-brand-green/20 transition-all"
+                      >
+                        {inviteLoading
+                          ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Ajout en cours…</>
+                          : <><i className="fa-solid fa-user-plus" /> Ajouter ce professionnel</>
+                        }
+                      </button>
+                      <button type="button" onClick={() => setSelectedProfId(null)} className="text-sm text-slate-500 hover:text-slate-700 transition">Annuler</button>
+                    </div>
+                  )}
+                </Section>
+              )}
+
+              {/* Résultat d'ajout */}
+              {inviteResult && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-4 flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white text-lg shrink-0">
+                    <i className="fa-solid fa-circle-check" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-emerald-800 mb-1"><strong>{inviteResult.name}</strong> a été ajouté à vos professionnels.</p>
+                    <p className="text-emerald-700 text-sm">{inviteResult.email}</p>
+                    <button type="button" onClick={() => { setInviteResult(null); setShowInvitePanel(true); }}
+                      className="mt-3 flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all">
+                      <i className="fa-solid fa-plus" /> Ajouter un autre
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste des professionnels liés */}
+              {myProfessionalsLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                  <span className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-brand-green animate-spin" />
+                  <p>Chargement…</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {myProfessionals.map(prof => {
+                    const isActive  = prof.status === 'active';
+                    const isRevoked = prof.status === 'revoked';
+                    return (
+                      <div key={prof.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="flex items-center gap-4 p-5 bg-slate-50 border-b border-slate-100">
+                          <div className="w-12 h-12 rounded-full bg-brand-green flex items-center justify-center font-bold text-white text-lg shrink-0">
+                            {prof.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900">{prof.name}</p>
+                            <p className="text-sm text-slate-500">{prof.email}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold
+                              ${isActive ? 'bg-emerald-100 text-emerald-700' : isRevoked ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                              <i className={`fa-solid ${isActive ? 'fa-circle-check' : isRevoked ? 'fa-circle-xmark' : 'fa-clock'} text-[10px]`} />
+                              {isActive ? 'Actif' : isRevoked ? 'Révoqué' : 'En attente'}
+                            </span>
+                            <p className="text-xs text-slate-400 mt-1">
+                              depuis le {new Date(prof.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="px-5 py-4 flex gap-3 flex-wrap">
+                          {isActive && (
+                            <button onClick={() => handleRevokeInvitation(prof.id)} disabled={profActionLoading}
+                              className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                              <i className="fa-solid fa-ban" /> Révoquer l'accès
+                            </button>
+                          )}
+                          {isRevoked && (
+                            <button onClick={() => handleResendInvitation(prof.id)} disabled={profActionLoading}
+                              className="flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                              <i className="fa-solid fa-rotate-right" /> Réactiver l'accès
+                            </button>
+                          )}
+                          <button onClick={() => handleDeleteInvitation(prof.id, prof.name)} disabled={profActionLoading}
+                            className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                            <i className="fa-regular fa-trash-can" /> Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {myProfessionals.length === 0 && !showInvitePanel && (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3 bg-white rounded-2xl border border-dashed border-slate-200">
+                      <i className="fa-solid fa-stethoscope text-4xl" />
+                      <p className="font-medium">Aucun professionnel lié pour le moment.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Messages — accessible même sans participant ── */}
+          {view === 'messages' && user?.id && !selectedChild && (
+            <MessagerieView role="parent" myId={user.id} accent="green" />
           )}
         </div>
       </div>

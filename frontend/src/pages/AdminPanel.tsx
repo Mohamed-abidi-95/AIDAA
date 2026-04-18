@@ -94,8 +94,15 @@ export const AdminPanel = (): JSX.Element => {
     title: '', type: 'video', description: '', category: '',
     categoryColor: '#f97316', emoji: '📹', duration: '',
     steps: 5, minutes: 15, emojiColor: '#d1fae5',
-    ageGroup: '4-6', level: '1', file: null,
+    ageGroup: '4-6', level: '1', language: 'fr', file: null,
   });
+
+  // ── Filters state ──────────────────────────────────────────────────────────
+  const [libTypeFilter, setLibTypeFilter]   = useState<'all' | 'video' | 'audio' | 'activity'>('all');
+  const [libLangFilter, setLibLangFilter]   = useState<'all' | 'fr' | 'ar' | 'tn'>('all');
+  const [msgDateFilter, setMsgDateFilter]   = useState('');
+  const [msgNameFilter, setMsgNameFilter]   = useState('');
+  const [msgRoleFilter, setMsgRoleFilter]   = useState<'all' | 'parent' | 'professional'>('all');
 
   // ── Data fetchers ──────────────────────────────────────────────────────
   const fetchContent = async () => { const { data } = await api.get<ApiResult<ContentItem[]>>('/api/content'); if (data.success) setContent(data.data); };
@@ -169,10 +176,11 @@ export const AdminPanel = (): JSX.Element => {
       fd.append('description', uploadForm.description || ''); fd.append('category', uploadForm.category || '');
       fd.append('category_color', uploadForm.categoryColor || '#f97316'); fd.append('emoji', uploadForm.emoji || '');
       fd.append('age_group', uploadForm.ageGroup || '4-6'); fd.append('level', uploadForm.level?.toString() || '1');
+      fd.append('language', uploadForm.language || 'fr');
       if (uploadForm.type === 'video' && uploadForm.duration) fd.append('duration', uploadForm.duration);
       if (uploadForm.type === 'activity') { fd.append('steps', (uploadForm.steps || 5).toString()); fd.append('minutes', (uploadForm.minutes || 15).toString()); fd.append('emoji_color', uploadForm.emojiColor || '#d1fae5'); }
       const { data } = await api.post<ApiResult<ContentItem>>('/api/content/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (data.success) { toast('Contenu uploadé ✓'); setUploadForm({ title: '', type: 'video', description: '', category: '', categoryColor: '#f97316', emoji: '📹', duration: '', steps: 5, minutes: 15, emojiColor: '#d1fae5', ageGroup: '4-6', level: '1', file: null }); await fetchContent(); }
+      if (data.success) { toast('Contenu uploadé ✓'); setUploadForm({ title: '', type: 'video', description: '', category: '', categoryColor: '#f97316', emoji: '📹', duration: '', steps: 5, minutes: 15, emojiColor: '#d1fae5', ageGroup: '4-6', level: '1', language: 'fr', file: null }); await fetchContent(); }
       else toast(data.message || 'Erreur upload', 'error');
     } catch (err) { toast(err instanceof Error ? err.message : 'Erreur upload', 'error'); } finally { setLoading(false); }
   };
@@ -205,13 +213,26 @@ export const AdminPanel = (): JSX.Element => {
         }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-4 px-6 py-8">
+        <div className="flex items-center gap-4 px-6 py-4">
           <div className="w-12 h-12 bg-white text-brand-orange rounded-xl flex items-center justify-center text-2xl shadow-sm shrink-0">
             <i className="fa-solid fa-puzzle-piece" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
             <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Administration</span>
+          </div>
+        </div>
+
+        {/* Admin profile card — top */}
+        <div className="px-5 pb-2 shrink-0">
+          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center font-bold text-brand-orange text-sm shrink-0">
+              {adminInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-white/80">Administrateur</p>
+            </div>
           </div>
         </div>
 
@@ -236,17 +257,8 @@ export const AdminPanel = (): JSX.Element => {
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="p-6">
-          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-brand-orange text-base shrink-0">
-              {adminInitial}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-white/80">Administrateur</p>
-            </div>
-          </div>
+        {/* Footer — logout only */}
+        <div className="px-5 pb-5">
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
             Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
@@ -278,10 +290,10 @@ export const AdminPanel = (): JSX.Element => {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-10">
+        <div className="flex-1 overflow-y-auto p-5">
 
           {/* ── KPI Cards ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
             <StatCard icon="fa-solid fa-layer-group"      color="orange" value={content.length} label="Contenus publiés" />
             <StatCard icon="fa-solid fa-user-group"       color="blue"   value={users.length}   label="Utilisateurs inscrits" />
             <StatCard icon="fa-solid fa-circle-check"     color="green"  value={activeUsers}    label="Comptes actifs" />
@@ -298,25 +310,56 @@ export const AdminPanel = (): JSX.Element => {
                 </span>
               }
             >
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Type :</span>
+                  {(['all', 'video', 'audio'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setLibTypeFilter(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                        ${libTypeFilter === t ? 'bg-brand-orange text-white border-brand-orange' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                      {t === 'all' ? 'Tous' : t === 'video' ? '🎬 Vidéo' : '🎵 Audio'}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Langue :</span>
+                  {(['all', 'fr', 'ar', 'tn'] as const).map(l => (
+                    <button key={l} type="button" onClick={() => setLibLangFilter(l)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                        ${libLangFilter === l ? 'bg-brand-orange text-white border-brand-orange' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                      {l === 'all' ? 'Toutes' : l === 'fr' ? '🇫🇷 FR' : l === 'ar' ? '🇹🇳 AR' : '🗣️ TN'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
                   <span className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin" />
                   <p>Chargement…</p>
                 </div>
-              ) : content.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                  <i className="fa-solid fa-inbox text-5xl" />
-                  <p className="font-medium">Aucun contenu uploadé.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {content.map(item => (
-                    <ContentCard key={item.id} content={item}
-                      onEdit={setEditingContent}
-                      onDelete={c => { setDeletingContentId(c.id); setDeletingTitle(c.title); }} />
-                  ))}
-                </div>
-              )}
+              ) : (() => {
+                const filtered = content.filter(item => {
+                  const typeOk = libTypeFilter === 'all' || item.type === libTypeFilter;
+                  const langOk = libLangFilter === 'all' || (item as any).language === libLangFilter;
+                  return typeOk && langOk;
+                });
+                return filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                    <i className="fa-solid fa-inbox text-5xl" />
+                    <p className="font-medium">Aucun contenu correspondant.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filtered.map(item => (
+                      <ContentCard key={item.id} content={item}
+                        onEdit={setEditingContent}
+                        onDelete={c => { setDeletingContentId(c.id); setDeletingTitle(c.title); }} />
+                    ))}
+                  </div>
+                );
+              })()}
             </Section>
           )}
 
@@ -330,9 +373,9 @@ export const AdminPanel = (): JSX.Element => {
                 </span>
               }
             >
-              {/* Type tabs */}
-              <div className="flex gap-4 mb-8">
-                {([['video', 'fa-solid fa-video', 'Vidéo'], ['audio', 'fa-solid fa-music', 'Audio'], ['activity', 'fa-solid fa-gamepad', 'Activité']] as const).map(([t, fa, label]) => (
+              {/* Type tabs — Video + Audio only */}
+              <div className="flex gap-4 mb-6">
+                {([['video', 'fa-solid fa-video', 'Vidéo'], ['audio', 'fa-solid fa-music', 'Audio']] as const).map(([t, fa, label]) => (
                   <button key={t} type="button"
                     className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-semibold text-sm border transition-all
                       ${uploadForm.type === t
@@ -352,15 +395,26 @@ export const AdminPanel = (): JSX.Element => {
                   <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl p-10 bg-slate-50 cursor-pointer hover:border-brand-orange hover:bg-orange-50/30 transition-all">
                     <i className="fa-solid fa-cloud-arrow-up text-4xl text-brand-orange" />
                     <span className="font-semibold text-slate-700">Cliquez pour uploader un fichier</span>
-                    <span className="text-sm text-slate-400">MP4, MP3, PNG ou ZIP — Max 50 MB</span>
+                    <span className="text-sm text-slate-400">MP4, MP3, WAV, OGG — Max 50 MB</span>
                     {uploadForm.file && <span className="text-sm font-medium text-emerald-600"><i className="fa-solid fa-circle-check mr-1" />{uploadForm.file.name}</span>}
-                    <input type="file" className="hidden" accept="video/*,audio/*,image/*" onChange={e => { if (e.target.files?.[0]) setUploadForm(p => ({ ...p, file: e.target.files![0] })); }} required />
+                    <input type="file" className="hidden" accept="video/*,audio/*" onChange={e => { if (e.target.files?.[0]) setUploadForm(p => ({ ...p, file: e.target.files![0] })); }} required />
                   </label>
                 </div>
 
-                <div>
-                  <label className={labelCls}>Titre du contenu *</label>
-                  <input type="text" name="title" value={uploadForm.title} onChange={handleUploadChange} placeholder="Ex: Apprentissage des couleurs" className={inputCls} required />
+                {/* Titre à 50% de largeur */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelCls}>Titre du contenu *</label>
+                    <input type="text" name="title" value={uploadForm.title} onChange={handleUploadChange} placeholder="Ex: Apprentissage des couleurs" className={inputCls} required />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Langue</label>
+                    <select name="language" value={uploadForm.language || 'fr'} onChange={handleUploadChange} className={inputCls}>
+                      <option value="fr">🇫🇷 Français (FR)</option>
+                      <option value="ar">🇹🇳 Arabe (AR)</option>
+                      <option value="tn">🗣️ Dialecte Tunisien (TN)</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -395,16 +449,6 @@ export const AdminPanel = (): JSX.Element => {
                       <input type="text" name="duration" value={uploadForm.duration || ''} onChange={handleUploadChange} placeholder="Ex: 5 min" className={inputCls} />
                     </div>
                   )}
-                  {uploadForm.type === 'activity' && (<>
-                    <div>
-                      <label className={labelCls}>Nombre d'étapes</label>
-                      <input type="number" name="steps" value={uploadForm.steps || 5} onChange={handleUploadChange} min="1" max="20" className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Durée (minutes)</label>
-                      <input type="number" name="minutes" value={uploadForm.minutes || 15} onChange={handleUploadChange} min="1" max="120" className={inputCls} />
-                    </div>
-                  </>)}
                   <div>
                     <label className={labelCls}>Couleur catégorie</label>
                     <input type="color" name="categoryColor" value={uploadForm.categoryColor || '#f97316'} onChange={handleUploadChange} className="h-[46px] w-full rounded-xl border border-slate-200 cursor-pointer p-1" />
@@ -622,50 +666,92 @@ export const AdminPanel = (): JSX.Element => {
               title="Tous les messages"
               badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-sm font-semibold">{adminMessages.length} message(s)</span>}
             >
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <input
+                  type="date"
+                  value={msgDateFilter}
+                  onChange={e => setMsgDateFilter(e.target.value)}
+                  className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-orange transition"
+                  title="Filtrer par date"
+                />
+                <input
+                  type="text"
+                  value={msgNameFilter}
+                  onChange={e => setMsgNameFilter(e.target.value)}
+                  placeholder="Rechercher par nom…"
+                  className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-orange transition w-48"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rôle :</span>
+                  {(['all', 'parent', 'professional'] as const).map(r => (
+                    <button key={r} type="button" onClick={() => setMsgRoleFilter(r)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                        ${msgRoleFilter === r ? 'bg-brand-orange text-white border-brand-orange' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                      {r === 'all' ? 'Tous' : r === 'parent' ? '👨‍👩‍👧 Parent' : '🩺 Professionnel'}
+                    </button>
+                  ))}
+                </div>
+                {(msgDateFilter || msgNameFilter || msgRoleFilter !== 'all') && (
+                  <button onClick={() => { setMsgDateFilter(''); setMsgNameFilter(''); setMsgRoleFilter('all'); }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition">
+                    <i className="fa-solid fa-xmark mr-1" /> Réinitialiser
+                  </button>
+                )}
+              </div>
+
               {monitorLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
                   <span className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin" />
                   <p>Chargement…</p>
                 </div>
-              ) : adminMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                  <i className="fa-solid fa-comments text-5xl" />
-                  <p className="font-medium">Aucun message enregistré.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto -mx-8 -mb-8">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Expéditeur</th>
-                        <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Destinataire</th>
-                        <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Enfant</th>
-                        <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Contenu</th>
-                        <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {adminMessages.map(m => (
-                        <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                          <td className="px-8 py-4">
-                            <p className="font-semibold text-slate-800">{m.sender_name}</p>
-                            <p className="text-xs text-slate-400 capitalize">{m.sender_role}</p>
-                          </td>
-                          <td className="px-8 py-4">
-                            <p className="font-semibold text-slate-800">{m.receiver_name}</p>
-                            <p className="text-xs text-slate-400 capitalize">{m.receiver_role}</p>
-                          </td>
-                          <td className="px-8 py-4 text-slate-600 text-sm">{m.child_name}</td>
-                          <td className="px-8 py-4 text-slate-600 text-sm max-w-xs truncate">{m.content}</td>
-                          <td className="px-8 py-4 text-slate-500 text-sm whitespace-nowrap">
-                            {new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </td>
+              ) : (() => {
+                const filtered = adminMessages.filter(m => {
+                  const dateOk = !msgDateFilter || m.created_at.startsWith(msgDateFilter);
+                  const nameOk = !msgNameFilter || m.sender_name.toLowerCase().includes(msgNameFilter.toLowerCase()) || m.receiver_name.toLowerCase().includes(msgNameFilter.toLowerCase());
+                  const roleOk = msgRoleFilter === 'all' || m.sender_role === msgRoleFilter || m.receiver_role === msgRoleFilter;
+                  return dateOk && nameOk && roleOk;
+                });
+                return filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                    <i className="fa-solid fa-comments text-5xl" />
+                    <p className="font-medium">Aucun message correspondant.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto -mx-8 -mb-8">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Expéditeur</th>
+                          <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Destinataire</th>
+                          <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Enfant</th>
+                          <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Contenu</th>
+                          <th className="text-left px-8 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {filtered.map(m => (
+                          <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <td className="px-8 py-4">
+                              <p className="font-semibold text-slate-800">{m.sender_name}</p>
+                              <p className="text-xs text-slate-400 capitalize">{m.sender_role === 'professional' ? '🩺 Professionnel' : '👨‍👩‍👧 Parent'}</p>
+                            </td>
+                            <td className="px-8 py-4">
+                              <p className="font-semibold text-slate-800">{m.receiver_name}</p>
+                              <p className="text-xs text-slate-400 capitalize">{m.receiver_role === 'professional' ? '🩺 Professionnel' : '👨‍👩‍👧 Parent'}</p>
+                            </td>
+                            <td className="px-8 py-4 text-slate-600 text-sm">{m.child_name}</td>
+                            <td className="px-8 py-4 text-slate-600 text-sm max-w-xs truncate">{m.content}</td>
+                            <td className="px-8 py-4 text-slate-500 text-sm whitespace-nowrap">
+                              {new Date(m.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </Section>
           )}
 

@@ -10,7 +10,7 @@ const { query } = require('../config/db');
 // ============================================================================
 const getByChildId = async (childId) => {
   return await query(
-    `SELECT al.*, c.title as content_title, c.type as content_type 
+    `SELECT al.*, c.title as content_title, c.title as activity_name, c.type as content_type 
      FROM activity_logs al
      LEFT JOIN content c ON al.content_id = c.id
      WHERE al.child_id = ?

@@ -1,7 +1,7 @@
 // ============================================================================
-// SHARED COMPONENTS — barrel re-export
+// SHARED COMPONENTS — barrel re-export (master)
+// Import n'importe quel composant depuis '@/components' ou '../components'
 // ============================================================================
-// Import any shared component from '@/components' or relative '../components'
 
 // ── UI primitives ──────────────────────────────────────────────────────────
 export * from './ui';
@@ -12,6 +12,8 @@ export * from './layout';
 // ── Forms ──────────────────────────────────────────────────────────────────
 export * from './forms';
 
-// ── Feedback (toast, loading) ──────────────────────────────────────────────
+// ── Feedback (toast, alert, loader) ───────────────────────────────────────
 export * from './feedback';
 
+// ── Inputs (text, select, file, date, checkbox) ───────────────────────────
+export * from './inputs';

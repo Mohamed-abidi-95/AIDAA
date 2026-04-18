@@ -217,14 +217,14 @@ export const MessagerieView = ({ role, myId, accent = 'green' }: Props): JSX.Ele
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-80px)] gap-6 animate-fade-in">
+    <div className="flex h-[calc(100vh-220px)] gap-4 animate-fade-in">
 
       {/* ══ LEFT PANEL — Contacts ══ */}
-      <div className="w-72 shrink-0 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="w-56 shrink-0 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className={`px-5 py-4 border-b border-slate-100`}>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{contactLabel}</p>
-          <p className="text-base font-bold text-slate-900">{contacts.length} contact{contacts.length !== 1 ? 's' : ''}</p>
+        <div className={`px-4 py-3 border-b border-slate-100`}>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{contactLabel}</p>
+          <p className="text-sm font-bold text-slate-900">{contacts.length} contact{contacts.length !== 1 ? 's' : ''}</p>
         </div>
 
         {/* Contact list */}
@@ -283,7 +283,7 @@ export const MessagerieView = ({ role, myId, accent = 'green' }: Props): JSX.Ele
         ) : (
           <>
             {/* ── Chat header ── */}
-            <div className="px-7 py-4 border-b border-slate-100 flex items-center gap-4 shrink-0">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3 shrink-0">
               <div className={`w-10 h-10 rounded-full ${accentBg} flex items-center justify-center font-bold text-white shrink-0`}>
                 {selectedContact.name.charAt(0).toUpperCase()}
               </div>
@@ -322,7 +322,7 @@ export const MessagerieView = ({ role, myId, accent = 'green' }: Props): JSX.Ele
             {/* ── Messages area ── */}
             {selectedChild && (
               <>
-                <div className="flex-1 overflow-y-auto px-7 py-5 flex flex-col gap-3">
+                <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-2">
 
                   {/* Child context banner */}
                   <div className={`flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl self-center
@@ -418,7 +418,7 @@ export const MessagerieView = ({ role, myId, accent = 'green' }: Props): JSX.Ele
                 </div>
 
                 {/* ── Input area ── */}
-                <div className="px-7 py-4 border-t border-slate-100 shrink-0">
+                <div className="px-5 py-3 border-t border-slate-100 shrink-0">
                   {error && (
                     <div className="mb-3 text-xs text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2 flex items-center gap-2">
                       <i className="fa-solid fa-circle-xmark" /> {error}

@@ -52,7 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_children_parent_id ON children(parent_id);
 CREATE TABLE IF NOT EXISTS content (
   id                   INT AUTO_INCREMENT PRIMARY KEY,
   title                VARCHAR(200) NOT NULL,
-  type                 ENUM('video','activity') NOT NULL,
+  type                 ENUM('video','audio','activity') NOT NULL DEFAULT 'video',
   category             VARCHAR(100),
   category_color       VARCHAR(20)  DEFAULT '#f97316',
   age_group            VARCHAR(50),
@@ -64,9 +64,16 @@ CREATE TABLE IF NOT EXISTS content (
   steps                INT          DEFAULT NULL,
   minutes              INT          DEFAULT NULL,
   emoji_color          VARCHAR(20)  DEFAULT NULL,
+  language             VARCHAR(10)  NOT NULL DEFAULT 'fr',  -- fr | ar | tn
   participant_category ENUM('enfant','jeune','adulte','tous') NOT NULL DEFAULT 'tous',
   created_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration : ajout colonne language si la table existe déjà
+ALTER TABLE content
+  MODIFY COLUMN type ENUM('video','audio','activity') NOT NULL DEFAULT 'video';
+ALTER TABLE content
+  ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER emoji_color;
 
 -- ============================================================================
 -- TABLE : activity_logs
@@ -290,14 +297,14 @@ LIMIT 1;
 -- ============================================================================
 -- DONNÉES : Contenu (vidéos + activités)
 -- ============================================================================
-INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, participant_category) VALUES
-('Apprendre à dire bonjour',   'video',    'Communication', '#f97316', '🗣️', '3 min', 'https://example.com/video1.mp4', 'Apprenez à dire bonjour poliment et avec des gestes amicaux',               '4-6', 1, 'tous'),
-('Reconnaître les émotions',   'video',    'Émotions',      '#f97316', '😊', '5 min', 'https://example.com/video2.mp4', 'Identifiez les différentes émotions : joie, tristesse, colère, peur',       '4-6', 1, 'tous'),
-('Jouer ensemble',             'video',    'Social',        '#f97316', '🧩', '4 min', 'https://example.com/video3.mp4', 'Les bénéfices du jeu social et comment jouer avec les autres',               '4-6', 1, 'tous'),
-('Préparer mon petit-déjeuner','video',    'Autonomie',     '#f97316', '🍎', '6 min', 'https://example.com/video4.mp4', 'Étapes pour préparer un petit-déjeuner sain',                               '4-6', 1, 'tous'),
-('Séquence du matin',          'activity', 'Autonomie',     '#f97316', '🌱', NULL,    'https://example.com/activity1',  'Routine matinale structurée avec étapes visuelles',                         '4-6', 1, 'tous'),
-('Créer avec les couleurs',    'activity', 'Créativité',    '#f97316', '🎨', NULL,    'https://example.com/activity2',  'Activité créative et sensorielle avec différentes couleurs',                 '4-6', 1, 'tous'),
-('Écouter et répéter',         'activity', 'Langage',       '#f97316', '🎵', NULL,    'https://example.com/activity3',  'Jeu d\'écoute et prononciation pour développer le langage',                  '4-6', 1, 'tous')
+INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, language, participant_category) VALUES
+('Apprendre à dire bonjour',   'video',    'Communication', '#f97316', '🗣️', '3 min', 'https://example.com/video1.mp4', 'Apprenez à dire bonjour poliment et avec des gestes amicaux',               '4-6', 1, 'fr', 'tous'),
+('Reconnaître les émotions',   'video',    'Émotions',      '#f97316', '😊', '5 min', 'https://example.com/video2.mp4', 'Identifiez les différentes émotions : joie, tristesse, colère, peur',       '4-6', 1, 'fr', 'tous'),
+('Jouer ensemble',             'video',    'Social',        '#f97316', '🧩', '4 min', 'https://example.com/video3.mp4', 'Les bénéfices du jeu social et comment jouer avec les autres',               '4-6', 1, 'fr', 'tous'),
+('Préparer mon petit-déjeuner','video',    'Autonomie',     '#f97316', '🍎', '6 min', 'https://example.com/video4.mp4', 'Étapes pour préparer un petit-déjeuner sain',                               '4-6', 1, 'fr', 'tous'),
+('Séquence du matin',          'activity', 'Autonomie',     '#f97316', '🌱', NULL,    'https://example.com/activity1',  'Routine matinale structurée avec étapes visuelles',                         '4-6', 1, 'fr', 'tous'),
+('Créer avec les couleurs',    'activity', 'Créativité',    '#f97316', '🎨', NULL,    'https://example.com/activity2',  'Activité créative et sensorielle avec différentes couleurs',                 '4-6', 1, 'fr', 'tous'),
+('Écouter et répéter',         'audio',    'Langage',       '#f97316', '🎵', '2 min', 'https://example.com/audio1.mp3', 'Jeu d\'écoute et prononciation pour développer le langage',                  '4-6', 1, 'fr', 'tous')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================

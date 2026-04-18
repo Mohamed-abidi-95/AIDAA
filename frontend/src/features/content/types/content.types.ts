@@ -68,6 +68,7 @@ export interface ContentFormData {
   emojiColor?: string; // for activities
   ageGroup?: string;
   level?: string | number;
+  language?: string; // fr | ar | tn
   file?: File | null;
   url?: string;
 }
