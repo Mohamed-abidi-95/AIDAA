@@ -362,7 +362,7 @@ WHERE p.email = 'leila.benali@aidaa.com' AND pr.email = 'karim.hamdi@aidaa.com'
 -- ============================================================================
 
 -- ============================================================================
--- DONNÉES : Contenu (vidéos + activités)
+-- DONNÉES : Contenu (vidéos + audio + activités)
 -- ============================================================================
 INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, language, participant_category) VALUES
 ('Apprendre à dire bonjour',   'video',    'Communication', '#f97316', '🗣️', '3 min', 'https://example.com/video1.mp4', 'Apprenez à dire bonjour poliment et avec des gestes amicaux',               '4-6', 1, 'fr', 'tous'),
@@ -371,8 +371,154 @@ INSERT INTO content (title, type, category, category_color, emoji, duration, url
 ('Préparer mon petit-déjeuner','video',    'Autonomie',     '#f97316', '🍎', '6 min', 'https://example.com/video4.mp4', 'Étapes pour préparer un petit-déjeuner sain',                               '4-6', 1, 'fr', 'tous'),
 ('Séquence du matin',          'activity', 'Autonomie',     '#f97316', '🌱', NULL,    'https://example.com/activity1',  'Routine matinale structurée avec étapes visuelles',                         '4-6', 1, 'fr', 'tous'),
 ('Créer avec les couleurs',    'activity', 'Créativité',    '#f97316', '🎨', NULL,    'https://example.com/activity2',  'Activité créative et sensorielle avec différentes couleurs',                 '4-6', 1, 'fr', 'tous'),
-('Écouter et répéter',         'audio',    'Langage',       '#f97316', '🎵', '2 min', 'https://example.com/audio1.mp3', 'Jeu d\'écoute et prononciation pour développer le langage',                  '4-6', 1, 'fr', 'tous')
+('Écouter et répéter',         'audio',    'Langage',       '#f97316', '🎵', '2 min', 'https://example.com/audio1.mp3', 'Jeu d\'écoute et prononciation pour développer le langage',                  '4-6', 1, 'fr', 'tous'),
+('Les chiffres en arabe',      'video',    'Langage',       '#3b82f6', '🔢', '4 min', 'https://example.com/video5.mp4', 'Apprendre les chiffres de 1 à 10 en arabe',                                 '4-6', 1, 'ar', 'tous'),
+('Marhba — Dire bonjour',      'audio',    'Communication', '#10b981', '👋', '3 min', 'https://example.com/audio2.mp3', 'Apprendre à saluer en dialecte tunisien',                                   '4-6', 1, 'tn', 'tous'),
+('Gestion du stress',          'video',    'Émotions',      '#8b5cf6', '😤', '7 min', 'https://example.com/video6.mp4', 'Techniques de relaxation et gestion des émotions difficiles',               '7-12', 2, 'fr', 'jeune'),
+('Autonomie au quotidien',     'activity', 'Autonomie',     '#f97316', '🏠', NULL,    'https://example.com/activity3',  'Activités pour développer l\'autonomie au quotidien',                       '7-12', 2, 'fr', 'jeune')
 ON DUPLICATE KEY UPDATE id = id;
+
+-- ============================================================================
+-- DONNÉES : Logs d'activités (pour que les analytics soient remplis)
+-- ============================================================================
+INSERT INTO activity_logs (child_id, content_id, status, action, score, duration_seconds, date)
+SELECT
+  c.id AS child_id,
+  ct.id AS content_id,
+  v.status, v.action, v.score, v.duration_seconds,
+  DATE_SUB(NOW(), INTERVAL v.days_ago DAY) AS date
+FROM children c
+JOIN users u ON c.parent_id = u.id
+JOIN content ct ON ct.title = v.content_title
+JOIN (
+  -- Test Child 1 (parent@aidaa.com) — 15 logs sur 30 jours
+  SELECT 'Test Child 1' AS child_name, 'parent@aidaa.com' AS parent_email, 'Apprendre à dire bonjour'    AS content_title, 'completed' AS status, 'content_accessed' AS action, 20 AS score, 180  AS duration_seconds, 28 AS days_ago UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Reconnaître les émotions',    'completed', 'content_accessed', 30, 300,  25 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Jouer ensemble',              'completed', 'content_accessed', 25, 240,  22 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Séquence du matin',           'completed', 'activity_done',    35, 420,  20 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Écouter et répéter',          'completed', 'content_accessed', 15, 120,  18 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Apprendre à dire bonjour',    'completed', 'content_accessed', 20, 180,  15 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Créer avec les couleurs',     'completed', 'activity_done',    40, 600,  12 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Reconnaître les émotions',    'completed', 'content_accessed', 30, 300,  10 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Préparer mon petit-déjeuner', 'started',   'content_accessed', 10, 90,    8 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Jouer ensemble',              'completed', 'content_accessed', 25, 240,   6 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Écouter et répéter',          'completed', 'content_accessed', 15, 120,   5 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Séquence du matin',           'completed', 'activity_done',    35, 420,   3 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Créer avec les couleurs',     'completed', 'activity_done',    40, 600,   2 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Les chiffres en arabe',       'completed', 'content_accessed', 20, 240,   1 UNION ALL
+  SELECT 'Test Child 1', 'parent@aidaa.com', 'Apprendre à dire bonjour',    'completed', 'content_accessed', 20, 180,   0 UNION ALL
+  -- Emma Johnson (sarah.johnson@aidaa.com) — 10 logs
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Apprendre à dire bonjour', 'completed', 'content_accessed', 20, 180, 20 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Reconnaître les émotions', 'completed', 'content_accessed', 30, 300, 18 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Jouer ensemble',           'completed', 'content_accessed', 25, 240, 15 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Écouter et répéter',       'completed', 'content_accessed', 15, 120, 12 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Séquence du matin',        'completed', 'activity_done',    35, 420,  9 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Créer avec les couleurs',  'completed', 'activity_done',    40, 600,  6 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Marhba — Dire bonjour',    'completed', 'content_accessed', 10, 180,  4 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Apprendre à dire bonjour', 'completed', 'content_accessed', 20, 180,  2 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Reconnaître les émotions', 'started',   'content_accessed', 10, 60,   1 UNION ALL
+  SELECT 'Emma Johnson', 'sarah.johnson@aidaa.com', 'Jouer ensemble',           'completed', 'content_accessed', 25, 240,  0 UNION ALL
+  -- Youssef Trabelsi (mohamed.trabelsi@aidaa.com) — 8 logs
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Jouer ensemble',              'completed', 'content_accessed', 25, 240, 14 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Séquence du matin',           'completed', 'activity_done',    35, 420, 11 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Les chiffres en arabe',       'completed', 'content_accessed', 20, 240,  8 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Écouter et répéter',          'completed', 'content_accessed', 15, 120,  6 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Créer avec les couleurs',     'completed', 'activity_done',    40, 600,  4 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Préparer mon petit-déjeuner', 'completed', 'content_accessed', 25, 360,  2 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Reconnaître les émotions',    'completed', 'content_accessed', 30, 300,  1 UNION ALL
+  SELECT 'Youssef Trabelsi', 'mohamed.trabelsi@aidaa.com', 'Apprendre à dire bonjour',    'completed', 'content_accessed', 20, 180,  0 UNION ALL
+  -- Nour Ben Ali (leila.benali@aidaa.com) — 7 logs
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Gestion du stress',      'completed', 'content_accessed', 45, 420, 10 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Autonomie au quotidien', 'completed', 'activity_done',    50, 720,  7 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Reconnaître les émotions','completed','content_accessed', 30, 300,  5 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Jouer ensemble',         'completed', 'content_accessed', 25, 240,  3 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Gestion du stress',      'completed', 'content_accessed', 45, 420,  2 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Autonomie au quotidien', 'started',   'activity_done',    20, 180,  1 UNION ALL
+  SELECT 'Nour Ben Ali', 'leila.benali@aidaa.com', 'Écouter et répéter',     'completed', 'content_accessed', 15, 120,  0
+) v ON c.name = v.child_name AND u.email = v.parent_email;
+
+-- ============================================================================
+-- DONNÉES : Messages (conversations entre parents et professionnels)
+-- ============================================================================
+INSERT INTO messages (child_id, sender_id, receiver_id, content, created_at)
+SELECT
+  ch.id AS child_id,
+  s.id  AS sender_id,
+  r.id  AS receiver_id,
+  v.content,
+  DATE_SUB(NOW(), INTERVAL v.hours_ago HOUR) AS created_at
+FROM users s
+JOIN users r     ON r.email = v.receiver_email
+JOIN children ch ON ch.name = v.child_name
+JOIN users pu    ON pu.id = ch.parent_id
+JOIN (
+  -- Conversation : Parent Test ↔ Dr. Professional Test (sujet: Test Child 1)
+  SELECT 'parent@aidaa.com'       AS sender_email, 'professional@aidaa.com' AS receiver_email, 'Test Child 1' AS child_name,
+         'Bonjour Dr. Professional, je voulais vous informer que Test Child 1 a bien progressé cette semaine !' AS content, 48 AS hours_ago UNION ALL
+  SELECT 'professional@aidaa.com', 'parent@aidaa.com', 'Test Child 1',
+         'Bonjour ! Très bien, j\'ai vu ses dernières activités. Il faut continuer à travailler sur la communication.', 47 UNION ALL
+  SELECT 'parent@aidaa.com', 'professional@aidaa.com', 'Test Child 1',
+         'Oui, nous pratiquons tous les jours. Il arrive maintenant à dire bonjour en regardant les gens !', 46 UNION ALL
+  SELECT 'professional@aidaa.com', 'parent@aidaa.com', 'Test Child 1',
+         'Excellent progrès ! Je recommande aussi les exercices d\'écoute et répétition au moins 2 fois par semaine.', 24 UNION ALL
+  SELECT 'parent@aidaa.com', 'professional@aidaa.com', 'Test Child 1',
+         'D\'accord, nous allons intégrer ça dans sa routine. Merci beaucoup !', 23 UNION ALL
+  SELECT 'professional@aidaa.com', 'parent@aidaa.com', 'Test Child 1',
+         'De rien ! N\'hésitez pas si vous avez des questions. À bientôt.', 22 UNION ALL
+  -- Conversation : Sarah Johnson ↔ Dr. Abderrahman Sbai (sujet: Emma Johnson)
+  SELECT 'sarah.johnson@aidaa.com', 'abderrahman.sbai@aidaa.com', 'Emma Johnson',
+         'Bonjour Dr. Sbai, Emma a eu une journée difficile à l\'école aujourd\'hui. Elle s\'est mise en colère.', 36 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com', 'sarah.johnson@aidaa.com', 'Emma Johnson',
+         'Bonjour Mme Johnson. Pouvez-vous me décrire ce qui s\'est passé exactement ?', 35 UNION ALL
+  SELECT 'sarah.johnson@aidaa.com', 'abderrahman.sbai@aidaa.com', 'Emma Johnson',
+         'Elle a eu du mal avec un changement de planning imprévu. Elle n\'aime pas les surprises.', 34 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com', 'sarah.johnson@aidaa.com', 'Emma Johnson',
+         'C\'est tout à fait normal pour les enfants TSA. Je vous conseille d\'utiliser un planning visuel chaque matin.', 12 UNION ALL
+  SELECT 'sarah.johnson@aidaa.com', 'abderrahman.sbai@aidaa.com', 'Emma Johnson',
+         'Merci pour le conseil ! Nous allons essayer dès demain.', 11 UNION ALL
+  -- Conversation : Mohamed Trabelsi ↔ Dr. Fatima Mansour (sujet: Youssef Trabelsi)
+  SELECT 'mohamed.trabelsi@aidaa.com', 'fatima.mansour@aidaa.com', 'Youssef Trabelsi',
+         'Salam Dr. Mansour, Youssef a terminé toutes ses activités cette semaine, Hamdellah !', 20 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com', 'mohamed.trabelsi@aidaa.com', 'Youssef Trabelsi',
+         'Mabrouk ! C\'est un excellent résultat. Son score moyen a augmenté de 15 points ce mois-ci.', 19 UNION ALL
+  SELECT 'mohamed.trabelsi@aidaa.com', 'fatima.mansour@aidaa.com', 'Youssef Trabelsi',
+         'On est très contents. Quelles activités recommandez-vous pour le mois prochain ?', 5 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com', 'mohamed.trabelsi@aidaa.com', 'Youssef Trabelsi',
+         'Je recommande de commencer les activités de niveau 2, surtout "Autonomie au quotidien". Il est prêt !', 4
+) v ON s.email = v.sender_email;
+
+-- ============================================================================
+-- DONNÉES : Notes professionnelles (observations cliniques)
+-- ============================================================================
+INSERT INTO notes (professional_id, child_id, content, date)
+SELECT pr.id, ch.id, v.content, DATE_SUB(NOW(), INTERVAL v.days_ago DAY)
+FROM users pr
+JOIN children ch ON ch.name = v.child_name
+JOIN users pu    ON pu.id = ch.parent_id
+JOIN (
+  -- Dr. Professional Test → Test Child 1
+  SELECT 'professional@aidaa.com' AS pro_email, 'Test Child 1' AS child_name,
+         'Séance du jour : très bonne concentration pendant l\'activité de communication. L\'enfant a maintenu le contact visuel pendant 3 secondes. Progrès notable par rapport à la semaine dernière.', 14 AS days_ago UNION ALL
+  SELECT 'professional@aidaa.com', 'Test Child 1',
+         'Revue des activités réalisées cette semaine. Score moyen de 28/50. Recommandation : augmenter la fréquence des exercices d\'écoute et répétition.', 7 UNION ALL
+  SELECT 'professional@aidaa.com', 'Test Child 1',
+         'Bilan mensuel positif. L\'enfant maîtrise maintenant les salutations de base. Prochaine étape : expressions d\'émotions simples.', 1 UNION ALL
+  -- Dr. Abderrahman Sbai → Emma Johnson
+  SELECT 'abderrahman.sbai@aidaa.com', 'Emma Johnson',
+         'Emma montre des progrès significatifs dans la reconnaissance des émotions. Elle identifie correctement joie et tristesse à 80%. Continuer les exercices avec les cartes émotions.', 10 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com', 'Emma Johnson',
+         'Incident de gestion émotionnelle signalé par la mère. Recommandation d\'un planning visuel quotidien pour prévenir les crises liées aux imprévus.', 5 UNION ALL
+  -- Dr. Fatima Mansour → Youssef Trabelsi
+  SELECT 'fatima.mansour@aidaa.com', 'Youssef Trabelsi',
+         'Youssef progresse bien en autonomie. Il réalise sa routine du matin de façon indépendante 4 jours sur 7. Objectif : atteindre 7/7 le mois prochain.', 8 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com', 'Youssef Trabelsi',
+         'Bilan positif ce mois-ci. Score total : 185 points. Prêt pour les activités de niveau 2. Famille très impliquée, ce qui favorise les progrès.', 2 UNION ALL
+  -- Dr. Karim Hamdi → Nour Ben Ali
+  SELECT 'karim.hamdi@aidaa.com', 'Nour Ben Ali',
+         'Nour travaille bien sur les techniques de gestion du stress. Elle applique la respiration profonde lors des situations difficiles. Très bonne progression.', 6 UNION ALL
+  SELECT 'karim.hamdi@aidaa.com', 'Nour Ben Ali',
+         'Séance d\'évaluation : Nour gère mieux ses transitions entre activités. Score de gestion des émotions : 75/100. Continuer les exercices d\'autonomie.', 1
+) v ON pr.email = v.pro_email;
 
 -- ============================================================================
 -- DONNÉES : Jeux
