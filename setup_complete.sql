@@ -252,47 +252,114 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ============================================================================
 -- DONNÉES : Utilisateurs (mots de passe hashés avec bcryptjs 12 rounds)
 -- ============================================================================
--- admin@aidaa.com          → admin123
--- parent@aidaa.com         → parent123
--- professional@aidaa.com   → professional123
+-- Mots de passe :
+--   admin123        → $2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u
+--   parent123       → $2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym
+--   professional123 → $2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou
+-- ============================================================================
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Admin Test', 'admin@aidaa.com',
-        '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u',
-        'admin', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u',
-  is_active = 1;
+-- ── ADMIN ────────────────────────────────────────────────────────────────────
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Admin AIDAA', 'admin@aidaa.com',
+ '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u',
+ 'admin', NULL, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Parent Test', 'parent@aidaa.com',
-        '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym',
-        'parent', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym',
-  is_active = 1;
+-- ── PARENTS (mot de passe : parent123) ───────────────────────────────────────
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Parent Test',      'parent@aidaa.com',
+ '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Sarah Johnson',    'sarah.johnson@aidaa.com',
+ '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Mohamed Trabelsi', 'mohamed.trabelsi@aidaa.com',
+ '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Leila Ben Ali',    'leila.benali@aidaa.com',
+ '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Dr. Professional Test', 'professional@aidaa.com',
-        '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou',
-        'professional', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou',
-  is_active = 1;
+-- ── PROFESSIONNELS (mot de passe : professional123) ──────────────────────────
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Dr. Professional Test', 'professional@aidaa.com',
+ '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthophonie',      1),
+('Dr. Abderrahman Sbai',  'abderrahman.sbai@aidaa.com',
+ '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Psychologie',      1),
+('Dr. Fatima Mansour',    'fatima.mansour@aidaa.com',
+ '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthopédagogie',   1),
+('Dr. Karim Hamdi',       'karim.hamdi@aidaa.com',
+ '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Neuropsychologie', 1),
+('Dr. Amina Chaabane',    'amina.chaabane@aidaa.com',
+ '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Ergothérapie',     1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), specialite = VALUES(specialite), is_active = 1;
 
 -- ============================================================================
--- DONNÉES : Enfant de test
+-- DONNÉES : Participants / Enfants (liés aux parents)
 -- ============================================================================
+
+-- Parent Test → Test Child 1 (enfant, 5 ans)
 INSERT INTO children (parent_id, name, age, participant_category)
-SELECT id, 'Test Child 1', 5, 'enfant'
-FROM users
-WHERE email = 'parent@aidaa.com'
-  AND NOT EXISTS (
-    SELECT 1 FROM children c
-    JOIN users u ON c.parent_id = u.id
-    WHERE u.email = 'parent@aidaa.com' AND c.name = 'Test Child 1'
-  )
+SELECT u.id, 'Test Child 1', 5, 'enfant' FROM users u
+WHERE u.email = 'parent@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = u.id AND c.name = 'Test Child 1')
 LIMIT 1;
+
+-- Sarah Johnson → Emma (enfant, 6 ans) + Lucas (enfant, 9 ans)
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id, 'Emma Johnson', 6, 'enfant' FROM users u
+WHERE u.email = 'sarah.johnson@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = u.id AND c.name = 'Emma Johnson')
+LIMIT 1;
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id, 'Lucas Johnson', 9, 'enfant' FROM users u
+WHERE u.email = 'sarah.johnson@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = u.id AND c.name = 'Lucas Johnson')
+LIMIT 1;
+
+-- Mohamed Trabelsi → Youssef (enfant, 7 ans)
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id, 'Youssef Trabelsi', 7, 'enfant' FROM users u
+WHERE u.email = 'mohamed.trabelsi@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = u.id AND c.name = 'Youssef Trabelsi')
+LIMIT 1;
+
+-- Leila Ben Ali → Nour (jeune, 14 ans)
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id, 'Nour Ben Ali', 14, 'jeune' FROM users u
+WHERE u.email = 'leila.benali@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id = u.id AND c.name = 'Nour Ben Ali')
+LIMIT 1;
+
+-- ============================================================================
+-- DONNÉES : Invitations professionnelles (parents ↔ professionnels)
+-- ============================================================================
+
+-- Parent Test ↔ Dr. Professional Test
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id, pr.id, 'active' FROM users p, users pr
+WHERE p.email = 'parent@aidaa.com' AND pr.email = 'professional@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id = p.id AND pi.professional_id = pr.id);
+
+-- Sarah Johnson ↔ Dr. Abderrahman Sbai
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id, pr.id, 'active' FROM users p, users pr
+WHERE p.email = 'sarah.johnson@aidaa.com' AND pr.email = 'abderrahman.sbai@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id = p.id AND pi.professional_id = pr.id);
+
+-- Mohamed Trabelsi ↔ Dr. Fatima Mansour
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id, pr.id, 'active' FROM users p, users pr
+WHERE p.email = 'mohamed.trabelsi@aidaa.com' AND pr.email = 'fatima.mansour@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id = p.id AND pi.professional_id = pr.id);
+
+-- Leila Ben Ali ↔ Dr. Karim Hamdi
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id, pr.id, 'active' FROM users p, users pr
+WHERE p.email = 'leila.benali@aidaa.com' AND pr.email = 'karim.hamdi@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id = p.id AND pi.professional_id = pr.id);
+
+-- ============================================================================
+-- DONNÉES : Contenu (vidéos + audio + activités)
+-- ============================================================================
 
 -- ============================================================================
 -- DONNÉES : Contenu (vidéos + activités)
@@ -433,23 +500,36 @@ WHERE NOT EXISTS (SELECT 1 FROM badges LIMIT 1);
 -- VÉRIFICATION FINALE
 -- ============================================================================
 SELECT '✅ SETUP TERMINÉ' AS statut;
-SELECT CONCAT('👤 Utilisateurs : ', COUNT(*)) AS info FROM users WHERE email IN ('admin@aidaa.com','parent@aidaa.com','professional@aidaa.com');
-SELECT CONCAT('🎮 Jeux         : ', COUNT(*)) AS info FROM games;
-SELECT CONCAT('🗣️  AAC          : ', COUNT(*)) AS info FROM aac_symbols;
-SELECT CONCAT('📋 Séquences    : ', COUNT(*)) AS info FROM guided_sequences;
-SELECT CONCAT('🏅 Badges       : ', COUNT(*)) AS info FROM badges;
-SELECT CONCAT('👶 Enfants      : ', COUNT(*)) AS info FROM children;
+SELECT CONCAT('👤 Utilisateurs      : ', COUNT(*)) AS info FROM users;
+SELECT CONCAT('👨‍👩‍👧 Parents           : ', COUNT(*)) AS info FROM users WHERE role = 'parent';
+SELECT CONCAT('🩺 Professionnels    : ', COUNT(*)) AS info FROM users WHERE role = 'professional';
+SELECT CONCAT('👶 Participants      : ', COUNT(*)) AS info FROM children;
+SELECT CONCAT('🤝 Invitations       : ', COUNT(*)) AS info FROM professional_invitations;
+SELECT CONCAT('🎬 Contenus         : ', COUNT(*)) AS info FROM content;
+SELECT CONCAT('🎮 Jeux             : ', COUNT(*)) AS info FROM games;
+SELECT CONCAT('🗣️  AAC              : ', COUNT(*)) AS info FROM aac_symbols;
+SELECT CONCAT('📋 Séquences        : ', COUNT(*)) AS info FROM guided_sequences;
+SELECT CONCAT('🏅 Badges           : ', COUNT(*)) AS info FROM badges;
 
 -- ============================================================================
 -- RÉCAPITULATIF COMPTES
 -- ============================================================================
--- ┌─────────────────┬──────────────────────────────┬──────────────────┐
--- │ Rôle            │ Email                        │ Mot de passe     │
--- ├─────────────────┼──────────────────────────────┼──────────────────┤
--- │ Admin           │ admin@aidaa.com               │ admin123         │
--- │ Parent          │ parent@aidaa.com              │ parent123        │
--- │ Professionnel   │ professional@aidaa.com        │ professional123  │
--- └─────────────────┴──────────────────────────────┴──────────────────┘
+-- ┌──────────────────┬──────────────────────────────────────┬──────────────────┐
+-- │ Rôle             │ Email                                │ Mot de passe     │
+-- ├──────────────────┼──────────────────────────────────────┼──────────────────┤
+-- │ Admin            │ admin@aidaa.com                      │ admin123         │
+-- ├──────────────────┼──────────────────────────────────────┼──────────────────┤
+-- │ Parent           │ parent@aidaa.com                     │ parent123        │
+-- │ Parent           │ sarah.johnson@aidaa.com              │ parent123        │
+-- │ Parent           │ mohamed.trabelsi@aidaa.com           │ parent123        │
+-- │ Parent           │ leila.benali@aidaa.com               │ parent123        │
+-- ├──────────────────┼──────────────────────────────────────┼──────────────────┤
+-- │ Professionnel    │ professional@aidaa.com               │ professional123  │
+-- │ Professionnel    │ abderrahman.sbai@aidaa.com           │ professional123  │
+-- │ Professionnel    │ fatima.mansour@aidaa.com             │ professional123  │
+-- │ Professionnel    │ karim.hamdi@aidaa.com                │ professional123  │
+-- │ Professionnel    │ amina.chaabane@aidaa.com             │ professional123  │
+-- └──────────────────┴──────────────────────────────────────┴──────────────────┘
 -- Frontend : http://localhost:5173
 -- Backend  : http://localhost:5000/health
 -- ============================================================================
