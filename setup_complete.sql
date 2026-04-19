@@ -17,15 +17,24 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- TABLE : users
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  name       VARCHAR(100)  NOT NULL,
-  email      VARCHAR(150)  NOT NULL UNIQUE,
-  password   VARCHAR(255)  DEFAULT NULL,
-  role       ENUM('admin','parent','professional') NOT NULL DEFAULT 'parent',
-  specialite VARCHAR(100)  NULL DEFAULT NULL,
-  is_active  TINYINT(1)    NOT NULL DEFAULT 1,
-  created_at TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  id                   INT AUTO_INCREMENT PRIMARY KEY,
+  name                 VARCHAR(100)  NOT NULL,
+  email                VARCHAR(150)  NOT NULL UNIQUE,
+  password             VARCHAR(255)  DEFAULT NULL,
+  role                 ENUM('admin','parent','professional') NOT NULL DEFAULT 'parent',
+  specialite           VARCHAR(100)  NULL DEFAULT NULL,
+  is_active            TINYINT(1)    NOT NULL DEFAULT 1,
+  status               VARCHAR(20)   NOT NULL DEFAULT 'approved',
+  reset_token          VARCHAR(255)  DEFAULT NULL,
+  reset_token_expires  DATETIME      DEFAULT NULL,
+  created_at           TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migration : ajout colonnes manquantes si la table existe deja
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status              VARCHAR(20)  NOT NULL DEFAULT 'approved' AFTER is_active;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token         VARCHAR(255) DEFAULT NULL AFTER status;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires DATETIME     DEFAULT NULL AFTER reset_token;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialite          VARCHAR(100) NULL DEFAULT NULL AFTER role;
 
 -- ============================================================================
 -- TABLE : children
@@ -248,24 +257,24 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- professional123 = $2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou
 -- ============================================================================
 
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Admin AIDAA', 'admin@aidaa.com', '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u', 'admin', NULL, 1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active, status) VALUES
+('Admin AIDAA', 'admin@aidaa.com', '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u', 'admin', NULL, 1, 'approved')
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1, status = 'approved';
 
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Parent Test',      'parent@aidaa.com',           '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Sarah Johnson',    'sarah.johnson@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Mohamed Trabelsi', 'mohamed.trabelsi@aidaa.com', '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Leila Ben Ali',    'leila.benali@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active, status) VALUES
+('Parent Test',      'parent@aidaa.com',           '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Sarah Johnson',    'sarah.johnson@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Mohamed Trabelsi', 'mohamed.trabelsi@aidaa.com', '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Leila Ben Ali',    'leila.benali@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved')
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1, status = 'approved';
 
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Dr. Professional Test', 'professional@aidaa.com',      '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthophonie',      1),
-('Dr. Abderrahman Sbai',  'abderrahman.sbai@aidaa.com',  '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Psychologie',      1),
-('Dr. Fatima Mansour',    'fatima.mansour@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthopedagogie',   1),
-('Dr. Karim Hamdi',       'karim.hamdi@aidaa.com',       '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Neuropsychologie', 1),
-('Dr. Amina Chaabane',    'amina.chaabane@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Ergotherapie',     1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), specialite = VALUES(specialite), is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active, status) VALUES
+('Dr. Professional Test', 'professional@aidaa.com',      '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthophonie',      1, 'approved'),
+('Dr. Abderrahman Sbai',  'abderrahman.sbai@aidaa.com',  '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Psychologie',      1, 'approved'),
+('Dr. Fatima Mansour',    'fatima.mansour@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthopedagogie',   1, 'approved'),
+('Dr. Karim Hamdi',       'karim.hamdi@aidaa.com',       '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Neuropsychologie', 1, 'approved'),
+('Dr. Amina Chaabane',    'amina.chaabane@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Ergotherapie',     1, 'approved')
+ON DUPLICATE KEY UPDATE password = VALUES(password), specialite = VALUES(specialite), is_active = 1, status = 'approved';
 
 -- ============================================================================
 -- DONNEES : Enfants
@@ -542,38 +551,38 @@ WHERE NOT EXISTS (SELECT 1 FROM badges LIMIT 1);
 -- ============================================================================
 
 -- Nouveaux parents (mot de passe : parent123)
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Amine Bouazizi',    'amine.bouazizi@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Fatma Jebali',      'fatma.jebali@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Karim Zouari',      'karim.zouari@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Sana Maaref',       'sana.maaref@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Nabil Ferchichi',   'nabil.ferchichi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Rania Mhiri',       'rania.mhiri@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Sofiane Khelifi',   'sofiane.khelifi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Amira Sassi',       'amira.sassi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Bilel Gharbi',      'bilel.gharbi@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Olfa Belhaj',       'olfa.belhaj@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Tarek Haddad',      'tarek.haddad@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Mouna Dridi',       'mouna.dridi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Yassine Chebbi',    'yassine.chebbi@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Rim Nasri',         'rim.nasri@aidaa.com',         '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Khaled Rejeb',      'khaled.rejeb@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Sonia Hammami',     'sonia.hammami@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Adel Bouslama',     'adel.bouslama@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Hajer Khalfallah',  'hajer.khalfallah@aidaa.com',  '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Walid Chaouch',     'walid.chaouch@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Ines Tlili',        'ines.tlili@aidaa.com',        '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Omar Baccar',       'omar.baccar@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Salma Ouertani',    'salma.ouertani@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Fares Boughanmi',   'fares.boughanmi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Nadya Oueslati',    'nadya.oueslati@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Bassem Letaief',    'bassem.letaief@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Dorsaf Ayari',      'dorsaf.ayari@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Mourad Karray',     'mourad.karray@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Hela Ghannouchi',   'hela.ghannouchi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Zied Labidi',       'zied.labidi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Nadia Sfaxi',       'nadia.sfaxi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active, status) VALUES
+('Amine Bouazizi',    'amine.bouazizi@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Fatma Jebali',      'fatma.jebali@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Karim Zouari',      'karim.zouari@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Sana Maaref',       'sana.maaref@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Nabil Ferchichi',   'nabil.ferchichi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Rania Mhiri',       'rania.mhiri@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Sofiane Khelifi',   'sofiane.khelifi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Amira Sassi',       'amira.sassi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Bilel Gharbi',      'bilel.gharbi@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Olfa Belhaj',       'olfa.belhaj@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Tarek Haddad',      'tarek.haddad@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Mouna Dridi',       'mouna.dridi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Yassine Chebbi',    'yassine.chebbi@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Rim Nasri',         'rim.nasri@aidaa.com',         '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Khaled Rejeb',      'khaled.rejeb@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Sonia Hammami',     'sonia.hammami@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Adel Bouslama',     'adel.bouslama@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Hajer Khalfallah',  'hajer.khalfallah@aidaa.com',  '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Walid Chaouch',     'walid.chaouch@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Ines Tlili',        'ines.tlili@aidaa.com',        '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Omar Baccar',       'omar.baccar@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Salma Ouertani',    'salma.ouertani@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Fares Boughanmi',   'fares.boughanmi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Nadya Oueslati',    'nadya.oueslati@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Bassem Letaief',    'bassem.letaief@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Dorsaf Ayari',      'dorsaf.ayari@aidaa.com',      '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Mourad Karray',     'mourad.karray@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Hela Ghannouchi',   'hela.ghannouchi@aidaa.com',   '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Zied Labidi',       'zied.labidi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved'),
+('Nadia Sfaxi',       'nadia.sfaxi@aidaa.com',       '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1, 'approved')
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1, status = 'approved';
 
 -- ============================================================================
 -- Enfants supplementaires (6 par professionnel existant + 7 pour Amina Chaabane)
