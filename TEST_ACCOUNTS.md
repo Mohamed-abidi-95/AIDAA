@@ -1,303 +1,124 @@
-# 🔐 AIDAA - TEST ACCOUNTS & CREDENTIALS
+# AIDAA — Comptes de test
 
-**Date:** April 4, 2026  
-**Status:** ✅ All Accounts Created & Verified  
-**Last Updated:** [Current Session]
+> Importer `setup_complete.sql` dans phpMyAdmin pour créer tous ces comptes.
 
 ---
 
-## 📋 ALL TEST ACCOUNTS
+## 👤 Admin
 
-### Account 1: ADMIN
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Email:         admin@aidaa.com
-Password:      admin123
-Role:          admin
-User ID:       1
-Status:        ✅ ACTIVE
-Dashboard:     http://localhost:5173/admin/dashboard
-Features:      - Upload content
-               - Manage users
-               - View system stats
-               - Create users
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-### Account 2: PARENT
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Email:         parent@aidaa.com
-Password:      parent123
-Role:          parent
-User ID:       5
-Status:        ✅ ACTIVE
-Dashboard:     http://localhost:5173/role-selection (puis /parent/dashboard ou /child)
-Child:         Test Child 1 (age 5)
-Child ID:      3
-Features:      - View children
-               - Track activities
-               - Read medical notes
-               - Message doctor
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
-
-### Account 3: PROFESSIONAL/DOCTOR
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Email:         professional@aidaa.com
-Password:      professional123
-Role:          professional
-User ID:       6
-Status:        ✅ ACTIVE
-Dashboard:     http://localhost:5173/professional/dashboard
-Features:      - Select patients
-               - View activity logs
-               - Write notes
-               - Message parents
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+| Nom | Email | Mot de passe |
+|-----|-------|-------------|
+| Admin AIDAA | admin@aidaa.com | admin123 |
 
 ---
 
-## 🧪 TESTING FLOW
+## 👨‍👩‍👧 Parents — mot de passe : `parent123`
 
-### Step 1: Admin Login Test
-```
-1. Go to: http://localhost:5173
-2. Click: "Login"
-3. Email: admin@aidaa.com
-4. Password: admin123
-5. Click: "LOGIN"
-6. ✅ Expected: Redirect to /admin/dashboard
-   - See: "Admin Panel" header
-   - See: Upload, Users, Content tabs
-```
-
-### Step 2: Parent Login Test
-```
-1. Go to: http://localhost:5173
-2. Click: "Logout" (if still logged in)
-3. Click: "Login"
-4. Email: parent@aidaa.com
-5. Password: parent123
-6. Click: "LOGIN"
-7. ✅ Expected: Redirect to /role-selection
-   - Choose "Parent Mode" to go to /parent/dashboard
-   - Choose "Child Mode" to go to /child
-```
-
-### Step 3: Professional Login Test
-```
-1. Go to: http://localhost:5173
-2. Click: "Logout" (if still logged in)
-3. Click: "Login"
-4. Email: professional@aidaa.com
-5. Password: professional123
-6. Click: "LOGIN"
-7. ✅ Expected: Redirect to /professional/dashboard
-   - See: "Professional Portal" header
-   - See: Patient selector
-   - See: Activity tabs
-```
+| Nom | Email | Enfant(s) | Professionnel lié |
+|-----|-------|-----------|-------------------|
+| Parent Test | parent@aidaa.com | Test Child 1 | Dr. Professional Test |
+| Sarah Johnson | sarah.johnson@aidaa.com | Emma Johnson, Lucas Johnson | Dr. Abderrahman Sbai |
+| Mohamed Trabelsi | mohamed.trabelsi@aidaa.com | Youssef Trabelsi | Dr. Fatima Mansour |
+| Leila Ben Ali | leila.benali@aidaa.com | Nour Ben Ali | Dr. Karim Hamdi |
+| Amine Bouazizi | amine.bouazizi@aidaa.com | Adam Bouazizi | Dr. Professional Test |
+| Fatma Jebali | fatma.jebali@aidaa.com | Lina Jebali | Dr. Professional Test |
+| Karim Zouari | karim.zouari@aidaa.com | Hamza Zouari | Dr. Professional Test |
+| Sana Maaref | sana.maaref@aidaa.com | Yasmine Maaref | Dr. Professional Test |
+| Nabil Ferchichi | nabil.ferchichi@aidaa.com | Sami Ferchichi | Dr. Professional Test |
+| Rania Mhiri | rania.mhiri@aidaa.com | Dina Mhiri | Dr. Professional Test |
+| Sofiane Khelifi | sofiane.khelifi@aidaa.com | Mehdi Khelifi | Dr. Abderrahman Sbai |
+| Amira Sassi | amira.sassi@aidaa.com | Rym Sassi | Dr. Abderrahman Sbai |
+| Bilel Gharbi | bilel.gharbi@aidaa.com | Karim Gharbi | Dr. Abderrahman Sbai |
+| Olfa Belhaj | olfa.belhaj@aidaa.com | Sara Belhaj | Dr. Abderrahman Sbai |
+| Tarek Haddad | tarek.haddad@aidaa.com | Anas Haddad | Dr. Abderrahman Sbai |
+| Mouna Dridi | mouna.dridi@aidaa.com | Amir Dridi | Dr. Fatima Mansour |
+| Yassine Chebbi | yassine.chebbi@aidaa.com | Ghofrane Chebbi | Dr. Fatima Mansour |
+| Rim Nasri | rim.nasri@aidaa.com | Ziad Nasri | Dr. Fatima Mansour |
+| Khaled Rejeb | khaled.rejeb@aidaa.com | Farah Rejeb | Dr. Fatima Mansour |
+| Sonia Hammami | sonia.hammami@aidaa.com | Wassim Hammami | Dr. Fatima Mansour |
+| Adel Bouslama | adel.bouslama@aidaa.com | Nour Bouslama | Dr. Fatima Mansour |
+| Hajer Khalfallah | hajer.khalfallah@aidaa.com | Malek Khalfallah | Dr. Karim Hamdi |
+| Walid Chaouch | walid.chaouch@aidaa.com | Islem Chaouch | Dr. Karim Hamdi |
+| Ines Tlili | ines.tlili@aidaa.com | Cyrine Tlili | Dr. Karim Hamdi |
+| Omar Baccar | omar.baccar@aidaa.com | Rami Baccar | Dr. Karim Hamdi |
+| Salma Ouertani | salma.ouertani@aidaa.com | Ghada Ouertani | Dr. Karim Hamdi |
+| Fares Boughanmi | fares.boughanmi@aidaa.com | Seif Boughanmi | Dr. Karim Hamdi |
+| Nadya Oueslati | nadya.oueslati@aidaa.com | Lara Oueslati | Dr. Amina Chaabane |
+| Bassem Letaief | bassem.letaief@aidaa.com | Imed Letaief | Dr. Amina Chaabane |
+| Dorsaf Ayari | dorsaf.ayari@aidaa.com | Malak Ayari | Dr. Amina Chaabane |
+| Mourad Karray | mourad.karray@aidaa.com | Skander Karray | Dr. Amina Chaabane |
+| Hela Ghannouchi | hela.ghannouchi@aidaa.com | Alia Ghannouchi | Dr. Amina Chaabane |
+| Zied Labidi | zied.labidi@aidaa.com | Chaima Labidi | Dr. Amina Chaabane |
+| Nadia Sfaxi | nadia.sfaxi@aidaa.com | Tarek Sfaxi | Dr. Amina Chaabane |
 
 ---
 
-## 📊 DATABASE VERIFICATION
+## 🩺 Professionnels — mot de passe : `professional123`
 
-### View All Users
-```sql
-SELECT id, name, email, role, is_active FROM users;
-```
-
-**Expected Output:**
-```
-id | name                    | email                    | role           | is_active
-1  | Admin Test              | admin@aidaa.com          | admin          | 1
-5  | Parent Test             | parent@aidaa.com         | parent         | 1
-6  | Dr. Professional Test   | professional@aidaa.com   | professional   | 1
-```
-
-### View Children
-```sql
-SELECT c.id, c.name, c.age, u.email as parent_email 
-FROM children c 
-JOIN users u ON c.parent_id = u.id;
-```
-
-**Expected Output:**
-```
-id | name           | age | parent_email
-3  | Test Child 1   | 5   | parent@aidaa.com
-```
+| Nom | Email | Spécialité | Enfants suivis |
+|-----|-------|-----------|----------------|
+| Dr. Professional Test | professional@aidaa.com | Orthophonie | Test Child 1, Adam Bouazizi, Lina Jebali, Hamza Zouari, Yasmine Maaref, Sami Ferchichi, Dina Mhiri |
+| Dr. Abderrahman Sbai | abderrahman.sbai@aidaa.com | Psychologie | Emma Johnson, Lucas Johnson, Mehdi Khelifi, Rym Sassi, Karim Gharbi, Sara Belhaj, Anas Haddad |
+| Dr. Fatima Mansour | fatima.mansour@aidaa.com | Orthopedagogie | Youssef Trabelsi, Amir Dridi, Ghofrane Chebbi, Ziad Nasri, Farah Rejeb, Wassim Hammami, Nour Bouslama |
+| Dr. Karim Hamdi | karim.hamdi@aidaa.com | Neuropsychologie | Nour Ben Ali, Malek Khalfallah, Islem Chaouch, Cyrine Tlili, Rami Baccar, Ghada Ouertani, Seif Boughanmi |
+| Dr. Amina Chaabane | amina.chaabane@aidaa.com | Ergotherapie | Lara Oueslati, Imed Letaief, Malak Ayari, Skander Karray, Alia Ghannouchi, Chaima Labidi, Tarek Sfaxi |
 
 ---
 
-## 🔄 CREATE NEW TEST ACCOUNTS
+## 🚀 Lancer le projet (PC de ton ami)
 
-### Create Another Parent
+### 1. Cloner le repo
+```bash
+git clone https://github.com/Mohamed-abidi-95/AIDAA.git
+cd AIDAA
+```
+
+### 2. Importer la base de données
+- Ouvrir **phpMyAdmin**
+- Supprimer `aidaa_db` si elle existe déjà
+- Importer `setup_complete.sql` → tout sera créé automatiquement
+
+### 3. Configurer le `.env` backend
+Créer le fichier `backend/.env` :
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=aidaa_db
+JWT_SECRET=aidaa_secret_key
+PORT=5000
+```
+
+### 4. Lancer le backend
 ```bash
 cd backend
-node insert-parent.js
-# Creates: parent@aidaa.com / parent123
+npm install
+npm start
+# → http://localhost:5000/health
 ```
 
-### Create Another Professional
+### 5. Lancer le frontend
 ```bash
-cd backend
-node insert-professional.js
-# Creates: professional@aidaa.com / professional123
-```
-
-### Manually via MySQL
-```sql
-USE aidaa_db;
-
--- Create parent
-INSERT INTO users (name, email, password, role, is_active)
-VALUES (
-  'Another Parent',
-  'another-parent@aidaa.com',
-  '$2a$12$rZjzKsF.wQg0V5zQz7lfH.2JGvKQHQrQsqGZqP7Jc9kQqM0HvLQvC',  -- password: parent123
-  'parent',
-  1
-);
-```
-
----
-
-## 🎮 TEST FEATURES FOR EACH ROLE
-
-### Admin Features to Test
-- [ ] Login & redirect to admin panel
-- [ ] Upload content (video/audio/image)
-- [ ] View all content
-- [ ] View all users
-- [ ] Create new users
-- [ ] Edit users
-
-### Parent Features to Test
-- [ ] Login & redirect to parent dashboard
-- [ ] Select child from dropdown
-- [ ] View activity summary (games, time, score)
-- [ ] View recent activities
-- [ ] View medical notes from doctor
-- [ ] See child information
-
-### Professional Features to Test
-- [ ] Login & redirect to professional dashboard
-- [ ] Select patient from dropdown
-- [ ] View patient information
-- [ ] View patient activity logs
-- [ ] Add clinical notes
-- [ ] Edit existing notes
-
----
-
-## 🚨 IF LOGIN FAILS
-
-### Error: "Invalid email or password"
-```bash
-# Option 1: Recreate the user
-node backend/insert-parent.js
-
-# Option 2: Verify password hash
-mysql -u root aidaa_db
-SELECT email, password FROM users WHERE email = 'parent@aidaa.com';
-
-# Option 3: Check database connection
-# Verify backend/.env has correct credentials
-```
-
-### Error: "Cannot connect to server"
-```bash
-# Verify backend is running
-cd backend
-npm run dev
-
-# Check port 5000 is free
-netstat -ano | findstr :5000
-```
-
-### Error: "Page not found after login"
-```bash
-# Verify frontend is running
 cd frontend
+npm install
 npm run dev
-
-# Check browser console for errors
-# F12 → Console tab
+# → http://localhost:5173
 ```
 
 ---
 
-## 📝 PASSWORD HASHING INFO
+## 📊 Statistiques base de données
 
-All passwords are hashed using **bcryptjs** with 12 salt rounds.
-
-**Hashed passwords in database:**
-```
-admin123:           $2a$12$C7OtpVjQ6tqp6oHJfH0dCez9JlJwxW0uFqRvMKLQvN8J5kQqM0HvLQvC
-parent123:          $2a$12$rZjzKsF.wQg0V5zQz7lfH.2JGvKQHQrQsqGZqP7Jc9kQqM0HvLQvC
-professional123:    $2a$12$sAzK0tQr8uHsP9wXyZ1nG.3MqLpQvJkRsZaB1cQdEeFfGhIjKlMnOp
-```
-
----
-
-## ✅ SUCCESS INDICATORS
-
-When everything is working correctly:
-
-1. ✅ Can login with all 3 accounts
-2. ✅ Each account redirects to correct dashboard
-3. ✅ No console errors (F12 → Console)
-4. ✅ Backend logs show successful connections
-5. ✅ Database queries return correct data
-6. ✅ Can switch between accounts (logout & login)
-
----
-
-## 🎯 WHAT'S NEXT
-
-1. Explore Admin Panel
-   - Upload a video/audio
-   - Create new users
-   - Manage content
-
-2. Explore Parent Dashboard
-   - View child activities
-   - Check medical notes
-   - Message professional
-
-3. Explore Professional Dashboard
-   - View assigned patients
-   - Add clinical notes
-   - Monitor progress
-
-4. Test Child Space
-   - Play games
-   - Track scores
-   - View content
-
----
-
-## 📞 QUICK REFERENCE
-
-| Need | Action |
-|------|--------|
-| Test Admin | Use: admin@aidaa.com / admin123 |
-| Test Parent | Use: parent@aidaa.com / parent123 |
-| Test Professional | Use: professional@aidaa.com / professional123 |
-| Add More Users | Run: node insert-parent.js |
-| View Database | Run: mysql -u root aidaa_db |
-| Check Backend | Go to: http://localhost:5000/health |
-| Check Frontend | Go to: http://localhost:5173 |
-
----
-
-**All accounts are ready to use!** 🎉
-
-**Last verified:** April 4, 2026  
-**Database status:** ✅ All test data inserted  
-**Application status:** ✅ Ready for testing
-
+| Table | Quantité |
+|-------|----------|
+| Utilisateurs | 40 (1 admin + 34 parents + 5 pros) |
+| Participants (enfants/jeunes) | 35 |
+| Invitations actives | 34 |
+| Contenus (vidéo/audio/activité) | 11 |
+| Logs d'activités | ~280 |
+| Messages | 15 |
+| Notes professionnelles | ~40 |
+| Séquences guidées | 5 |
+| Symboles AAC | 30 |
+| Badges | 6 |
+| Jeux | 3 |
