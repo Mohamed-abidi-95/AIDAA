@@ -1,13 +1,8 @@
 -- ============================================================================
 -- AIDAA — setup_complete.sql
 -- ============================================================================
--- FICHIER UNIQUE : schéma complet + toutes les migrations + toutes les données
--- Importer directement dans phpMyAdmin (ou : mysql -u root < setup_complete.sql)
--- ============================================================================
--- Comptes créés :
---   admin@aidaa.com          / admin123
---   parent@aidaa.com         / parent123
---   professional@aidaa.com   / professional123
+-- FICHIER UNIQUE : schema complet + migrations + toutes les donnees de demo
+-- Importer dans phpMyAdmin ou : mysql -u root < setup_complete.sql
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS aidaa_db
@@ -52,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_children_parent_id ON children(parent_id);
 CREATE TABLE IF NOT EXISTS content (
   id                   INT AUTO_INCREMENT PRIMARY KEY,
   title                VARCHAR(200) NOT NULL,
-  type                 ENUM('video','activity') NOT NULL,
+  type                 ENUM('video','audio','activity') NOT NULL DEFAULT 'video',
   category             VARCHAR(100),
   category_color       VARCHAR(20)  DEFAULT '#f97316',
   age_group            VARCHAR(50),
@@ -64,9 +59,13 @@ CREATE TABLE IF NOT EXISTS content (
   steps                INT          DEFAULT NULL,
   minutes              INT          DEFAULT NULL,
   emoji_color          VARCHAR(20)  DEFAULT NULL,
+  language             VARCHAR(10)  NOT NULL DEFAULT 'fr',
   participant_category ENUM('enfant','jeune','adulte','tous') NOT NULL DEFAULT 'tous',
   created_at           TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE content MODIFY COLUMN type ENUM('video','audio','activity') NOT NULL DEFAULT 'video';
+ALTER TABLE content ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER emoji_color;
 
 -- ============================================================================
 -- TABLE : activity_logs
@@ -81,7 +80,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   duration_seconds INT          DEFAULT 0,
   date             TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (child_id)   REFERENCES children(id) ON DELETE CASCADE,
-  FOREIGN KEY (content_id) REFERENCES content(id)  ON DELETE CASCADE
+  FOREIGN KEY (content_id) REFERENCES content(id)  ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX IF NOT EXISTS idx_activity_logs_child_id   ON activity_logs(child_id);
@@ -178,7 +177,7 @@ CREATE TABLE IF NOT EXISTS sequence_steps (
   step_number      INT NOT NULL,
   title            VARCHAR(200) NOT NULL,
   description      TEXT,
-  emoji            VARCHAR(20)  DEFAULT '▶️',
+  emoji            VARCHAR(20)  DEFAULT '▶',
   duration_seconds INT          DEFAULT 60,
   FOREIGN KEY (sequence_id) REFERENCES guided_sequences(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -190,7 +189,7 @@ CREATE TABLE IF NOT EXISTS aac_symbols (
   id                   INT AUTO_INCREMENT PRIMARY KEY,
   label                VARCHAR(100) NOT NULL,
   emoji                VARCHAR(20)  NOT NULL,
-  category             VARCHAR(50)  NOT NULL DEFAULT 'Général',
+  category             VARCHAR(50)  NOT NULL DEFAULT 'General',
   participant_category ENUM('enfant','jeune','adulte','tous') NOT NULL DEFAULT 'tous',
   color                VARCHAR(20)  DEFAULT '#3b82f6',
   sort_order           INT          DEFAULT 0
@@ -243,207 +242,326 @@ CREATE INDEX IF NOT EXISTS idx_prof_inv_prof   ON professional_invitations(profe
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================================
--- DONNÉES : Utilisateurs (mots de passe hashés avec bcryptjs 12 rounds)
+-- DONNEES : Utilisateurs
+-- admin123        = $2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u
+-- parent123       = $2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym
+-- professional123 = $2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou
 -- ============================================================================
--- admin@aidaa.com          → admin123
--- parent@aidaa.com         → parent123
--- professional@aidaa.com   → professional123
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Admin Test', 'admin@aidaa.com',
-        '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u',
-        'admin', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u',
-  is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Admin AIDAA', 'admin@aidaa.com', '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u', 'admin', NULL, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Parent Test', 'parent@aidaa.com',
-        '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym',
-        'parent', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym',
-  is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Parent Test',      'parent@aidaa.com',           '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Sarah Johnson',    'sarah.johnson@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Mohamed Trabelsi', 'mohamed.trabelsi@aidaa.com', '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
+('Leila Ben Ali',    'leila.benali@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
 
-INSERT INTO users (name, email, password, role, is_active)
-VALUES ('Dr. Professional Test', 'professional@aidaa.com',
-        '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou',
-        'professional', 1)
-ON DUPLICATE KEY UPDATE
-  password  = '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou',
-  is_active = 1;
+INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
+('Dr. Professional Test', 'professional@aidaa.com',      '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthophonie',      1),
+('Dr. Abderrahman Sbai',  'abderrahman.sbai@aidaa.com',  '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Psychologie',      1),
+('Dr. Fatima Mansour',    'fatima.mansour@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthopedagogie',   1),
+('Dr. Karim Hamdi',       'karim.hamdi@aidaa.com',       '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Neuropsychologie', 1),
+('Dr. Amina Chaabane',    'amina.chaabane@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Ergotherapie',     1)
+ON DUPLICATE KEY UPDATE password = VALUES(password), specialite = VALUES(specialite), is_active = 1;
 
 -- ============================================================================
--- DONNÉES : Enfant de test
+-- DONNEES : Enfants
 -- ============================================================================
+
 INSERT INTO children (parent_id, name, age, participant_category)
-SELECT id, 'Test Child 1', 5, 'enfant'
-FROM users
-WHERE email = 'parent@aidaa.com'
-  AND NOT EXISTS (
-    SELECT 1 FROM children c
-    JOIN users u ON c.parent_id = u.id
-    WHERE u.email = 'parent@aidaa.com' AND c.name = 'Test Child 1'
-  )
-LIMIT 1;
+SELECT u.id,'Test Child 1',5,'enfant' FROM users u WHERE u.email='parent@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Test Child 1') LIMIT 1;
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Emma Johnson',6,'enfant' FROM users u WHERE u.email='sarah.johnson@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Emma Johnson') LIMIT 1;
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Lucas Johnson',9,'enfant' FROM users u WHERE u.email='sarah.johnson@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Lucas Johnson') LIMIT 1;
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Youssef Trabelsi',7,'enfant' FROM users u WHERE u.email='mohamed.trabelsi@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Youssef Trabelsi') LIMIT 1;
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Nour Ben Ali',14,'jeune' FROM users u WHERE u.email='leila.benali@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Nour Ben Ali') LIMIT 1;
 
 -- ============================================================================
--- DONNÉES : Contenu (vidéos + activités)
+-- DONNEES : Invitations professionnelles
 -- ============================================================================
-INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, participant_category) VALUES
-('Apprendre à dire bonjour',   'video',    'Communication', '#f97316', '🗣️', '3 min', 'https://example.com/video1.mp4', 'Apprenez à dire bonjour poliment et avec des gestes amicaux',               '4-6', 1, 'tous'),
-('Reconnaître les émotions',   'video',    'Émotions',      '#f97316', '😊', '5 min', 'https://example.com/video2.mp4', 'Identifiez les différentes émotions : joie, tristesse, colère, peur',       '4-6', 1, 'tous'),
-('Jouer ensemble',             'video',    'Social',        '#f97316', '🧩', '4 min', 'https://example.com/video3.mp4', 'Les bénéfices du jeu social et comment jouer avec les autres',               '4-6', 1, 'tous'),
-('Préparer mon petit-déjeuner','video',    'Autonomie',     '#f97316', '🍎', '6 min', 'https://example.com/video4.mp4', 'Étapes pour préparer un petit-déjeuner sain',                               '4-6', 1, 'tous'),
-('Séquence du matin',          'activity', 'Autonomie',     '#f97316', '🌱', NULL,    'https://example.com/activity1',  'Routine matinale structurée avec étapes visuelles',                         '4-6', 1, 'tous'),
-('Créer avec les couleurs',    'activity', 'Créativité',    '#f97316', '🎨', NULL,    'https://example.com/activity2',  'Activité créative et sensorielle avec différentes couleurs',                 '4-6', 1, 'tous'),
-('Écouter et répéter',         'activity', 'Langage',       '#f97316', '🎵', NULL,    'https://example.com/activity3',  'Jeu d\'écoute et prononciation pour développer le langage',                  '4-6', 1, 'tous')
+
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id,pr.id,'active' FROM users p, users pr WHERE p.email='parent@aidaa.com' AND pr.email='professional@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id=p.id AND pi.professional_id=pr.id);
+
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id,pr.id,'active' FROM users p, users pr WHERE p.email='sarah.johnson@aidaa.com' AND pr.email='abderrahman.sbai@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id=p.id AND pi.professional_id=pr.id);
+
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id,pr.id,'active' FROM users p, users pr WHERE p.email='mohamed.trabelsi@aidaa.com' AND pr.email='fatima.mansour@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id=p.id AND pi.professional_id=pr.id);
+
+INSERT INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id,pr.id,'active' FROM users p, users pr WHERE p.email='leila.benali@aidaa.com' AND pr.email='karim.hamdi@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM professional_invitations pi WHERE pi.parent_id=p.id AND pi.professional_id=pr.id);
+
+-- ============================================================================
+-- DONNEES : Contenu (sans accents pour eviter erreurs d encodage)
+-- ============================================================================
+INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, language, participant_category) VALUES
+('Apprendre a dire bonjour',   'video',    'Communication', '#f97316', '🗣', '3 min', 'https://example.com/video1.mp4',  'Apprenez a dire bonjour poliment',             '4-6',  1, 'fr', 'tous'),
+('Reconnaitre les emotions',   'video',    'Emotions',      '#f97316', '😊', '5 min', 'https://example.com/video2.mp4',  'Identifiez joie, tristesse, colere, peur',    '4-6',  1, 'fr', 'tous'),
+('Jouer ensemble',             'video',    'Social',        '#f97316', '🧩', '4 min', 'https://example.com/video3.mp4',  'Les benefices du jeu social',                  '4-6',  1, 'fr', 'tous'),
+('Preparer mon petit-dejeuner','video',    'Autonomie',     '#f97316', '🍎', '6 min', 'https://example.com/video4.mp4',  'Etapes pour preparer un petit-dejeuner sain', '4-6',  1, 'fr', 'tous'),
+('Sequence du matin',          'activity', 'Autonomie',     '#f97316', '🌱', NULL,    'https://example.com/activity1',   'Routine matinale avec etapes visuelles',       '4-6',  1, 'fr', 'tous'),
+('Creer avec les couleurs',    'activity', 'Creativite',    '#f97316', '🎨', NULL,    'https://example.com/activity2',   'Activite creative et sensorielle',             '4-6',  1, 'fr', 'tous'),
+('Ecouter et repeter',         'audio',    'Langage',       '#f97316', '🎵', '2 min', 'https://example.com/audio1.mp3',  'Jeu ecoute et prononciation',                  '4-6',  1, 'fr', 'tous'),
+('Les chiffres en arabe',      'video',    'Langage',       '#3b82f6', '🔢', '4 min', 'https://example.com/video5.mp4',  'Apprendre les chiffres de 1 a 10 en arabe',   '4-6',  1, 'ar', 'tous'),
+('Marhba - Dire bonjour',      'audio',    'Communication', '#10b981', '👋', '3 min', 'https://example.com/audio2.mp3',  'Apprendre a saluer en dialecte tunisien',      '4-6',  1, 'tn', 'tous'),
+('Gestion du stress',          'video',    'Emotions',      '#8b5cf6', '😤', '7 min', 'https://example.com/video6.mp4',  'Techniques relaxation et gestion emotions',    '7-12', 2, 'fr', 'jeune'),
+('Autonomie au quotidien',     'activity', 'Autonomie',     '#f97316', '🏠', NULL,    'https://example.com/activity3',   'Activites pour developper l autonomie',        '7-12', 2, 'fr', 'jeune')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================
--- DONNÉES : Jeux
+-- DONNEES : Jeux
 -- ============================================================================
 INSERT INTO games (title, description, type, instructions) VALUES
-('Color Match',       'Cliquer la couleur qui correspond au mot affiché',  'color_match',       'Lisez le nom de la couleur et cliquez sur le bon bouton.'),
-('Memory Game',       'Retrouver les paires de cartes identiques',          'memory',            'Cliquez sur les cartes pour les retourner et trouver les paires.'),
-('Sound Recognition', 'Écouter un son et sélectionner la bonne image',      'sound_recognition', 'Écoutez le son joué et cliquez sur l\'image correspondante.')
+('Color Match',       'Cliquer la couleur qui correspond au mot',  'color_match',       'Lisez le nom de la couleur et cliquez sur le bon bouton.'),
+('Memory Game',       'Retrouver les paires de cartes identiques', 'memory',            'Cliquez sur les cartes pour trouver les paires.'),
+('Sound Recognition', 'Ecouter un son et selectionner une image',  'sound_recognition', 'Ecoutez le son et cliquez sur l image correspondante.')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================
--- DONNÉES : Séquences guidées
+-- DONNEES : Sequences guidees
 -- ============================================================================
 INSERT INTO guided_sequences (title, description, emoji, participant_category, duration_minutes, difficulty) VALUES
-('Routine du matin',          'Apprendre la routine du matin étape par étape', '🌅', 'enfant', 10, 'facile'),
-('Lavage des mains',          'Comment bien se laver les mains',               '🧼', 'tous',    5, 'facile'),
-('Préparation repas simple',  'Préparer un sandwich ou une collation',          '🥪', 'jeune',  20, 'moyen'),
-('Prise des transports',      'Utiliser les transports en commun',              '🚌', 'adulte', 30, 'moyen'),
-('Gestion des émotions',      'Reconnaître et exprimer ses émotions',           '😊', 'tous',   15, 'facile')
+('Routine du matin',         'Apprendre la routine du matin etape par etape', '🌅', 'enfant', 10, 'facile'),
+('Lavage des mains',         'Comment bien se laver les mains',               '🧼', 'tous',    5, 'facile'),
+('Preparation repas simple', 'Preparer un sandwich ou une collation',         '🥪', 'jeune',  20, 'moyen'),
+('Prise des transports',     'Utiliser les transports en commun',             '🚌', 'adulte', 30, 'moyen'),
+('Gestion des emotions',     'Reconnaitre et exprimer ses emotions',          '😊', 'tous',   15, 'facile')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================
--- DONNÉES : Étapes des séquences
+-- DONNEES : Etapes sequences
 -- ============================================================================
-
--- Routine du matin
 INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.step_number, v.title, v.description, v.emoji, v.duration_seconds
-FROM guided_sequences s
+SELECT s.id, v.sn, v.t, v.d, v.e, v.ds FROM guided_sequences s
 JOIN (
-  SELECT 1 AS step_number, 'Se réveiller'      AS title, 'Ouvrir les yeux et s\'étirer'     AS description, '☀️' AS emoji, 30  AS duration_seconds UNION ALL
-  SELECT 2, 'Se lever',          'Mettre les pieds par terre',              '🛏️', 30  UNION ALL
-  SELECT 3, 'Se laver le visage','Aller à la salle de bain',               '🚿', 120 UNION ALL
-  SELECT 4, 'S\'habiller',       'Choisir et mettre ses vêtements',         '👕', 180 UNION ALL
-  SELECT 5, 'Petit déjeuner',    'Manger et boire',                         '🥛', 600
+  SELECT 1 sn,'Se reveiller' t,'Ouvrir les yeux' d,'☀' e,30 ds UNION ALL
+  SELECT 2,'Se lever','Mettre les pieds par terre','🛏',30 UNION ALL
+  SELECT 3,'Se laver le visage','Aller a la salle de bain','🚿',120 UNION ALL
+  SELECT 4,'S habiller','Choisir et mettre ses vetements','👕',180 UNION ALL
+  SELECT 5,'Petit dejeuner','Manger et boire','🥛',600
 ) v ON 1=1
-WHERE s.title = 'Routine du matin'
-  AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
+WHERE s.title='Routine du matin' AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id=s.id);
 
--- Lavage des mains
 INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.step_number, v.title, v.description, v.emoji, v.duration_seconds
-FROM guided_sequences s
+SELECT s.id, v.sn, v.t, v.d, v.e, v.ds FROM guided_sequences s
 JOIN (
-  SELECT 1 AS step_number, 'Ouvrir le robinet' AS title, 'Tourner le robinet'              AS description, '🚰' AS emoji, 10 AS duration_seconds UNION ALL
-  SELECT 2, 'Mouiller',          'Mettre les mains sous l\'eau',            '💧', 10 UNION ALL
-  SELECT 3, 'Savonner',          'Prendre du savon et frotter',             '🧴', 20 UNION ALL
-  SELECT 4, 'Rincer',            'Enlever tout le savon',                   '💧', 15 UNION ALL
-  SELECT 5, 'Sécher',            'Utiliser une serviette propre',           '🧻', 10
+  SELECT 1 sn,'Ouvrir le robinet' t,'Tourner le robinet' d,'🚰' e,10 ds UNION ALL
+  SELECT 2,'Mouiller','Mettre les mains sous l eau','💧',10 UNION ALL
+  SELECT 3,'Savonner','Prendre du savon et frotter','🧴',20 UNION ALL
+  SELECT 4,'Rincer','Enlever tout le savon','💧',15 UNION ALL
+  SELECT 5,'Secher','Utiliser une serviette propre','🧻',10
 ) v ON 1=1
-WHERE s.title = 'Lavage des mains'
-  AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
+WHERE s.title='Lavage des mains' AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id=s.id);
 
--- Gestion des émotions
 INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.step_number, v.title, v.description, v.emoji, v.duration_seconds
-FROM guided_sequences s
+SELECT s.id, v.sn, v.t, v.d, v.e, v.ds FROM guided_sequences s
 JOIN (
-  SELECT 1 AS step_number, 'Identifier'         AS title, 'Comment est-ce que je me sens ?' AS description, '🤔' AS emoji, 30 AS duration_seconds UNION ALL
-  SELECT 2, 'Respirer',          'Prendre 3 grandes inspirations',          '💨', 30 UNION ALL
-  SELECT 3, 'Exprimer',          'Dire ce que l\'on ressent',               '💬', 60 UNION ALL
-  SELECT 4, 'Chercher solution', 'Que puis-je faire ?',                     '💡', 60 UNION ALL
-  SELECT 5, 'Demander aide',     'Parler à quelqu\'un de confiance',        '🤝', 30
+  SELECT 1 sn,'Identifier' t,'Comment est-ce que je me sens ?' d,'🤔' e,30 ds UNION ALL
+  SELECT 2,'Respirer','Prendre 3 grandes inspirations','💨',30 UNION ALL
+  SELECT 3,'Exprimer','Dire ce que l on ressent','💬',60 UNION ALL
+  SELECT 4,'Chercher solution','Que puis-je faire ?','💡',60 UNION ALL
+  SELECT 5,'Demander aide','Parler a quelqu un de confiance','🤝',30
 ) v ON 1=1
-WHERE s.title = 'Gestion des émotions'
-  AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
+WHERE s.title='Gestion des emotions' AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id=s.id);
 
 -- ============================================================================
--- DONNÉES : Symboles AAC
+-- DONNEES : Logs d activites (analytics)
+-- SYNTAXE CORRECTE : sous-table v en premier dans FROM, puis JOIN sur les vraies tables
+-- ============================================================================
+INSERT INTO activity_logs (child_id, content_id, status, action, score, duration_seconds, date)
+SELECT c.id, ct.id, v.st, v.ac, v.sc, v.ds, DATE_SUB(NOW(), INTERVAL v.da DAY)
+FROM (
+  SELECT 'Test Child 1' cn,'parent@aidaa.com' pe,'Apprendre a dire bonjour' ct,'completed' st,'content_accessed' ac,20 sc,180 ds,28 da UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Reconnaitre les emotions',    'completed','content_accessed',30,300,25 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Jouer ensemble',               'completed','content_accessed',25,240,22 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Sequence du matin',            'completed','activity_done',   35,420,20 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Ecouter et repeter',           'completed','content_accessed',15,120,18 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Apprendre a dire bonjour',     'completed','content_accessed',20,180,15 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Creer avec les couleurs',      'completed','activity_done',   40,600,12 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Reconnaitre les emotions',     'completed','content_accessed',30,300,10 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Preparer mon petit-dejeuner',  'started',  'content_accessed',10,90, 8 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Jouer ensemble',               'completed','content_accessed',25,240, 6 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Ecouter et repeter',           'completed','content_accessed',15,120, 5 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Sequence du matin',            'completed','activity_done',   35,420, 3 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Creer avec les couleurs',      'completed','activity_done',   40,600, 2 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Les chiffres en arabe',        'completed','content_accessed',20,240, 1 UNION ALL
+  SELECT 'Test Child 1','parent@aidaa.com','Apprendre a dire bonjour',     'completed','content_accessed',20,180, 0 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Apprendre a dire bonjour','completed','content_accessed',20,180,20 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Reconnaitre les emotions', 'completed','content_accessed',30,300,18 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Jouer ensemble',            'completed','content_accessed',25,240,15 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Ecouter et repeter',        'completed','content_accessed',15,120,12 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Sequence du matin',         'completed','activity_done',   35,420, 9 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Creer avec les couleurs',   'completed','activity_done',   40,600, 6 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Marhba - Dire bonjour',     'completed','content_accessed',10,180, 4 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Apprendre a dire bonjour',  'completed','content_accessed',20,180, 2 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Reconnaitre les emotions',  'started',  'content_accessed',10,60,  1 UNION ALL
+  SELECT 'Emma Johnson','sarah.johnson@aidaa.com','Jouer ensemble',            'completed','content_accessed',25,240, 0 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Jouer ensemble',              'completed','content_accessed',25,240,14 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Sequence du matin',           'completed','activity_done',   35,420,11 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Les chiffres en arabe',       'completed','content_accessed',20,240, 8 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Ecouter et repeter',          'completed','content_accessed',15,120, 6 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Creer avec les couleurs',     'completed','activity_done',   40,600, 4 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Preparer mon petit-dejeuner', 'completed','content_accessed',25,360, 2 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Reconnaitre les emotions',    'completed','content_accessed',30,300, 1 UNION ALL
+  SELECT 'Youssef Trabelsi','mohamed.trabelsi@aidaa.com','Apprendre a dire bonjour',    'completed','content_accessed',20,180, 0 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Gestion du stress',       'completed','content_accessed',45,420,10 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Autonomie au quotidien',  'completed','activity_done',   50,720, 7 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Reconnaitre les emotions','completed','content_accessed',30,300, 5 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Jouer ensemble',          'completed','content_accessed',25,240, 3 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Gestion du stress',       'completed','content_accessed',45,420, 2 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Autonomie au quotidien',  'started',  'activity_done',   20,180, 1 UNION ALL
+  SELECT 'Nour Ben Ali','leila.benali@aidaa.com','Ecouter et repeter',      'completed','content_accessed',15,120, 0
+) v
+JOIN children c  ON c.name    = v.cn
+JOIN users    u  ON u.id      = c.parent_id AND u.email = v.pe
+JOIN content  ct ON ct.title  = v.ct;
+
+-- ============================================================================
+-- DONNEES : Messages
+-- SYNTAXE CORRECTE : sous-table v en premier dans FROM
+-- ============================================================================
+INSERT INTO messages (child_id, sender_id, receiver_id, content, created_at)
+SELECT ch.id, s.id, r.id, v.msg, DATE_SUB(NOW(), INTERVAL v.ha HOUR)
+FROM (
+  SELECT 'parent@aidaa.com' se,'professional@aidaa.com' re,'Test Child 1' cn,'Bonjour Dr. Professional, Test Child 1 a bien progresse cette semaine !' msg,48 ha UNION ALL
+  SELECT 'professional@aidaa.com','parent@aidaa.com','Test Child 1','Bonjour ! Il faut continuer a travailler sur la communication.',47 UNION ALL
+  SELECT 'parent@aidaa.com','professional@aidaa.com','Test Child 1','Il arrive maintenant a dire bonjour en regardant les gens !',46 UNION ALL
+  SELECT 'professional@aidaa.com','parent@aidaa.com','Test Child 1','Excellent ! Je recommande les exercices d ecoute 2 fois par semaine.',24 UNION ALL
+  SELECT 'parent@aidaa.com','professional@aidaa.com','Test Child 1','D accord, nous allons integrer ca dans sa routine. Merci !',23 UNION ALL
+  SELECT 'professional@aidaa.com','parent@aidaa.com','Test Child 1','De rien ! N hesitez pas si vous avez des questions.',22 UNION ALL
+  SELECT 'sarah.johnson@aidaa.com','abderrahman.sbai@aidaa.com','Emma Johnson','Bonjour Dr. Sbai, Emma a eu une journee difficile. Elle s est mise en colere.',36 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com','sarah.johnson@aidaa.com','Emma Johnson','Bonjour. Pouvez-vous me decrire ce qui s est passe ?',35 UNION ALL
+  SELECT 'sarah.johnson@aidaa.com','abderrahman.sbai@aidaa.com','Emma Johnson','Elle a eu du mal avec un changement de planning imprevu.',34 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com','sarah.johnson@aidaa.com','Emma Johnson','Normal pour TSA. Je conseille un planning visuel chaque matin.',12 UNION ALL
+  SELECT 'sarah.johnson@aidaa.com','abderrahman.sbai@aidaa.com','Emma Johnson','Merci ! Nous allons essayer des demain.',11 UNION ALL
+  SELECT 'mohamed.trabelsi@aidaa.com','fatima.mansour@aidaa.com','Youssef Trabelsi','Salam Dr. Mansour, Youssef a termine toutes ses activites cette semaine !',20 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com','mohamed.trabelsi@aidaa.com','Youssef Trabelsi','Mabrouk ! Son score moyen a augmente de 15 points ce mois-ci.',19 UNION ALL
+  SELECT 'mohamed.trabelsi@aidaa.com','fatima.mansour@aidaa.com','Youssef Trabelsi','Quelles activites recommandez-vous pour le mois prochain ?',5 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com','mohamed.trabelsi@aidaa.com','Youssef Trabelsi','Je recommande les activites de niveau 2, surtout Autonomie au quotidien. Il est pret !',4
+) v
+JOIN users    s  ON s.email = v.se
+JOIN users    r  ON r.email = v.re
+JOIN children ch ON ch.name = v.cn;
+
+-- ============================================================================
+-- DONNEES : Notes professionnelles
+-- SYNTAXE CORRECTE : sous-table v en premier dans FROM
+-- ============================================================================
+INSERT INTO notes (professional_id, child_id, content, date)
+SELECT pr.id, ch.id, v.msg, DATE_SUB(NOW(), INTERVAL v.da DAY)
+FROM (
+  SELECT 'professional@aidaa.com' pe,'Test Child 1' cn,'Seance : bonne concentration. Contact visuel 3 secondes. Progres notable.' msg,14 da UNION ALL
+  SELECT 'professional@aidaa.com','Test Child 1','Score moyen 28/50. Recommandation : augmenter la frequence des exercices ecoute.',7 UNION ALL
+  SELECT 'professional@aidaa.com','Test Child 1','Bilan mensuel positif. Maitrise des salutations. Prochaine etape : expressions emotions.',1 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com','Emma Johnson','Emma identifie joie et tristesse a 80%. Continuer les exercices cartes emotions.',10 UNION ALL
+  SELECT 'abderrahman.sbai@aidaa.com','Emma Johnson','Incident emotionnel signale. Recommandation : planning visuel quotidien.',5 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com','Youssef Trabelsi','Youssef realise sa routine du matin de facon independante 4 jours sur 7. Objectif 7/7.',8 UNION ALL
+  SELECT 'fatima.mansour@aidaa.com','Youssef Trabelsi','Bilan positif. Score total : 185 points. Pret pour activites niveau 2.',2 UNION ALL
+  SELECT 'karim.hamdi@aidaa.com','Nour Ben Ali','Nour applique la respiration profonde. Tres bonne progression sur gestion du stress.',6 UNION ALL
+  SELECT 'karim.hamdi@aidaa.com','Nour Ben Ali','Score gestion emotions : 75/100. Continuer les exercices d autonomie.',1
+) v
+JOIN users    pr ON pr.email = v.pe
+JOIN children ch ON ch.name  = v.cn;
+
+-- ============================================================================
+-- DONNEES : Symboles AAC
 -- ============================================================================
 INSERT INTO aac_symbols (label, emoji, category, participant_category, color, sort_order)
 SELECT * FROM (
-  -- Besoins
-  SELECT 'J\'ai faim'         AS label,'🍽️' AS emoji,'Besoins'  AS category,'tous'   AS participant_category,'#ef4444' AS color, 1 AS sort_order UNION ALL
-  SELECT 'J\'ai soif',              '💧','Besoins',  'tous',   '#3b82f6', 2 UNION ALL
-  SELECT 'Je veux dormir',          '😴','Besoins',  'tous',   '#8b5cf6', 3 UNION ALL
-  SELECT 'J\'ai mal',               '🤕','Besoins',  'tous',   '#f97316', 4 UNION ALL
-  SELECT 'Toilettes',               '🚻','Besoins',  'tous',   '#6b7280', 5 UNION ALL
-  SELECT 'J\'ai froid',             '🥶','Besoins',  'tous',   '#60a5fa', 6 UNION ALL
-  SELECT 'J\'ai chaud',             '🥵','Besoins',  'tous',   '#f87171', 7 UNION ALL
-  SELECT 'Je veux jouer',           '🎮','Besoins',  'tous',   '#10b981', 8 UNION ALL
-  SELECT 'Je veux de l\'aide',      '🙋','Besoins',  'tous',   '#f59e0b', 9 UNION ALL
-  -- Émotions
-  SELECT 'Je suis heureux',         '😊','Émotions', 'tous',   '#f59e0b', 1 UNION ALL
-  SELECT 'Je suis triste',          '😢','Émotions', 'tous',   '#60a5fa', 2 UNION ALL
-  SELECT 'Je suis en colère',       '😠','Émotions', 'tous',   '#ef4444', 3 UNION ALL
-  SELECT 'J\'ai peur',              '😨','Émotions', 'tous',   '#8b5cf6', 4 UNION ALL
-  SELECT 'Je suis fatigué',         '😴','Émotions', 'tous',   '#94a3b8', 5 UNION ALL
-  SELECT 'Je suis calme',           '😌','Émotions', 'tous',   '#34d399', 6 UNION ALL
-  SELECT 'J\'aime ça',              '❤️','Émotions', 'tous',   '#f43f5e', 7 UNION ALL
-  SELECT 'Je ne veux pas',          '🙅','Émotions', 'tous',   '#f97316', 8 UNION ALL
-  -- Actions
-  SELECT 'Arrêter',                 '✋','Actions',  'tous',   '#ef4444', 1 UNION ALL
-  SELECT 'Venir',                   '👋','Actions',  'tous',   '#3b82f6', 2 UNION ALL
-  SELECT 'Aider',                   '🤝','Actions',  'tous',   '#10b981', 3 UNION ALL
-  SELECT 'Montrer',                 '👉','Actions',  'tous',   '#f59e0b', 4 UNION ALL
-  SELECT 'Donner',                  '🎁','Actions',  'tous',   '#8b5cf6', 5 UNION ALL
-  SELECT 'Attendre',                '⏳','Actions',  'tous',   '#6b7280', 6 UNION ALL
-  SELECT 'Recommencer',             '🔄','Actions',  'tous',   '#06b6d4', 7 UNION ALL
-  -- Aliments
-  SELECT 'Eau',                     '💧','Aliments', 'tous',   '#3b82f6', 1 UNION ALL
-  SELECT 'Pain',                    '🍞','Aliments', 'tous',   '#f59e0b', 2 UNION ALL
-  SELECT 'Fruit',                   '🍎','Aliments', 'tous',   '#ef4444', 3 UNION ALL
-  SELECT 'Légumes',                 '🥦','Aliments', 'tous',   '#10b981', 4 UNION ALL
-  SELECT 'Lait',                    '🥛','Aliments', 'enfant', '#e2e8f0', 5 UNION ALL
-  SELECT 'Gâteau',                  '🎂','Aliments', 'enfant', '#ec4899', 6
+  SELECT 'J ai faim'        lbl,'🍽' ej,'Besoins'  cat,'tous'   pc,'#ef4444' col,1 so UNION ALL
+  SELECT 'J ai soif',           '💧','Besoins',  'tous',  '#3b82f6',2 UNION ALL
+  SELECT 'Je veux dormir',      '😴','Besoins',  'tous',  '#8b5cf6',3 UNION ALL
+  SELECT 'J ai mal',            '🤕','Besoins',  'tous',  '#f97316',4 UNION ALL
+  SELECT 'Toilettes',           '🚻','Besoins',  'tous',  '#6b7280',5 UNION ALL
+  SELECT 'J ai froid',          '🥶','Besoins',  'tous',  '#60a5fa',6 UNION ALL
+  SELECT 'J ai chaud',          '🥵','Besoins',  'tous',  '#f87171',7 UNION ALL
+  SELECT 'Je veux jouer',       '🎮','Besoins',  'tous',  '#10b981',8 UNION ALL
+  SELECT 'Je veux de l aide',   '🙋','Besoins',  'tous',  '#f59e0b',9 UNION ALL
+  SELECT 'Je suis heureux',     '😊','Emotions', 'tous',  '#f59e0b',1 UNION ALL
+  SELECT 'Je suis triste',      '😢','Emotions', 'tous',  '#60a5fa',2 UNION ALL
+  SELECT 'Je suis en colere',   '😠','Emotions', 'tous',  '#ef4444',3 UNION ALL
+  SELECT 'J ai peur',           '😨','Emotions', 'tous',  '#8b5cf6',4 UNION ALL
+  SELECT 'Je suis fatigue',     '😴','Emotions', 'tous',  '#94a3b8',5 UNION ALL
+  SELECT 'Je suis calme',       '😌','Emotions', 'tous',  '#34d399',6 UNION ALL
+  SELECT 'J aime ca',           '❤','Emotions', 'tous',  '#f43f5e',7 UNION ALL
+  SELECT 'Je ne veux pas',      '🙅','Emotions', 'tous',  '#f97316',8 UNION ALL
+  SELECT 'Arreter',             '✋','Actions',  'tous',  '#ef4444',1 UNION ALL
+  SELECT 'Venir',               '👋','Actions',  'tous',  '#3b82f6',2 UNION ALL
+  SELECT 'Aider',               '🤝','Actions',  'tous',  '#10b981',3 UNION ALL
+  SELECT 'Montrer',             '👉','Actions',  'tous',  '#f59e0b',4 UNION ALL
+  SELECT 'Donner',              '🎁','Actions',  'tous',  '#8b5cf6',5 UNION ALL
+  SELECT 'Attendre',            '⏳','Actions',  'tous',  '#6b7280',6 UNION ALL
+  SELECT 'Recommencer',         '🔄','Actions',  'tous',  '#06b6d4',7 UNION ALL
+  SELECT 'Eau',                 '💧','Aliments', 'tous',  '#3b82f6',1 UNION ALL
+  SELECT 'Pain',                '🍞','Aliments', 'tous',  '#f59e0b',2 UNION ALL
+  SELECT 'Fruit',               '🍎','Aliments', 'tous',  '#ef4444',3 UNION ALL
+  SELECT 'Legumes',             '🥦','Aliments', 'tous',  '#10b981',4 UNION ALL
+  SELECT 'Lait',                '🥛','Aliments', 'enfant','#e2e8f0',5 UNION ALL
+  SELECT 'Gateau',              '🎂','Aliments', 'enfant','#ec4899',6
 ) AS tmp
 WHERE NOT EXISTS (SELECT 1 FROM aac_symbols LIMIT 1);
 
 -- ============================================================================
--- DONNÉES : Badges
+-- DONNEES : Badges
 -- ============================================================================
 INSERT INTO badges (name, description, emoji, condition_type, condition_value, color)
 SELECT * FROM (
-  SELECT 'Premier pas'    AS name,'Première activité réalisée !' AS description,'🌟' AS emoji,'activities' AS condition_type, 1   AS condition_value,'#f59e0b' AS color UNION ALL
-  SELECT 'Explorateur',        '5 activités complétées',         '🧭','activities',  5,  '#3b82f6' UNION ALL
-  SELECT 'Étoile montante',    '10 activités complétées',        '⭐','activities', 10,  '#8b5cf6' UNION ALL
-  SELECT 'Champion',           '50 points gagnés',               '🏆','points',     50,  '#ef4444' UNION ALL
-  SELECT 'Super joueur',       '100 points gagnés',              '💎','points',    100,  '#06b6d4' UNION ALL
-  SELECT 'Grand champion',     '250 points gagnés',              '👑','points',    250,  '#f97316'
+  SELECT 'Premier pas'    nm,'Premiere activite realisee !' dsc,'🌟' ej,'activities' ct,1   cv,'#f59e0b' col UNION ALL
+  SELECT 'Explorateur',     '5 activites completees',      '🧭','activities',  5, '#3b82f6' UNION ALL
+  SELECT 'Etoile montante', '10 activites completees',     '⭐','activities', 10, '#8b5cf6' UNION ALL
+  SELECT 'Champion',        '50 points gagnes',            '🏆','points',     50, '#ef4444' UNION ALL
+  SELECT 'Super joueur',    '100 points gagnes',           '💎','points',    100, '#06b6d4' UNION ALL
+  SELECT 'Grand champion',  '250 points gagnes',           '👑','points',    250, '#f97316'
 ) AS tmp
 WHERE NOT EXISTS (SELECT 1 FROM badges LIMIT 1);
 
 -- ============================================================================
--- VÉRIFICATION FINALE
+-- VERIFICATION FINALE
 -- ============================================================================
-SELECT '✅ SETUP TERMINÉ' AS statut;
-SELECT CONCAT('👤 Utilisateurs : ', COUNT(*)) AS info FROM users WHERE email IN ('admin@aidaa.com','parent@aidaa.com','professional@aidaa.com');
-SELECT CONCAT('🎮 Jeux         : ', COUNT(*)) AS info FROM games;
-SELECT CONCAT('🗣️  AAC          : ', COUNT(*)) AS info FROM aac_symbols;
-SELECT CONCAT('📋 Séquences    : ', COUNT(*)) AS info FROM guided_sequences;
-SELECT CONCAT('🏅 Badges       : ', COUNT(*)) AS info FROM badges;
-SELECT CONCAT('👶 Enfants      : ', COUNT(*)) AS info FROM children;
+SELECT 'SETUP TERMINE' AS statut;
+SELECT CONCAT('Utilisateurs      : ', COUNT(*)) info FROM users;
+SELECT CONCAT('Parents           : ', COUNT(*)) info FROM users WHERE role='parent';
+SELECT CONCAT('Professionnels    : ', COUNT(*)) info FROM users WHERE role='professional';
+SELECT CONCAT('Participants      : ', COUNT(*)) info FROM children;
+SELECT CONCAT('Invitations       : ', COUNT(*)) info FROM professional_invitations;
+SELECT CONCAT('Contenus          : ', COUNT(*)) info FROM content;
+SELECT CONCAT('Activites logs    : ', COUNT(*)) info FROM activity_logs;
+SELECT CONCAT('Messages          : ', COUNT(*)) info FROM messages;
+SELECT CONCAT('Notes             : ', COUNT(*)) info FROM notes;
+SELECT CONCAT('Jeux              : ', COUNT(*)) info FROM games;
+SELECT CONCAT('AAC               : ', COUNT(*)) info FROM aac_symbols;
+SELECT CONCAT('Sequences         : ', COUNT(*)) info FROM guided_sequences;
+SELECT CONCAT('Badges            : ', COUNT(*)) info FROM badges;
 
 -- ============================================================================
--- RÉCAPITULATIF COMPTES
+-- RECAPITULATIF COMPTES
 -- ============================================================================
--- ┌─────────────────┬──────────────────────────────┬──────────────────┐
--- │ Rôle            │ Email                        │ Mot de passe     │
--- ├─────────────────┼──────────────────────────────┼──────────────────┤
--- │ Admin           │ admin@aidaa.com               │ admin123         │
--- │ Parent          │ parent@aidaa.com              │ parent123        │
--- │ Professionnel   │ professional@aidaa.com        │ professional123  │
--- └─────────────────┴──────────────────────────────┴──────────────────┘
--- Frontend : http://localhost:5173
--- Backend  : http://localhost:5000/health
--- ============================================================================
-
+-- Admin           : admin@aidaa.com                 / admin123
+-- Parent          : parent@aidaa.com                / parent123
+-- Parent          : sarah.johnson@aidaa.com         / parent123
+-- Parent          : mohamed.trabelsi@aidaa.com      / parent123
+-- Parent          : leila.benali@aidaa.com          / parent123
+-- Professionnel   : professional@aidaa.com          / professional123
+-- Professionnel   : abderrahman.sbai@aidaa.com      / professional123
+-- Professionnel   : fatima.mansour@aidaa.com        / professional123
+-- Professionnel   : karim.hamdi@aidaa.com           / profession
