@@ -65,7 +65,8 @@ const inviteProfessional = async (req, res) => {
 
     const profRecord = await query('SELECT password, is_active FROM users WHERE id = ?', [profId]);
     const alreadyActive = profRecord.length > 0 && profRecord[0].password && profRecord[0].is_active;
-    const initialStatus = alreadyActive ? 'active' : 'pending';
+    // Toujours 'pending' : le professionnel doit accepter explicitement
+    const initialStatus = 'pending';
 
     if (existingRows.length > 0) {
       const existing = existingRows[0];

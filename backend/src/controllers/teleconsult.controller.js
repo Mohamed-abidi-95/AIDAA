@@ -15,8 +15,9 @@ const getMyConsultations = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
+    const statusFilter = req.query.status || null;
 
-    const consultations = await teleconsultModel.getByUserId(userId, userRole);
+    const consultations = await teleconsultModel.getByUserId(userId, userRole, statusFilter);
 
     res.status(200).json({
       success: true,
@@ -77,6 +78,41 @@ const getById = async (req, res) => {
 };
 
 // ============================================================================
+// Get consultation room details
+// ============================================================================
+// GET /teleconsult/room/:roomId
+const getRoomDetails = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+
+    const consultation = await teleconsultModel.getByRoomId(roomId);
+    if (!consultation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Salle introuvable.',
+      });
+    }
+
+    // Passer en "in_progress" si on rejoint une séance planifiée
+    if (consultation.status === 'scheduled') {
+      await teleconsultModel.updateStatus(consultation.id, 'in_progress');
+      consultation.status = 'in_progress';
+    }
+
+    res.status(200).json({
+      success: true,
+      data: consultation,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur.',
+      error: error.message,
+    });
+  }
+};
+
+// ============================================================================
 // Create new consultation
 // ============================================================================
 // POST /teleconsult
@@ -124,7 +160,7 @@ const create = async (req, res) => {
     if (req.user.role !== 'admin') {
       const linkRows = await query(
         `SELECT 1 FROM professional_invitations
-         WHERE parent_id = ? AND professional_id = ? AND status != 'revoked'`,
+         WHERE parent_id = ? AND professional_id = ? AND status = 'active'`,
         [parentId, professionalId]
       );
       if (linkRows.length === 0) {
@@ -135,7 +171,7 @@ const create = async (req, res) => {
       }
     }
 
-    const consultationId = await teleconsultModel.create(
+    const result = await teleconsultModel.create(
       parentId,
       professionalId,
       date_time,
@@ -145,13 +181,12 @@ const create = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Consultation created successfully',
+      message: 'Téléconsultation planifiée.',
       data: {
-        id: consultationId,
-        parent_id: parentId,
-        professional_id: professionalId,
+        id: result.insertId,
+        roomId: result.roomId,
+        jitsiLink: result.jitsiLink,
         date_time,
-        meeting_link,
         notes,
       },
     });
@@ -161,6 +196,49 @@ const create = async (req, res) => {
       success: false,
       message: 'Failed to create consultation',
       error: error.message,
+    });
+  }
+};
+
+// ============================================================================
+// Update consultation status
+// ============================================================================
+// PUT /teleconsult/:id/status
+const updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const consultation = await teleconsultModel.getById(id);
+    if (!consultation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Consultation not found',
+      });
+    }
+
+    // Check permissions
+    if (
+      consultation.parent_id !== req.user.id &&
+      consultation.professional_id !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    await teleconsultModel.updateStatus(id, status);
+
+    res.status(200).json({
+      success: true,
+      message: `Statut mis à jour: "${status}"`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -209,15 +287,8 @@ const update = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Consultation updated successfully',
-      data: {
-        id,
-        date_time,
-        meeting_link,
-        notes,
-      },
     });
   } catch (error) {
-    console.error('Update consultation error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update consultation',
@@ -262,7 +333,6 @@ const deleteConsultation = async (req, res) => {
       message: 'Consultation deleted successfully',
     });
   } catch (error) {
-    console.error('Delete consultation error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete consultation',
@@ -274,7 +344,9 @@ const deleteConsultation = async (req, res) => {
 module.exports = {
   getMyConsultations,
   getById,
+  getRoomDetails,
   create,
+  updateStatus,
   update,
   deleteConsultation,
 };

@@ -23,30 +23,33 @@ interface Teleconsult {
   date_time: string;        // ISO datetime
   meeting_link: string | null;
   notes: string | null;
+  room_id?: string;
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   parent_name?: string;
   parent_email?: string;
+  professional_name?: string;
+  professional_email?: string;
   created_at?: string;
 }
 
-type SessionStatus = 'planned' | 'ongoing' | 'done';
+type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
 
-/** Derive status from date_time: past → done, today within 1h → ongoing, future → planned */
-const deriveStatus = (dt: string): SessionStatus => {
-  const d = new Date(dt);
-  const now = new Date();
-  const diffMs = d.getTime() - now.getTime();
-  const diffMin = diffMs / 60000;
-  if (diffMin < -60) return 'done';
-  if (diffMin <= 60) return 'ongoing';
-  return 'planned';
+/** Si status DB absent → dériver depuis date_time */
+const getEffectiveStatus = (t: Teleconsult): SessionStatus => {
+  if (t.status && t.status !== 'scheduled') return t.status;
+  const diffMin = (new Date(t.date_time).getTime() - Date.now()) / 60000;
+  if (diffMin < -90) return 'completed';
+  if (diffMin <= 30) return 'in_progress';
+  return 'scheduled';
 };
 
-const STATUS_LABELS: Record<SessionStatus, string> = {
-  planned: 'Planifiée',
-  ongoing: 'En cours',
-  done:    'Terminée',
+const STATUS_CFG: Record<SessionStatus, { label: string; bg: string; text: string; icon: string }> = {
+  scheduled:   { label: 'Planifiée',  bg: 'bg-blue-50',    text: 'text-blue-700',   icon: 'fa-calendar' },
+  in_progress: { label: 'En cours',   bg: 'bg-green-50',   text: 'text-green-700',  icon: 'fa-video' },
+  completed:   { label: 'Terminée',   bg: 'bg-slate-100',  text: 'text-slate-600',  icon: 'fa-check' },
+  cancelled:   { label: 'Annulée',    bg: 'bg-red-50',     text: 'text-red-700',    icon: 'fa-xmark' },
 };
 
 // ── Nav config (mirrors ProfessionalPage) ──────────────────────────────────
@@ -60,14 +63,12 @@ const NAV = [
 
 // ── Status badge ──────────────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: SessionStatus }) => {
-  const cls = status === 'ongoing'
-    ? 'bg-emerald-100 text-emerald-700'
-    : status === 'planned' ? 'bg-blue-100 text-blue-700'
-    : 'bg-slate-100 text-slate-600';
+  const cfg = STATUS_CFG[status] ?? STATUS_CFG['scheduled'];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cls}`}>
-      {status === 'ongoing' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-      {STATUS_LABELS[status]}
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+      {status === 'in_progress' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+      <i className={`fa-solid ${cfg.icon} text-[10px]`} />
+      {cfg.label}
     </span>
   );
 };
@@ -126,12 +127,12 @@ export const TeleconsultationList = (): JSX.Element => {
 
   const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Derived stats
-  const sessionsWithStatus = sessions.map(s => ({ ...s, status: deriveStatus(s.date_time) }));
-  const totalCount   = sessionsWithStatus.length;
-  const plannedCount = sessionsWithStatus.filter(s => s.status === 'planned').length;
-  const ongoingCount = sessionsWithStatus.filter(s => s.status === 'ongoing').length;
-  const doneCount    = sessionsWithStatus.filter(s => s.status === 'done').length;
+  // Derived stats using new status logic
+  const sessionsWithStatus = sessions.map(s => ({ ...s, _eff: getEffectiveStatus(s) }));
+  const totalCount     = sessionsWithStatus.length;
+  const plannedCount   = sessionsWithStatus.filter(s => s._eff === 'scheduled').length;
+  const ongoingCount   = sessionsWithStatus.filter(s => s._eff === 'in_progress').length;
+  const doneCount      = sessionsWithStatus.filter(s => s._eff === 'completed').length;
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -318,7 +319,10 @@ export const TeleconsultationList = (): JSX.Element => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sessionsWithStatus.map(session => (
+                    {sessionsWithStatus.map(session => {
+                      const eff = session._eff;
+                      const roomOrId = session.room_id || session.id;
+                      return (
                       <tr key={session.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-7 py-4">
                           <div className="flex items-center gap-3">
@@ -333,28 +337,29 @@ export const TeleconsultationList = (): JSX.Element => {
                         </td>
                         <td className="px-7 py-4 text-slate-600 text-sm">{fmtDate(session.date_time)}</td>
                         <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{fmtTime(session.date_time)}</td>
-                        <td className="px-7 py-4"><StatusBadge status={session.status} /></td>
+                        <td className="px-7 py-4"><StatusBadge status={eff} /></td>
                         <td className="px-7 py-4 text-slate-500 text-sm max-w-[200px] truncate">{session.notes || '—'}</td>
                         <td className="px-7 py-4">
                           <button
-                            onClick={() => navigate(`/professionnel/teleconsultation/${session.id}`)}
+                            onClick={() => navigate(`/professionnel/teleconsultation/${roomOrId}`)}
                             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border
-                              ${session.status === 'ongoing'
+                              ${eff === 'in_progress'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : session.status === 'planned'
+                                : eff === 'scheduled'
                                   ? 'bg-orange-50 text-brand-orange border-orange-200 hover:bg-orange-100'
                                   : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
                           >
-                            {session.status === 'planned'
+                            {eff === 'scheduled'
                               ? <><i className="fa-solid fa-play mr-1.5" />Démarrer</>
-                              : session.status === 'ongoing'
+                              : eff === 'in_progress'
                                 ? <><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />Rejoindre</>
                                 : <><i className="fa-solid fa-eye mr-1.5" />Voir</>
                             }
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

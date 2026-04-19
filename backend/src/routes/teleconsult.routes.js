@@ -21,6 +21,12 @@ router.use(auth);
 router.get('/my', teleconsultController.getMyConsultations);
 
 // ============================================================================
+// GET /teleconsult/room/:roomId
+// ============================================================================
+// Get consultation details by room ID
+router.get('/room/:roomId', teleconsultController.getRoomDetails);
+
+// ============================================================================
 // GET /teleconsult/:id
 // ============================================================================
 // Get consultation by ID
@@ -31,6 +37,12 @@ router.get('/:id', teleconsultController.getById);
 // ============================================================================
 // Create new consultation
 router.post('/', teleconsultController.create);
+
+// ============================================================================
+// PUT /teleconsult/:id/status
+// ============================================================================
+// Update consultation status
+router.put('/:id/status', teleconsultController.updateStatus);
 
 // ============================================================================
 // PUT /teleconsult/:id

@@ -146,6 +146,9 @@ const autoMigrate = async () => {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
   await run('teleconsultations.created_at', `ALTER TABLE teleconsultations ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+  await run('teleconsultations.status', `ALTER TABLE teleconsultations ADD COLUMN status ENUM('scheduled','in_progress','completed','cancelled') NOT NULL DEFAULT 'scheduled'`);
+  await run('teleconsultations.room_id', `ALTER TABLE teleconsultations ADD COLUMN room_id VARCHAR(120) NULL`);
+  await run('teleconsultations.reminder_sent', `ALTER TABLE teleconsultations ADD COLUMN reminder_sent TINYINT NOT NULL DEFAULT 0`);
 
   // ── messages — colonne is_read pour le compteur de non-lus ───────────────
   await run('messages.is_read', `ALTER TABLE messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`);

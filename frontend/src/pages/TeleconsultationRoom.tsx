@@ -67,7 +67,11 @@ export const TeleconsultationRoom = (): JSX.Element => {
     const fetchSession = async () => {
       try {
         setLoading(true);
-        const { data } = await api.get<ApiResult<Teleconsult>>(`/api/teleconsult/${sessionId}`);
+        // Essayer d'abord par room_id (nouveau), sinon par id numérique (ancien)
+        const endpoint = isNaN(Number(sessionId))
+          ? `/api/teleconsult/room/${sessionId}`
+          : `/api/teleconsult/${sessionId}`;
+        const { data } = await api.get<ApiResult<Teleconsult>>(endpoint);
         if (data.success) {
           setSession(data.data);
         } else {

@@ -8,7 +8,7 @@ import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { MessagerieView } from './MessagerieView';
 import { ChatbotWidget } from '../features/chatbot/ChatbotWidget';
-import { StatCard, Section, ScoreBadge, useToast, ToastStack, inputClsGreen as inputCls } from '../components';
+import { StatCard, Section, ScoreBadge, useToast, ToastStack } from '../components';
 
 declare global { interface Window { Chart: any; } }
 
@@ -81,6 +81,13 @@ export const ParentDashboard = (): JSX.Element => {
   const [notes, setNotes]                   = useState<Note[]>([]);
   const [view, setView]                     = useState<ViewKey>('summary');
   const [groupBy, setGroupBy]               = useState<string>("none");
+
+  // Filtres journal d'activités
+  const [actSearch,  setActSearch]  = useState('');
+  const [scoreMin,   setScoreMin]   = useState('');
+  const [scoreMax,   setScoreMax]   = useState('');
+  const [dateFrom,   setDateFrom]   = useState('');
+  const [dateTo,     setDateTo]     = useState('');
 
   // Analytics state
   const [analyticsOverview,  setAnalyticsOverview]  = useState<AnalyticsOverview | null>(null);
@@ -667,9 +674,21 @@ export const ParentDashboard = (): JSX.Element => {
               )}
 
               {/* ── Activités ── */}
-              {view === 'activities' && (
+              {view === 'activities' && (() => {
+                // Filtrage local
+                const filtered = activities.filter(a => {
+                  const title = (a.activity_name || a.content_title || a.action || '').toLowerCase();
+                  if (actSearch  && !title.includes(actSearch.toLowerCase())) return false;
+                  if (scoreMin !== '' && a.score < +scoreMin) return false;
+                  if (scoreMax !== '' && a.score > +scoreMax) return false;
+                  if (dateFrom && new Date(a.date) < new Date(dateFrom)) return false;
+                  if (dateTo   && new Date(a.date) > new Date(dateTo + 'T23:59:59')) return false;
+                  return true;
+                });
+                const hasFilters = actSearch || scoreMin || scoreMax || dateFrom || dateTo || groupBy !== 'none';
+                return (
                 <Section title={`Journal d'activités — ${selectedChild.name}`}
-                  badge={<span className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-semibold">{activities.length} activité(s)</span>}
+                  badge={<span className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-semibold">{filtered.length} / {activities.length} activité(s)</span>}
                 >
                   {activities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
@@ -678,27 +697,69 @@ export const ParentDashboard = (): JSX.Element => {
                     </div>
                   ) : (
                     <>
-                      {/* Group By dropdown */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Grouper par :</span>
-                        <select
-                          value={groupBy}
-                          onChange={e => setGroupBy(e.target.value)}
-                          style={{
-                            padding: "8px 12px", borderRadius: "8px",
-                            border: "1px solid #F5A94E", fontSize: "13px",
-                            color: "#C45E0A", background: "#FEF3E7", cursor: "pointer"
-                          }}
-                        >
-                          <option value="none">Aucun groupement</option>
-                          <option value="activity_name">Par activité</option>
-                          <option value="date">Par date</option>
-                          <option value="score">Par score</option>
-                        </select>
+                      {/* ── Barre de filtres ── */}
+                      <div className="flex flex-wrap items-center gap-3 mb-5 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        {/* Recherche */}
+                        <div className="relative min-w-[180px] flex-1">
+                          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+                          <input type="text" value={actSearch} onChange={e => setActSearch(e.target.value)}
+                            placeholder="Nom de l'activité…"
+                            className="w-full pl-8 pr-3 py-2 rounded-xl border border-emerald-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green"
+                          />
+                        </div>
+                        {/* Score min/max */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Score :</span>
+                          <input type="number" value={scoreMin} onChange={e => setScoreMin(e.target.value)}
+                            placeholder="Min" min={0} max={100}
+                            className="w-16 px-2 py-2 rounded-xl border border-emerald-200 text-sm text-center text-slate-700 bg-white focus:outline-none focus:border-brand-green"
+                          />
+                          <span className="text-slate-400 text-xs">–</span>
+                          <input type="number" value={scoreMax} onChange={e => setScoreMax(e.target.value)}
+                            placeholder="Max" min={0} max={100}
+                            className="w-16 px-2 py-2 rounded-xl border border-emerald-200 text-sm text-center text-slate-700 bg-white focus:outline-none focus:border-brand-green"
+                          />
+                        </div>
+                        {/* Date range */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Date :</span>
+                          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                            className="px-2 py-2 rounded-xl border border-emerald-200 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-green"
+                          />
+                          <span className="text-slate-400 text-xs">→</span>
+                          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                            className="px-2 py-2 rounded-xl border border-emerald-200 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-green"
+                          />
+                        </div>
+                        {/* Grouper par */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Grouper par :</span>
+                          <select value={groupBy} onChange={e => setGroupBy(e.target.value)}
+                            className="px-3 py-2 rounded-xl border border-emerald-200 text-sm text-emerald-700 bg-emerald-50 focus:outline-none focus:border-brand-green cursor-pointer"
+                          >
+                            <option value="none">Aucun</option>
+                            <option value="activity_name">Par activité</option>
+                            <option value="date">Par date</option>
+                            <option value="score">Par score</option>
+                          </select>
+                        </div>
+                        {/* Reset */}
+                        {hasFilters && (
+                          <button onClick={() => { setActSearch(''); setScoreMin(''); setScoreMax(''); setDateFrom(''); setDateTo(''); setGroupBy('none'); }}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-slate-500 hover:bg-white hover:text-red-500 border border-transparent hover:border-red-200 transition-all font-medium">
+                            <i className="fa-solid fa-rotate-left text-xs" /> Réinitialiser
+                          </button>
+                        )}
                       </div>
 
+                      {filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
+                          <i className="fa-solid fa-filter-circle-xmark text-3xl" />
+                          <p className="font-medium">Aucune activité ne correspond aux filtres.</p>
+                        </div>
+                      ) : (
                       <div className="overflow-x-auto -mx-7 -mb-7">
-                        {Object.entries(groupActivities(activities, groupBy)).map(([groupName, items]) => (
+                        {Object.entries(groupActivities(filtered, groupBy)).map(([groupName, items]) => (
                           <div key={groupName} style={{ marginBottom: "16px" }}>
                             {groupBy !== "none" && (
                               <div style={{
@@ -739,10 +800,12 @@ export const ParentDashboard = (): JSX.Element => {
                           </div>
                         ))}
                       </div>
+                      )}
                     </>
                   )}
                 </Section>
-              )}
+                );
+              })()}
 
               {/* ── Analytiques ── */}
               {view === 'analytics' && (
@@ -1039,6 +1102,12 @@ export const ParentDashboard = (): JSX.Element => {
                             <button onClick={() => handleRevokeInvitation(prof.id)} disabled={profActionLoading}
                               className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
                               <i className="fa-solid fa-ban" /> Révoquer l'accès
+                            </button>
+                          )}
+                          {prof.status === 'pending' && (
+                            <button onClick={() => handleCancelInvitation(prof.id, prof.name)} disabled={profActionLoading}
+                              className="flex items-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                              <i className="fa-solid fa-xmark" /> Annuler l'invitation
                             </button>
                           )}
                           {isRevoked && (
