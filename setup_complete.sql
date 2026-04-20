@@ -567,6 +567,209 @@ SELECT * FROM (
 WHERE NOT EXISTS (SELECT 1 FROM badges LIMIT 1);
 
 -- ============================================================================
+-- INJECTION COMPLETE : enfants, invitations, logs, messages, notes
+-- (equivalent de inject-all-data.js — couvre tous les parents de la base)
+-- ============================================================================
+
+-- ── Enfants pour chaque parent ────────────────────────────────────────────
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Adam',6,'enfant' FROM users u WHERE u.email='parent2@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Sara',8,'enfant' FROM users u WHERE u.email='parent2@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Sara');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Khalil',5,'enfant' FROM users u WHERE u.email='afif.adbiis@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Nadia',12,'jeune' FROM users u WHERE u.email='afif.adbiis@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Nadia');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Youssef',7,'enfant' FROM users u WHERE u.email='mohamed@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Mariem',9,'enfant' FROM users u WHERE u.email='mohamed@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Mariem');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Ines',14,'jeune' FROM users u WHERE u.email='parent3@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Sami',4,'enfant' FROM users u WHERE u.email='parent3@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Sami');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Leila',10,'enfant' FROM users u WHERE u.email='salem@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Omar',6,'enfant' FROM users u WHERE u.email='salem@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Omar');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Farah',11,'jeune' FROM users u WHERE u.email='ali@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Anis',5,'enfant' FROM users u WHERE u.email='ali@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Anis');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Rim',8,'enfant' FROM users u WHERE u.email='karim@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Tarek',13,'jeune' FROM users u WHERE u.email='karim@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Tarek');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Adam',6,'enfant' FROM users u WHERE u.email='fatma@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Sara',8,'enfant' FROM users u WHERE u.email='fatma@aidaa.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Sara');
+
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Khalil',5,'enfant' FROM users u WHERE u.email='ali11@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id);
+INSERT INTO children (parent_id, name, age, participant_category)
+SELECT u.id,'Nadia',12,'jeune' FROM users u WHERE u.email='ali11@gmail.com'
+  AND NOT EXISTS (SELECT 1 FROM children c WHERE c.parent_id=u.id AND c.name='Nadia');
+
+-- ── Invitations professionnelles pour tous les parents ───────────────────
+INSERT IGNORE INTO professional_invitations (parent_id, professional_id, status)
+SELECT p.id, pr.id, 'active'
+FROM users p
+JOIN users pr ON pr.email IN ('professional@aidaa.com','abderrahman@aidaa.com','docteur@gmail.com','doctor2@gmail.com')
+WHERE p.role='parent'
+  AND pr.role='professional'
+  AND NOT EXISTS (
+    SELECT 1 FROM professional_invitations pi WHERE pi.parent_id=p.id AND pi.professional_id=pr.id
+  )
+ORDER BY p.id, pr.id
+LIMIT 30;
+
+-- ── Logs d activites pour tous les enfants ────────────────────────────────
+INSERT INTO activity_logs (child_id, content_id, status, action, score, duration_seconds, date)
+SELECT c.id, ct.id, v.st, v.ac, v.sc, v.ds, DATE_SUB(NOW(), INTERVAL v.da DAY)
+FROM (
+  SELECT 'Adam' cn,'parent2@gmail.com' pe,'Apprendre a dire bonjour' ct,'completed' st,'content_accessed' ac,25 sc,180 ds,27 da UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,22 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Jouer ensemble','completed','content_accessed',20,240,18 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Ecouter et repeter','completed','content_accessed',15,120,14 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Sequence du matin','completed','activity_done',35,420,10 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Creer avec les couleurs','completed','activity_done',40,600,6 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Les chiffres en arabe','completed','content_accessed',20,240,3 UNION ALL
+  SELECT 'Adam','parent2@gmail.com','Preparer mon petit-dejeuner','started','content_accessed',10,90,1 UNION ALL
+  SELECT 'Sara','parent2@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,25 UNION ALL
+  SELECT 'Sara','parent2@gmail.com','Jouer ensemble','completed','content_accessed',25,240,20 UNION ALL
+  SELECT 'Sara','parent2@gmail.com','Ecouter et repeter','completed','content_accessed',15,120,15 UNION ALL
+  SELECT 'Sara','parent2@gmail.com','Sequence du matin','completed','activity_done',35,420,10 UNION ALL
+  SELECT 'Sara','parent2@gmail.com','Creer avec les couleurs','completed','activity_done',40,600,5 UNION ALL
+  SELECT 'Khalil','afif.adbiis@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,26 UNION ALL
+  SELECT 'Khalil','afif.adbiis@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,20 UNION ALL
+  SELECT 'Khalil','afif.adbiis@gmail.com','Jouer ensemble','completed','content_accessed',25,240,15 UNION ALL
+  SELECT 'Khalil','afif.adbiis@gmail.com','Sequence du matin','completed','activity_done',35,420,10 UNION ALL
+  SELECT 'Khalil','afif.adbiis@gmail.com','Ecouter et repeter','completed','content_accessed',15,120,5 UNION ALL
+  SELECT 'Nadia','afif.adbiis@gmail.com','Gestion du stress','completed','content_accessed',45,420,12 UNION ALL
+  SELECT 'Nadia','afif.adbiis@gmail.com','Autonomie au quotidien','completed','activity_done',50,720,8 UNION ALL
+  SELECT 'Nadia','afif.adbiis@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,4 UNION ALL
+  SELECT 'Youssef','mohamed@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,24 UNION ALL
+  SELECT 'Youssef','mohamed@gmail.com','Jouer ensemble','completed','content_accessed',25,240,18 UNION ALL
+  SELECT 'Youssef','mohamed@gmail.com','Les chiffres en arabe','completed','content_accessed',20,240,12 UNION ALL
+  SELECT 'Youssef','mohamed@gmail.com','Sequence du matin','completed','activity_done',35,420,7 UNION ALL
+  SELECT 'Mariem','mohamed@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,22 UNION ALL
+  SELECT 'Mariem','mohamed@gmail.com','Jouer ensemble','completed','content_accessed',25,240,16 UNION ALL
+  SELECT 'Mariem','mohamed@gmail.com','Creer avec les couleurs','completed','activity_done',40,600,9 UNION ALL
+  SELECT 'Ines','parent3@gmail.com','Gestion du stress','completed','content_accessed',45,420,14 UNION ALL
+  SELECT 'Ines','parent3@gmail.com','Autonomie au quotidien','completed','activity_done',50,720,9 UNION ALL
+  SELECT 'Ines','parent3@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,5 UNION ALL
+  SELECT 'Sami','parent3@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,23 UNION ALL
+  SELECT 'Sami','parent3@gmail.com','Jouer ensemble','completed','content_accessed',25,240,17 UNION ALL
+  SELECT 'Sami','parent3@gmail.com','Ecouter et repeter','completed','content_accessed',15,120,11 UNION ALL
+  SELECT 'Leila','salem@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,21 UNION ALL
+  SELECT 'Leila','salem@gmail.com','Jouer ensemble','completed','content_accessed',25,240,15 UNION ALL
+  SELECT 'Leila','salem@gmail.com','Creer avec les couleurs','completed','activity_done',40,600,8 UNION ALL
+  SELECT 'Omar','salem@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,20 UNION ALL
+  SELECT 'Omar','salem@gmail.com','Ecouter et repeter','completed','content_accessed',15,120,13 UNION ALL
+  SELECT 'Omar','salem@gmail.com','Sequence du matin','completed','activity_done',35,420,6 UNION ALL
+  SELECT 'Farah','ali@gmail.com','Gestion du stress','completed','content_accessed',45,420,13 UNION ALL
+  SELECT 'Farah','ali@gmail.com','Autonomie au quotidien','completed','activity_done',50,720,8 UNION ALL
+  SELECT 'Farah','ali@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,3 UNION ALL
+  SELECT 'Anis','ali@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,22 UNION ALL
+  SELECT 'Anis','ali@gmail.com','Jouer ensemble','completed','content_accessed',25,240,16 UNION ALL
+  SELECT 'Anis','ali@gmail.com','Les chiffres en arabe','completed','content_accessed',20,240,9 UNION ALL
+  SELECT 'Rim','karim@aidaa.com','Apprendre a dire bonjour','completed','content_accessed',20,180,19 UNION ALL
+  SELECT 'Rim','karim@aidaa.com','Reconnaitre les emotions','completed','content_accessed',30,300,13 UNION ALL
+  SELECT 'Rim','karim@aidaa.com','Creer avec les couleurs','completed','activity_done',40,600,7 UNION ALL
+  SELECT 'Tarek','karim@aidaa.com','Gestion du stress','completed','content_accessed',45,420,11 UNION ALL
+  SELECT 'Tarek','karim@aidaa.com','Autonomie au quotidien','completed','activity_done',50,720,6 UNION ALL
+  SELECT 'Tarek','karim@aidaa.com','Reconnaitre les emotions','completed','content_accessed',30,300,2 UNION ALL
+  SELECT 'Adam','fatma@aidaa.com','Apprendre a dire bonjour','completed','content_accessed',20,180,18 UNION ALL
+  SELECT 'Adam','fatma@aidaa.com','Jouer ensemble','completed','content_accessed',25,240,12 UNION ALL
+  SELECT 'Adam','fatma@aidaa.com','Ecouter et repeter','completed','content_accessed',15,120,6 UNION ALL
+  SELECT 'Sara','fatma@aidaa.com','Reconnaitre les emotions','completed','content_accessed',30,300,17 UNION ALL
+  SELECT 'Sara','fatma@aidaa.com','Sequence du matin','completed','activity_done',35,420,10 UNION ALL
+  SELECT 'Sara','fatma@aidaa.com','Creer avec les couleurs','completed','activity_done',40,600,4 UNION ALL
+  SELECT 'Khalil','ali11@gmail.com','Apprendre a dire bonjour','completed','content_accessed',20,180,16 UNION ALL
+  SELECT 'Khalil','ali11@gmail.com','Jouer ensemble','completed','content_accessed',25,240,10 UNION ALL
+  SELECT 'Khalil','ali11@gmail.com','Les chiffres en arabe','completed','content_accessed',20,240,5 UNION ALL
+  SELECT 'Nadia','ali11@gmail.com','Gestion du stress','completed','content_accessed',45,420,9 UNION ALL
+  SELECT 'Nadia','ali11@gmail.com','Autonomie au quotidien','completed','activity_done',50,720,4 UNION ALL
+  SELECT 'Nadia','ali11@gmail.com','Reconnaitre les emotions','completed','content_accessed',30,300,1
+) v
+JOIN children c  ON c.name = v.cn
+JOIN users    u  ON u.id   = c.parent_id AND u.email = v.pe
+JOIN content  ct ON ct.title = v.ct;
+
+-- ── Messages pour les nouveaux parents ───────────────────────────────────
+INSERT INTO messages (child_id, sender_id, receiver_id, content, created_at)
+SELECT ch.id, s.id, r.id, v.msg, DATE_SUB(NOW(), INTERVAL v.ha HOUR)
+FROM (
+  SELECT 'parent2@gmail.com' se,'professional@aidaa.com' re,'Adam' cn,'Bonjour Docteur, comment va la progression de mon enfant ?' msg,48 ha UNION ALL
+  SELECT 'professional@aidaa.com','parent2@gmail.com','Adam','Bonjour ! La progression est tres encourageante cette semaine.',45 UNION ALL
+  SELECT 'parent2@gmail.com','professional@aidaa.com','Adam','Il a du mal a rester concentre. Des conseils ?',24 UNION ALL
+  SELECT 'professional@aidaa.com','parent2@gmail.com','Adam','Essayez des sessions courtes de 10-15 minutes avec des pauses regulieres.',22 UNION ALL
+  SELECT 'afif.adbiis@gmail.com','abderrahman@aidaa.com','Khalil','Bonjour Docteur, Khalil a bien progresse cette semaine !',40 UNION ALL
+  SELECT 'abderrahman@aidaa.com','afif.adbiis@gmail.com','Khalil','Excellent ! Continuez les exercices AAC quotidiennement.',38 UNION ALL
+  SELECT 'afif.adbiis@gmail.com','abderrahman@aidaa.com','Khalil','Merci pour vos conseils. Nous sommes tres contents de ses progres.',20 UNION ALL
+  SELECT 'mohamed@gmail.com','docteur@gmail.com','Youssef','Salam Docteur, Youssef a termine toutes ses activites cette semaine !',36 UNION ALL
+  SELECT 'docteur@gmail.com','mohamed@gmail.com','Youssef','Mabrouk ! Son score a augmente de 15 points ce mois-ci.',34 UNION ALL
+  SELECT 'parent3@gmail.com','professional@aidaa.com','Ines','Bonjour, Ines applique bien les techniques de gestion du stress.',30 UNION ALL
+  SELECT 'professional@aidaa.com','parent3@gmail.com','Ines','Tres bonne nouvelle ! Je recommande les activites niveau 2.',28 UNION ALL
+  SELECT 'karim@aidaa.com','abderrahman@aidaa.com','Rim','Rim a bien progresse. Elle dit bonjour maintenant en regardant les gens !',18 UNION ALL
+  SELECT 'abderrahman@aidaa.com','karim@aidaa.com','Rim','Excellent progres ! Continuez les exercices de communication.',16 UNION ALL
+  SELECT 'fatma@aidaa.com','professional@aidaa.com','Adam','Adam a complete toutes ses activites. Nous sommes ravis !',12 UNION ALL
+  SELECT 'professional@aidaa.com','fatma@aidaa.com','Adam','Super ! Il est pret pour les activites de niveau 2.',10
+) v
+JOIN users    s  ON s.email = v.se
+JOIN users    r  ON r.email = v.re
+JOIN children ch ON ch.name = v.cn
+JOIN users    pu ON pu.id   = ch.parent_id AND pu.email = v.se;
+
+-- ── Notes professionnelles pour les nouveaux enfants ─────────────────────
+INSERT INTO notes (professional_id, child_id, content, date)
+SELECT pr.id, ch.id, v.msg, DATE_SUB(NOW(), INTERVAL v.da DAY)
+FROM (
+  SELECT 'professional@aidaa.com' pe,'Adam' cn,'parent2@gmail.com' ppe,'Seance productive. Bonne concentration maintenue pendant 15 minutes. Progres notable.' msg,14 da UNION ALL
+  SELECT 'professional@aidaa.com','Adam','parent2@gmail.com','Score moyen en hausse de 20%. Recommandation : activites niveau 2.',7 UNION ALL
+  SELECT 'professional@aidaa.com','Sara','parent2@gmail.com','Bonne interaction sociale. Contact visuel maintenu lors des echanges.',10 UNION ALL
+  SELECT 'abderrahman@aidaa.com','Khalil','afif.adbiis@gmail.com','L enfant montre des ameliorations dans la communication non-verbale. Continuer les exercices AAC.',12 UNION ALL
+  SELECT 'abderrahman@aidaa.com','Khalil','afif.adbiis@gmail.com','Bilan mensuel positif. Recommandation : augmenter la frequence quotidienne.',5 UNION ALL
+  SELECT 'abderrahman@aidaa.com','Nadia','afif.adbiis@gmail.com','Nadia applique la respiration profonde. Tres bonne progression sur gestion du stress.',8 UNION ALL
+  SELECT 'docteur@gmail.com','Youssef','mohamed@gmail.com','Youssef realise sa routine du matin de facon independante 4 jours sur 7.',11 UNION ALL
+  SELECT 'docteur@gmail.com','Mariem','mohamed@gmail.com','L enfant a bien repondu aux nouvelles techniques. Prochaine etape : autonomie.',6 UNION ALL
+  SELECT 'professional@aidaa.com','Ines','parent3@gmail.com','Ines gere bien ses emotions en classe. Score : 75/100.',9 UNION ALL
+  SELECT 'professional@aidaa.com','Sami','parent3@gmail.com','Bonne premiere seance. Sami est curieux et interactif.',4 UNION ALL
+  SELECT 'abderrahman@aidaa.com','Rim','karim@aidaa.com','Rim identifie joie et tristesse a 80%. Continuer les exercices cartes emotions.',7 UNION ALL
+  SELECT 'abderrahman@aidaa.com','Tarek','karim@aidaa.com','Tarek applique les techniques de gestion du stress avec succes.',3 UNION ALL
+  SELECT 'professional@aidaa.com','Adam','fatma@aidaa.com','Bonne concentration. Objectif de la semaine atteint.',5 UNION ALL
+  SELECT 'professional@aidaa.com','Sara','fatma@aidaa.com','Sara progresse bien. Continuer les activites de communication.',2
+) v
+JOIN users    pr  ON pr.email  = v.pe
+JOIN users    pu  ON pu.email  = v.ppe
+JOIN children ch  ON ch.name   = v.cn AND ch.parent_id = pu.id;
+
+-- ============================================================================
 -- VERIFICATION FINALE
 -- ============================================================================
 SELECT 'SETUP TERMINE' AS statut;
