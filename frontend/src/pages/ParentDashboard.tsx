@@ -23,6 +23,19 @@ interface ProfessionalRecord {
   status: 'pending' | 'active' | 'revoked';
   invited_at: string;
 }
+interface Teleconsult {
+  id: number;
+  parent_id: number;
+  professional_id: number;
+  date_time: string;
+  meeting_link: string | null;
+  notes: string | null;
+  room_id?: string;
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  professional_name?: string;
+  professional_email?: string;
+  created_at?: string;
+}
 
 // ── Analytics interfaces ─────────────────────────────────────────────────────
 interface AnalyticsOverview { totalSessions: number; totalMinutes: number; avgScore: number; streakDays: number; }
@@ -37,8 +50,9 @@ const NAV = [
   { key: 'activities',   fa: 'fa-solid fa-gamepad',             label: 'Activités'           },
   { key: 'analytics',    fa: 'fa-solid fa-chart-line',          label: 'Analytiques'         },
   { key: 'notes',        fa: 'fa-solid fa-notes-medical',       label: 'Notes médicales'     },
-  { key: 'professional', fa: 'fa-solid fa-stethoscope',         label: 'Mon professionnel'   },
-  { key: 'messages',     fa: 'fa-solid fa-comments',            label: 'Messages'            },
+  { key: 'professional',      fa: 'fa-solid fa-stethoscope',  label: 'Mon professionnel'   },
+  { key: 'teleconsultation',  fa: 'fa-solid fa-video',         label: 'Téléconsultation'    },
+  { key: 'messages',          fa: 'fa-solid fa-comments',      label: 'Messages'            },
 ] as const;
 
 type ViewKey = typeof NAV[number]['key'];
@@ -96,6 +110,11 @@ export const ParentDashboard = (): JSX.Element => {
   const [analyticsScores,    setAnalyticsScores]    = useState<ScoreByCategory[]>([]);
   const [analyticsLoading,   setAnalyticsLoading]   = useState(false);
   const [analyticsError,     setAnalyticsError]     = useState('');
+
+  // Teleconsultation state
+  const [teleconsults,        setTeleconsults]        = useState<Teleconsult[]>([]);
+  const [teleconsultsLoading, setTeleconsultsLoading] = useState(false);
+  const [teleconsultsError,   setTeleconsultsError]   = useState('');
 
   // Chart refs (avoid "canvas already in use" on child change)
   const lineChartRef  = useRef<any>(null);
@@ -155,6 +174,24 @@ export const ParentDashboard = (): JSX.Element => {
     };
     fetchAnalytics();
   }, [view, selectedChild]);
+
+  // ── Teleconsultation data fetch ──────────────────────────────────────────
+  useEffect(() => {
+    if (view !== 'teleconsultation') return;
+    const fetchTeleconsults = async () => {
+      try {
+        setTeleconsultsLoading(true);
+        setTeleconsultsError('');
+        const { data } = await api.get<ApiResult<Teleconsult[]>>('/api/teleconsult/my');
+        if (data.success) setTeleconsults(data.data);
+      } catch (err: any) {
+        setTeleconsultsError(err?.response?.data?.message || 'Erreur lors du chargement des téléconsultations.');
+      } finally {
+        setTeleconsultsLoading(false);
+      }
+    };
+    fetchTeleconsults();
+  }, [view]);
 
   // ── Chart rendering (re-runs whenever timeline/breakdown data changes) ────
   useEffect(() => {
@@ -582,8 +619,12 @@ export const ParentDashboard = (): JSX.Element => {
           </form>
         </div>
 
-        {/* Footer — logout only */}
-        <div className="px-5 pb-5 shrink-0">
+        {/* Footer — profil + logout */}
+        <div className="px-5 pb-5 shrink-0 flex flex-col gap-2">
+          <button onClick={() => navigate('/profile')}
+            className="w-full flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold py-2.5 rounded-lg transition-all text-sm">
+            <i className="fa-solid fa-user-pen" /> Mon profil
+          </button>
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
             Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
@@ -623,7 +664,7 @@ export const ParentDashboard = (): JSX.Element => {
         <div className="flex-1 overflow-y-auto p-5">
 
           {/* No children — only show for views that need a child */}
-          {children.length === 0 && !['professional', 'messages'].includes(view) && (
+          {children.length === 0 && !['professional', 'messages', 'teleconsultation'].includes(view) && (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 gap-4">
               <i className="fa-solid fa-magnifying-glass text-5xl" />
               <div className="text-center">
@@ -1139,6 +1180,166 @@ export const ParentDashboard = (): JSX.Element => {
           {view === 'messages' && user?.id && !selectedChild && (
             <MessagerieView role="parent" myId={user.id} accent="green" />
           )}
+
+          {/* ── Téléconsultation — accessible sans participant sélectionné ── */}
+          {view === 'teleconsultation' && (() => {
+            type TStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+            const getStatus = (t: Teleconsult): TStatus => {
+              if (t.status && t.status !== 'scheduled') return t.status;
+              const diffMin = (new Date(t.date_time).getTime() - Date.now()) / 60000;
+              if (diffMin < -90) return 'completed';
+              if (diffMin <= 30)  return 'in_progress';
+              return 'scheduled';
+            };
+            // Utilise room_id comme fallback si le lien est invalide (meet.aidaa.tn)
+            const getJitsiLink = (t: Teleconsult): string | null => {
+              if (t.meeting_link && !t.meeting_link.includes('meet.aidaa.tn')) return t.meeting_link;
+              if (t.room_id) return `https://meet.jit.si/${t.room_id}`;
+              return null;
+            };
+            const STATUS_CFG: Record<TStatus, { label: string; bg: string; text: string; dot?: string }> = {
+              scheduled:   { label: 'Planifiée',  bg: 'bg-blue-50',   text: 'text-blue-700'  },
+              in_progress: { label: 'En cours',   bg: 'bg-emerald-50',text: 'text-emerald-700', dot: 'bg-emerald-500' },
+              completed:   { label: 'Terminée',   bg: 'bg-slate-100', text: 'text-slate-500'  },
+              cancelled:   { label: 'Annulée',    bg: 'bg-red-50',    text: 'text-red-600'   },
+            };
+            const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+            const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const enriched = teleconsults.map(t => ({ ...t, _eff: getStatus(t) }));
+            const totalCount    = enriched.length;
+            const plannedCount  = enriched.filter(t => t._eff === 'scheduled').length;
+            const ongoingCount  = enriched.filter(t => t._eff === 'in_progress').length;
+            const doneCount     = enriched.filter(t => t._eff === 'completed').length;
+
+            return (
+              <div className="flex flex-col gap-4">
+                {/* ── KPIs ── */}
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                  {[
+                    { icon: 'fa-solid fa-calendar-days',  label: 'Total',      value: totalCount,   bg: 'bg-slate-50',    border: 'border-slate-200',   text: 'text-slate-700' },
+                    { icon: 'fa-solid fa-calendar-check', label: 'Planifiées', value: plannedCount, bg: 'bg-blue-50',     border: 'border-blue-200',    text: 'text-blue-700'  },
+                    { icon: 'fa-solid fa-video',          label: 'En cours',   value: ongoingCount, bg: 'bg-emerald-50',  border: 'border-emerald-200', text: 'text-emerald-700' },
+                    { icon: 'fa-solid fa-circle-check',   label: 'Terminées',  value: doneCount,    bg: 'bg-slate-50',    border: 'border-slate-200',   text: 'text-slate-500' },
+                  ].map(s => (
+                    <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-4 flex items-center gap-4`}>
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg ${s.bg} border ${s.border} ${s.text} shrink-0`}>
+                        <i className={s.icon} />
+                      </div>
+                      <div>
+                        <p className={`text-2xl font-bold ${s.text}`}>{s.value}</p>
+                        <p className="text-xs text-slate-400 font-medium">{s.label}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Erreur ── */}
+                {teleconsultsError && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm font-semibold">
+                    <i className="fa-solid fa-circle-exclamation" /> {teleconsultsError}
+                  </div>
+                )}
+
+                {/* ── Loading ── */}
+                {teleconsultsLoading && (
+                  <div className="flex items-center justify-center py-20 text-slate-400 gap-3">
+                    <span className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-brand-green animate-spin" />
+                    <p className="font-medium">Chargement des sessions…</p>
+                  </div>
+                )}
+
+                {/* ── Liste sessions ── */}
+                {!teleconsultsLoading && (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                      <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                        <i className="fa-solid fa-video text-brand-green" /> Mes sessions
+                      </h3>
+                      <span className="text-xs text-slate-400 font-medium">{totalCount} session(s)</span>
+                    </div>
+
+                    {enriched.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                        <i className="fa-solid fa-calendar-xmark text-5xl" />
+                        <div className="text-center">
+                          <p className="font-semibold text-slate-600">Aucune session planifiée</p>
+                          <p className="text-sm mt-1">Votre professionnel créera une session depuis son tableau de bord.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {enriched.map(t => {
+                          const cfg = STATUS_CFG[t._eff];
+                          const canJoin = t._eff === 'in_progress';
+                          return (
+                            <div key={t.id} className="px-6 py-5 flex items-start gap-4 hover:bg-slate-50/60 transition-colors">
+                              {/* Avatar professionnel */}
+                              <div className="w-12 h-12 rounded-full bg-brand-green flex items-center justify-center font-bold text-white text-base shrink-0">
+                                {(t.professional_name || 'P').charAt(0).toUpperCase()}
+                              </div>
+
+                              {/* Infos */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <p className="font-bold text-slate-900 text-sm">
+                                    Dr. {t.professional_name || 'Professionnel'}
+                                  </p>
+                                  {t.professional_email && (
+                                    <span className="text-xs text-slate-400">{t.professional_email}</span>
+                                  )}
+                                  {/* Badge statut */}
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+                                    {cfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} animate-pulse`} />}
+                                    {cfg.label}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-4 flex-wrap text-sm text-slate-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <i className="fa-regular fa-calendar text-[12px]" />
+                                    {fmtDate(t.date_time)}
+                                  </span>
+                                  <span className="flex items-center gap-1.5">
+                                    <i className="fa-regular fa-clock text-[12px]" />
+                                    {fmtTime(t.date_time)}
+                                  </span>
+                                </div>
+                                {t.notes && (
+                                  <p className="text-xs text-slate-400 mt-1.5 italic line-clamp-1">{t.notes}</p>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex flex-col gap-2 shrink-0">
+                                {(() => {
+                                  const link = getJitsiLink(t);
+                                  if (!link) return null;
+                                  if (canJoin) return (
+                                    <a href={link} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 bg-brand-green hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm shadow-md shadow-emerald-200 transition-all">
+                                      <i className="fa-solid fa-video text-[11px]" /> Rejoindre
+                                    </a>
+                                  );
+                                  if (t._eff === 'scheduled') return (
+                                    <a href={link} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 bg-slate-100 hover:bg-blue-50 text-blue-600 border border-blue-200 font-semibold px-4 py-2 rounded-xl text-sm transition-all">
+                                      <i className="fa-solid fa-link text-[11px]" /> Lien
+                                    </a>
+                                  );
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+
+              </div>
+            );
+          })()}
         </div>
       </div>
 

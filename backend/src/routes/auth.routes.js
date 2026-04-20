@@ -19,6 +19,8 @@ const authController = require('../controllers/auth.controller');
 // Router allows creating routes that can be mounted on app
 // Example: app.use('/api/auth', router)
 const router = express.Router();
+const auth = require('../middlewares/auth');
+
 
 // ============================================================================
 // POST /api/auth/login
@@ -54,12 +56,11 @@ router.post('/reset-password', authController.resetPassword);
 // Response (error):
 //   { success: false, message: "..." }
 // Handler: Maps to authController.setPassword
-router.post(
-  // Route path: /set-password
-  '/set-password',
-  // Route handler - calls setPassword controller
-  authController.setPassword
-);
+router.post('/set-password', authController.setPassword);
+
+// ── Profile — authenticated ───────────────────────────────────────────────
+router.get('/me',  auth, authController.getMe);
+router.put('/me',  auth, authController.updateMe);
 
 // ============================================================================
 // EXPORT MODULE

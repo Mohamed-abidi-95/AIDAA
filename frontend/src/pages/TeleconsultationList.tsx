@@ -41,8 +41,15 @@ const getEffectiveStatus = (t: Teleconsult): SessionStatus => {
   if (t.status && t.status !== 'scheduled') return t.status;
   const diffMin = (new Date(t.date_time).getTime() - Date.now()) / 60000;
   if (diffMin < -90) return 'completed';
-  if (diffMin <= 30) return 'in_progress';
+  if (diffMin <= 30)  return 'in_progress';
   return 'scheduled';
+};
+
+/** Retourne le vrai lien Jitsi — utilise room_id si meeting_link est invalide */
+const getJitsiLink = (t: Teleconsult): string | null => {
+  if (t.meeting_link && !t.meeting_link.includes('meet.aidaa.tn')) return t.meeting_link;
+  if (t.room_id) return `https://meet.jit.si/${t.room_id}`;
+  return null;
 };
 
 const STATUS_CFG: Record<SessionStatus, { label: string; bg: string; text: string; icon: string }> = {
@@ -85,6 +92,7 @@ export const TeleconsultationList = (): JSX.Element => {
   const [search, setSearch]                   = useState('');
   const [loading, setLoading]                 = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [deletingId, setDeletingId]           = useState<number | null>(null);
 
   const profInitial = user?.name?.charAt(0).toUpperCase() ?? 'P';
 
@@ -137,6 +145,20 @@ export const TeleconsultationList = (): JSX.Element => {
   // ── Helpers ──────────────────────────────────────────────────────────────
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Supprimer cette session ? Cette action est irréversible.')) return;
+    try {
+      setDeletingId(id);
+      await api.delete(`/api/teleconsult/${id}`);
+      setSessions(prev => prev.filter(s => s.id !== id));
+      toast('Session supprimée.', 'success');
+    } catch {
+      toast('Erreur lors de la suppression.', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -313,53 +335,68 @@ export const TeleconsultationList = (): JSX.Element => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {['Parent', 'Date', 'Heure', 'Statut', 'Notes', 'Action'].map(h => (
+                      {['Parent', 'Date', 'Heure', 'Statut', 'Notes', 'Actions'].map(h => (
                         <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {sessionsWithStatus.map(session => {
-                      const eff = session._eff;
-                      const roomOrId = session.room_id || session.id;
-                      return (
-                      <tr key={session.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                        <td className="px-7 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-brand-orange flex items-center justify-center font-bold text-white text-sm shrink-0">
-                              {(session.parent_name || 'P').charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-slate-800 text-sm">{session.parent_name || `Parent #${session.parent_id}`}</p>
-                              {session.parent_email && <p className="text-xs text-slate-400">{session.parent_email}</p>}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-7 py-4 text-slate-600 text-sm">{fmtDate(session.date_time)}</td>
-                        <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{fmtTime(session.date_time)}</td>
-                        <td className="px-7 py-4"><StatusBadge status={eff} /></td>
-                        <td className="px-7 py-4 text-slate-500 text-sm max-w-[200px] truncate">{session.notes || '—'}</td>
-                        <td className="px-7 py-4">
-                          <button
-                            onClick={() => navigate(`/professionnel/teleconsultation/${roomOrId}`)}
-                            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all border
-                              ${eff === 'in_progress'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : eff === 'scheduled'
-                                  ? 'bg-orange-50 text-brand-orange border-orange-200 hover:bg-orange-100'
-                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
-                          >
-                            {eff === 'scheduled'
-                              ? <><i className="fa-solid fa-play mr-1.5" />Démarrer</>
-                              : eff === 'in_progress'
-                                ? <><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />Rejoindre</>
-                                : <><i className="fa-solid fa-eye mr-1.5" />Voir</>
-                            }
-                          </button>
-                        </td>
-                      </tr>
-                      );
-                    })}
+                     {sessionsWithStatus.map(session => {
+                       const eff      = session._eff;
+                       const jitsiUrl = getJitsiLink(session);
+                       return (
+                       <tr key={session.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                         <td className="px-7 py-4">
+                           <div className="flex items-center gap-3">
+                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-brand-orange flex items-center justify-center font-bold text-white text-sm shrink-0">
+                               {(session.parent_name || 'P').charAt(0)}
+                             </div>
+                             <div>
+                               <p className="font-semibold text-slate-800 text-sm">{session.parent_name || `Parent #${session.parent_id}`}</p>
+                               {session.parent_email && <p className="text-xs text-slate-400">{session.parent_email}</p>}
+                             </div>
+                           </div>
+                         </td>
+                         <td className="px-7 py-4 text-slate-600 text-sm">{fmtDate(session.date_time)}</td>
+                         <td className="px-7 py-4 font-semibold text-slate-800 text-sm">{fmtTime(session.date_time)}</td>
+                         <td className="px-7 py-4"><StatusBadge status={eff} /></td>
+                         <td className="px-7 py-4 text-slate-500 text-sm max-w-[200px] truncate">{session.notes || '—'}</td>
+                         <td className="px-7 py-4">
+                           <div className="flex items-center gap-2">
+                             {/* Bouton rejoindre / démarrer → ouvre Jitsi directement */}
+                             {jitsiUrl && eff !== 'completed' && eff !== 'cancelled' && (
+                               <a
+                                 href={jitsiUrl}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border
+                                   ${eff === 'in_progress'
+                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                     : 'bg-orange-50 text-brand-orange border-orange-200 hover:bg-orange-100'}`}
+                               >
+                                 {eff === 'in_progress'
+                                   ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Rejoindre</>
+                                   : <><i className="fa-solid fa-video text-[10px]" />Démarrer</>
+                                 }
+                               </a>
+                             )}
+                             {/* Bouton supprimer */}
+                             <button
+                               onClick={() => handleDelete(session.id)}
+                               disabled={deletingId === session.id}
+                               title="Supprimer"
+                               className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 transition-all disabled:opacity-40"
+                             >
+                               {deletingId === session.id
+                                 ? <span className="w-3 h-3 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
+                                 : <i className="fa-solid fa-trash text-[10px]" />
+                               }
+                             </button>
+                           </div>
+                         </td>
+                       </tr>
+                       );
+                     })}
                   </tbody>
                 </table>
               </div>

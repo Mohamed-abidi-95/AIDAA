@@ -651,6 +651,63 @@ const resetPassword = async (req, res) => {
 };
 
 // ============================================================================
+// GET /api/auth/me — Profil de l'utilisateur connecté
+// ============================================================================
+const getMe = async (req, res) => {
+  try {
+    const rows = await query(
+      'SELECT id, name, email, role, is_active, status, specialite, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+    return res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error('[auth.controller] getMe error:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ============================================================================
+// PUT /api/auth/me — Modifier son propre profil
+// ============================================================================
+const updateMe = async (req, res) => {
+  try {
+    const { name, specialite, currentPassword, newPassword } = req.body;
+    const updates = [];
+    const values  = [];
+
+    if (name && name.trim()) { updates.push('name = ?'); values.push(name.trim()); }
+    if (specialite !== undefined) { updates.push('specialite = ?'); values.push(specialite || null); }
+
+    // Mot de passe
+    if (newPassword) {
+      if (!currentPassword) return res.status(400).json({ success: false, message: 'Mot de passe actuel requis.' });
+      const rows = await query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+      if (rows.length === 0) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+      const match = await bcryptjs.compare(currentPassword, rows[0].password || '');
+      if (!match) return res.status(400).json({ success: false, message: 'Mot de passe actuel incorrect.' });
+      const hash = await bcryptjs.hash(newPassword, 12);
+      updates.push('password = ?');
+      values.push(hash);
+    }
+
+    if (updates.length === 0) return res.status(400).json({ success: false, message: 'Aucune modification fournie.' });
+
+    values.push(req.user.id);
+    await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
+
+    const updated = await query(
+      'SELECT id, name, email, role, is_active, status, specialite, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    return res.json({ success: true, message: 'Profil mis à jour.', data: updated[0] });
+  } catch (error) {
+    console.error('[auth.controller] updateMe error:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ============================================================================
 // Export authentication controller functions
 module.exports = {
   login,
@@ -659,4 +716,6 @@ module.exports = {
   signupProfessional,
   forgotPassword,
   resetPassword,
+  getMe,
+  updateMe,
 };

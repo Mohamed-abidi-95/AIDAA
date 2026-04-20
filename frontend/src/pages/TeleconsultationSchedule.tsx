@@ -81,7 +81,6 @@ export const TeleconsultationSchedule = (): JSX.Element => {
     if (!professionalId) { setError('Utilisateur non authentifié.'); return; }
 
     const date_time = `${form.date}T${form.time}:00`;
-    const meeting_link = `https://meet.aidaa.tn/session-${Date.now()}`;
 
     setLoading(true);
     try {
@@ -89,7 +88,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
         parentId,
         professionalId,
         date_time,
-        meeting_link,
+        // meeting_link omis → le backend génère automatiquement un lien Jitsi Meet
         notes: form.notes || `Session de ${form.duration} min`,
       });
 

@@ -19,6 +19,8 @@ import { PendingApprovalPage } from '../pages/PendingApprovalPage';
 import { ProfessionalSignupPage } from '../pages/ProfessionalSignupPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
+import { ProfilePage } from '../pages/ProfilePage';
+
 
 // NOTE: key={location.pathname} was removed — it forced full component-tree remounts on
 // every navigation, causing: (1) visual "page reload" effect, (2) login/logout race
@@ -38,6 +40,7 @@ export const AppRoutes = (): JSX.Element => {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/parent/dashboard" replace />} />
         <Route path="progress" element={<ProgressDashboard />} />
+        <Route path="profile" element={<ProfilePage />} />
 
         <Route element={<RoleRoute allowedRoles={['admin']} />}>
           <Route path="admin/dashboard" element={<AdminPanel />} />
