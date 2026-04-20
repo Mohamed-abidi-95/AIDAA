@@ -56,14 +56,22 @@ export const MemoryGame = ({ onComplete, onClose }: MemoryGameProps): JSX.Elemen
   const handleFlip = useCallback((uid: string) => {
     if (locked || finished) return;
 
-    setCards((prev) => {
-      const card = prev.find((c) => c.uid === uid);
-      if (!card || card.flipped || card.matched) return prev;
-      return prev.map((c) => c.uid === uid ? { ...c, flipped: true } : c);
-    });
-
+    // Capture selected synchronously before any state update
     setSelected((prev) => {
+      // Already 2 selected and waiting → ignore
+      if (prev.length === 2) return prev;
+
+      const card_check = prev.includes(uid);
+      if (card_check) return prev; // same card clicked twice
+
       const next = [...prev, uid];
+
+      // Flip the card visually
+      setCards((prevCards) => {
+        const card = prevCards.find((c) => c.uid === uid);
+        if (!card || card.flipped || card.matched) return prevCards;
+        return prevCards.map((c) => c.uid === uid ? { ...c, flipped: true } : c);
+      });
 
       if (next.length === 2) {
         setLocked(true);
@@ -71,12 +79,13 @@ export const MemoryGame = ({ onComplete, onClose }: MemoryGameProps): JSX.Elemen
 
         setTimeout(() => {
           setCards((prevCards) => {
-            const [a, b] = [prevCards.find((c) => c.uid === next[0])!, prevCards.find((c) => c.uid === next[1])!];
+            const a = prevCards.find((c) => c.uid === next[0]);
+            const b = prevCards.find((c) => c.uid === next[1]);
             const isMatch = a && b && a.id === b.id;
 
             if (isMatch) {
               const updated = prevCards.map((c) =>
-                c.uid === next[0] || c.uid === next[1] ? { ...c, matched: true } : c
+                c.uid === next[0] || c.uid === next[1] ? { ...c, matched: true, flipped: true } : c
               );
               const newMatchCount = updated.filter((c) => c.matched).length / 2;
               setMatchedCount(newMatchCount);
@@ -96,11 +105,12 @@ export const MemoryGame = ({ onComplete, onClose }: MemoryGameProps): JSX.Elemen
             }
           });
 
+          // ✅ Reset selected AND unlock INSIDE the timeout
+          setSelected([]);
           setLocked(false);
-          return [];
         }, 900);
 
-        return next;
+        return next; // hold the 2 selected while waiting
       }
 
       return next;

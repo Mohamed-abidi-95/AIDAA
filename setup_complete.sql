@@ -248,24 +248,55 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- professional123 = $2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou
 -- ============================================================================
 
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Admin AIDAA', 'admin@aidaa.com', '$2a$12$oOIeHCX1szjy2IP/rbJjseJFOQXuVVSHCmlcZS1AJJXYP3wxVtH4u', 'admin', NULL, 1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
+-- ============================================================================
+-- TOUS LES UTILISATEURS REELS DE LA BASE (export direct)
+-- Mots de passe connus :
+--   admin@aidaa.com          / admin123
+--   parent@aidaa.com         / parent123
+--   professional@aidaa.com   / professional123
+--   abderrahman@aidaa.com    / abderrahman123
+--   karim@aidaa.com          / karim123
+--   fatma@aidaa.com          / fatma123
+--   mohamed@aidaa.com        / mohamed123
+--   Les autres comptes ont leurs mots de passe chiffres exportes directement
+-- ============================================================================
 
 INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Parent Test',      'parent@aidaa.com',           '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Sarah Johnson',    'sarah.johnson@aidaa.com',    '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Mohamed Trabelsi', 'mohamed.trabelsi@aidaa.com', '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1),
-('Leila Ben Ali',    'leila.benali@aidaa.com',     '$2a$12$yFhFPRrEI1AwTzcrTqpFvOTZHI6TRLI5ZN621wMq2UX.HCu2eF/ym', 'parent', NULL, 1)
+-- ADMIN
+('Admin User',          'admin@aidaa.com',             '$2a$12$E2JSSI7q3/N57HLUKhpz6ORZXhm.YYJw0gGz/vFcoH.il6n5z4QIa', 'admin',        NULL,             1),
+-- PARENTS
+('Sarah Johnson',       'sarah.johnson@example.com',   '$2a$12$wC.Ff34Eh6sFfowkzsq4sOuiyhIv37bSHfdPe0lIxZlKhNihOVJ6q', 'parent',       NULL,             1),
+('Michael Smith',       'michael.smith@example.com',   NULL,                                                            'parent',       NULL,             1),
+('Parent Test',         'parent@aidaa.com',             '$2a$12$5oNfdRN28VXuEmdm9k..juC.lo3eQ3v/ndOyPW/nBAn50hnqw4fca', 'parent',       NULL,             1),
+('parent',              'parent2@gmail.com',            '$2a$12$uW82PMDgRipNVDDU.XvEJO3fsmGJlEtrA9UTntXhT9jqvURJgNJdK', 'parent',       NULL,             1),
+('afif',                'afif.adbiis@gmail.com',        '$2a$12$voZ5CXWo17rztIaEiFjTU.IBp/tSJcOeciJFpDoCUsv3xOme8Tm/S', 'parent',       NULL,             1),
+('Mohamed',             'mohamed@gmail.com',             '$2a$12$DH2ApANqy284OOzALYj1pehPypHk5VUiagl74jJ7TdPy6BoOlffK.', 'parent',       NULL,             1),
+('parent3',             'parent3@gmail.com',             '$2a$12$K/q7ebdinnSdrb7Wq9/h3O3Dl.IGKa/MbRy3gRyVCOCsIoyOIx0WO', 'parent',       NULL,             1),
+('salem',               'salem@gmail.com',               '$2a$12$4J84HUcV5X4eYWLm6FWFlu8fUd8TMdvJ1.OUrlV22xmvsplw0YyWG', 'parent',       NULL,             1),
+('Ali',                 'ali@gmail.com',                 '$2a$12$97nj9Zs0VBrCmfS4JUytHu1N2g33dOMjXL4DQqcYKUevDH6SYUDKa', 'parent',       NULL,             1),
+('Karim Boulares',      'karim@aidaa.com',               '$2a$12$OCexHfeGX/OB1cKiX/Mfu.FbPDtw2DhM.duuytSNxT8ET.fWuWLAe', 'parent',       NULL,             1),
+('Fatma Chaabane',      'fatma@aidaa.com',               '$2a$12$HiR9FMOhj7LnSCmVC.P0ZuqJYIvygo70PTNQzhX67ns5ukb.j/vXy', 'parent',       NULL,             1),
+('Mohamed Trabelsi',    'mohamed@aidaa.com',              '$2a$12$TC/MTGMqTDo8kNzq73QmIOZM/MLGV2FcMbnDuWf6./TnZNrvWORTW', 'parent',       NULL,             1),
+('ali',                 'ali11@gmail.com',               '$2a$12$frAmuJDdhLczVvVnEHz5..umIxCvj0Xm2AI/c8wUybyDr2qrk/JtW', 'parent',       NULL,             1),
+-- PROFESSIONNELS
+('Dr. Emily Brown',     'emily.brown@aidaa.com',         NULL,                                                            'professional', NULL,             1),
+('Dr. Professional Test','professional@aidaa.com',       '$2a$12$wfzafEB/yqef3wwyu6F1k.j2twsrI3vltbbWHB3FshkQFwblAK.Ua', 'professional', NULL,             1),
+('ali2',                'ali2@example.com',               '$2a$12$BKZmozEYUUx0VlU39n90e.u3qTHjCL7HZy0wUJtygpXLnOlC10Xi2', 'professional', NULL,             1),
+('hellow',              'hellow@gmail.com',               '$2a$12$O0XsNgArPkv/7CzhXxHPjuKd4n7KTDcDHZ.NhTcPMyt/S1US67tzK', 'professional', NULL,             1),
+('professionnel',       'professionnel@gmail.com',        NULL,                                                            'professional', NULL,             1),
+('professionnel',       'professionel@gmail.com',         NULL,                                                            'professional', NULL,             1),
+('Docteur',             'docteur@gmail.com',               '$2a$12$Og50MXH0iztat6nZC1bYJuJUZ8Xp/tmoG.UI/CWL.4Ik60Zl4crFq', 'professional', NULL,             1),
+('docteur',             'docteur1@gmail.com',              '$2a$12$71WLMd4OabcWtQ1VRndIAeOyDzu3.gka2mx.sXR4Hn4.LPVzfWI.2', 'professional', NULL,             1),
+('doctor',              'doctor2@gmail.com',               '$2a$12$4ZWBXMmspH4oQ9O7WLl1xe4l/3VKNi6X4mL0lb9A/kLx.c5cOQb2C', 'professional', NULL,             1),
+('professionnal',       'professsionnal@admin.com',        NULL,                                                            'professional', NULL,             1),
+('professional',        'professional@gmail.com',          NULL,                                                            'professional', NULL,             1),
+('professionnal',       'professionnal@admin.com',         '$2a$12$XpYTcP1NB8C8W6N82PHB0.YIAdQPmXzyb17vZR57IjNzlAb6tbn3i', 'professional', NULL,             1),
+('professionnal',       'professionnal@gmail.com',         NULL,                                                            'professional', NULL,             1),
+('Docteur3',            'docteur3@gmail.com',              '$2a$12$8l2YyQqFFitj0BV2gNnPduWOT6D4Po4StAygblwjuRSZY8rudmv/2', 'professional', NULL,             1),
+('doctor3',             'doctor3@gmail.com',               NULL,                                                            'professional', NULL,             1),
+('Dr. Abderrahman Sbai','abderrahman@aidaa.com',           '$2a$12$UR70arRYpaGeGQpOIAPkj.zxb51MhxXYQe./RiNiBY7SkiHm/DY3W', 'professional', 'Psychologie',    1)
 ON DUPLICATE KEY UPDATE password = VALUES(password), is_active = 1;
 
-INSERT INTO users (name, email, password, role, specialite, is_active) VALUES
-('Dr. Professional Test', 'professional@aidaa.com',      '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthophonie',      1),
-('Dr. Abderrahman Sbai',  'abderrahman.sbai@aidaa.com',  '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Psychologie',      1),
-('Dr. Fatima Mansour',    'fatima.mansour@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Orthopedagogie',   1),
-('Dr. Karim Hamdi',       'karim.hamdi@aidaa.com',       '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Neuropsychologie', 1),
-('Dr. Amina Chaabane',    'amina.chaabane@aidaa.com',    '$2a$12$bdVfrJZynYQriFyUC8wcMe/iMIBzgNml4dfcfCeQbCR8/8gQPyeou', 'professional', 'Ergotherapie',     1)
-ON DUPLICATE KEY UPDATE password = VALUES(password), specialite = VALUES(specialite), is_active = 1;
 
 -- ============================================================================
 -- DONNEES : Enfants
