@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS guided_sequences (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(200) NOT NULL,
   description TEXT,
-  emoji VARCHAR(20) DEFAULT '?',
+  emoji VARCHAR(20) DEFAULT NULL,
   participant_category ENUM('enfant','jeune','adulte','tous') NOT NULL DEFAULT 'tous',
   duration_minutes INT DEFAULT 15,
   difficulty ENUM('facile','moyen','difficile') DEFAULT 'facile',
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS sequence_steps (
   step_number INT NOT NULL,
   title VARCHAR(200) NOT NULL,
   description TEXT,
-  emoji VARCHAR(20) DEFAULT '?',
+  emoji VARCHAR(20) DEFAULT NULL,
   duration_seconds INT DEFAULT 60,
   FOREIGN KEY (sequence_id) REFERENCES guided_sequences(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS badges (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   description TEXT,
-  emoji VARCHAR(20) NOT NULL DEFAULT '?',
+  emoji VARCHAR(20) NOT NULL DEFAULT '*',
   condition_type ENUM('activities','points','games') NOT NULL,
   condition_value INT NOT NULL DEFAULT 1,
   color VARCHAR(20) DEFAULT '#f59e0b',
@@ -352,23 +352,40 @@ WHERE p.email = 'mohamed@aidaa.com' AND pr.email = 'abderrahman@aidaa.com'
 -- DONNEES : Contenu educatif
 -- ============================================================================
 
-INSERT INTO content (title, type, category, category_color, emoji, duration, url, description, age_group, level, language, participant_category) VALUES
-('Apprendre a dire bonjour',    'video',    'Communication', '#f97316', '?', '3 min', 'https://example.com/v1.mp4',  'Apprendre a saluer poliment',           '4-6',  1, 'fr', 'tous'),
-('Reconnaitre les emotions',    'video',    'Emotions',      '#f97316', '?', '5 min', 'https://example.com/v2.mp4',  'Identifier les differentes emotions',   '4-6',  1, 'fr', 'tous'),
-('Jouer ensemble',              'video',    'Social',        '#f97316', '?', '4 min', 'https://example.com/v3.mp4',  'Les benefices du jeu social',           '4-6',  1, 'fr', 'tous'),
-('Preparer mon petit-dejeuner', 'video',    'Autonomie',     '#f97316', '?', '6 min', 'https://example.com/v4.mp4',  'Preparer un petit-dejeuner sain',       '4-6',  1, 'fr', 'tous'),
-('Sequence du matin',           'activity', 'Autonomie',     '#f97316', '?', NULL,    'https://example.com/a1',      'Routine matinale structuree',           '4-6',  1, 'fr', 'tous'),
-('Creer avec les couleurs',     'activity', 'Creativite',    '#f97316', '?', NULL,    'https://example.com/a2',      'Activite creative et sensorielle',      '4-6',  1, 'fr', 'tous'),
-('Ecouter et repeter',          'audio',    'Langage',       '#f97316', '?', '2 min', 'https://example.com/au1.mp3', 'Jeu ecoute et prononciation',           '4-6',  1, 'fr', 'tous'),
-('Les chiffres en arabe',       'video',    'Langage',       '#3b82f6', '?', '4 min', 'https://example.com/v5.mp4',  'Apprendre les chiffres 1-10 en arabe', '4-6',  1, 'ar', 'tous'),
-('Marhba - Dire bonjour',       'audio',    'Communication', '#10b981', '?', '3 min', 'https://example.com/au2.mp3', 'Saluer en dialecte tunisien',           '4-6',  1, 'tn', 'tous'),
-('Gestion du stress',           'video',    'Emotions',      '#8b5cf6', '?', '7 min', 'https://example.com/v6.mp4',  'Techniques de relaxation',              '7-12', 2, 'fr', 'jeune'),
-('Autonomie au quotidien',      'activity', 'Autonomie',     '#f97316', '?', NULL,    'https://example.com/a3',      'Developper autonomie au quotidien',     '7-12', 2, 'fr', 'jeune'),
-('Memoire - Jeu des paires',    'activity', 'Cognition',     '#6366f1', '?', NULL,    'https://example.com/mem',     'Exercice de memoire visuelle',          '4-10', 1, 'fr', 'tous'),
-('Ma routine du soir',          'video',    'Autonomie',     '#f59e0b', '?', '5 min', 'https://example.com/soir',    'Routine du coucher etape par etape',    '4-8',  1, 'fr', 'tous'),
-('Chansons tunisiennes',        'audio',    'Langage',       '#10b981', '?', '4 min', 'https://example.com/tn-songs','Chansons educatives en dialecte',       '3-8',  1, 'tn', 'enfant'),
-('Vocabulaire arabe quotidien', 'video',    'Langage',       '#3b82f6', '?', '5 min', 'https://example.com/ar-vocab','Mots courants en arabe standard',       '5-10', 1, 'ar', 'tous')
+INSERT INTO content (title, type, category, category_color, duration, url, description, age_group, level, language, participant_category) VALUES
+('Apprendre a dire bonjour',    'video',    'Communication', '#f97316', '3 min', 'https://example.com/v1.mp4',  'Apprendre a saluer poliment',           '4-6',  1, 'fr', 'tous'),
+('Reconnaitre les emotions',    'video',    'Emotions',      '#f97316', '5 min', 'https://example.com/v2.mp4',  'Identifier les differentes emotions',   '4-6',  1, 'fr', 'tous'),
+('Jouer ensemble',              'video',    'Social',        '#f97316', '4 min', 'https://example.com/v3.mp4',  'Les benefices du jeu social',           '4-6',  1, 'fr', 'tous'),
+('Preparer mon petit-dejeuner', 'video',    'Autonomie',     '#f97316', '6 min', 'https://example.com/v4.mp4',  'Preparer un petit-dejeuner sain',       '4-6',  1, 'fr', 'tous'),
+('Sequence du matin',           'activity', 'Autonomie',     '#f97316', NULL,    'https://example.com/a1',      'Routine matinale structuree',           '4-6',  1, 'fr', 'tous'),
+('Creer avec les couleurs',     'activity', 'Creativite',    '#f97316', NULL,    'https://example.com/a2',      'Activite creative et sensorielle',      '4-6',  1, 'fr', 'tous'),
+('Ecouter et repeter',          'audio',    'Langage',       '#f97316', '2 min', 'https://example.com/au1.mp3', 'Jeu ecoute et prononciation',           '4-6',  1, 'fr', 'tous'),
+('Les chiffres en arabe',       'video',    'Langage',       '#3b82f6', '4 min', 'https://example.com/v5.mp4',  'Apprendre les chiffres 1-10 en arabe', '4-6',  1, 'ar', 'tous'),
+('Marhba - Dire bonjour',       'audio',    'Communication', '#10b981', '3 min', 'https://example.com/au2.mp3', 'Saluer en dialecte tunisien',           '4-6',  1, 'tn', 'tous'),
+('Gestion du stress',           'video',    'Emotions',      '#8b5cf6', '7 min', 'https://example.com/v6.mp4',  'Techniques de relaxation',              '7-12', 2, 'fr', 'jeune'),
+('Autonomie au quotidien',      'activity', 'Autonomie',     '#f97316', NULL,    'https://example.com/a3',      'Developper autonomie au quotidien',     '7-12', 2, 'fr', 'jeune'),
+('Memoire - Jeu des paires',    'activity', 'Cognition',     '#6366f1', NULL,    'https://example.com/mem',     'Exercice de memoire visuelle',          '4-10', 1, 'fr', 'tous'),
+('Ma routine du soir',          'video',    'Autonomie',     '#f59e0b', '5 min', 'https://example.com/soir',    'Routine du coucher etape par etape',    '4-8',  1, 'fr', 'tous'),
+('Chansons tunisiennes',        'audio',    'Langage',       '#10b981', '4 min', 'https://example.com/tn-songs','Chansons educatives en dialecte',       '3-8',  1, 'tn', 'enfant'),
+('Vocabulaire arabe quotidien', 'video',    'Langage',       '#3b82f6', '5 min', 'https://example.com/ar-vocab','Mots courants en arabe standard',       '5-10', 1, 'ar', 'tous')
 ON DUPLICATE KEY UPDATE id = id;
+
+-- Mise a jour des emojis apres insertion (utilise les codes unicode)
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x97,0xA3) WHERE title = 'Apprendre a dire bonjour' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x98,0x8A) WHERE title = 'Reconnaitre les emotions' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0xA7,0xA9) WHERE title = 'Jouer ensemble' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8D,0x8E) WHERE title = 'Preparer mon petit-dejeuner' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8C,0xB1) WHERE title = 'Sequence du matin' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8E,0xA8) WHERE title = 'Creer avec les couleurs' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8E,0xB5) WHERE title = 'Ecouter et repeter' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x94,0xA2) WHERE title = 'Les chiffres en arabe' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x91,0x8B) WHERE title = 'Marhba - Dire bonjour' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x98,0xA4) WHERE title = 'Gestion du stress' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8F,0xA0) WHERE title = 'Autonomie au quotidien' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0xA7,0xA0) WHERE title = 'Memoire - Jeu des paires' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8C,0x99) WHERE title = 'Ma routine du soir' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x8E,0xB6) WHERE title = 'Chansons tunisiennes' AND emoji IS NULL;
+UPDATE content SET emoji = CHAR(0xF0,0x9F,0x93,0x9A) WHERE title = 'Vocabulaire arabe quotidien' AND emoji IS NULL;
 
 -- ============================================================================
 -- DONNEES : Logs d activites
@@ -521,46 +538,46 @@ ON DUPLICATE KEY UPDATE id = id;
 -- DONNEES : Sequences guidees
 -- ============================================================================
 
-INSERT INTO guided_sequences (title, description, emoji, participant_category, duration_minutes, difficulty) VALUES
-('Routine du matin',         'Apprendre la routine du matin etape par etape', '?', 'enfant', 10, 'facile'),
-('Lavage des mains',         'Comment bien se laver les mains',               '?', 'tous',    5, 'facile'),
-('Preparation repas simple', 'Preparer un sandwich ou une collation',          '?', 'jeune',  20, 'moyen'),
-('Prise des transports',     'Utiliser les transports en commun',              '?', 'adulte', 30, 'moyen'),
-('Gestion des emotions',     'Reconnaitre et exprimer ses emotions',           '?', 'tous',   15, 'facile')
+INSERT INTO guided_sequences (title, description, participant_category, duration_minutes, difficulty) VALUES
+('Routine du matin',         'Apprendre la routine du matin etape par etape', 'enfant', 10, 'facile'),
+('Lavage des mains',         'Comment bien se laver les mains',               'tous',    5, 'facile'),
+('Preparation repas simple', 'Preparer un sandwich ou une collation',          'jeune',  20, 'moyen'),
+('Prise des transports',     'Utiliser les transports en commun',              'adulte', 30, 'moyen'),
+('Gestion des emotions',     'Reconnaitre et exprimer ses emotions',           'tous',   15, 'facile')
 ON DUPLICATE KEY UPDATE id = id;
 
-INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.n, v.t, v.d, v.e, v.dur FROM guided_sequences s
+INSERT INTO sequence_steps (sequence_id, step_number, title, description, duration_seconds)
+SELECT s.id, v.n, v.t, v.d, v.dur FROM guided_sequences s
 JOIN (
-  SELECT 1 AS n,'Se reveiller'       AS t,'Ouvrir les yeux et s etirer'   AS d,'?' AS e,30  AS dur UNION ALL
-  SELECT 2,'Se lever',                    'Mettre les pieds par terre',      '?',30  UNION ALL
-  SELECT 3,'Se laver le visage',          'Aller a la salle de bain',        '?',120 UNION ALL
-  SELECT 4,'S habiller',                  'Choisir et mettre ses vetements', '?',180 UNION ALL
-  SELECT 5,'Petit dejeuner',              'Manger et boire',                 '?',600
+  SELECT 1 AS n,'Se reveiller'       AS t,'Ouvrir les yeux et s etirer'   AS d,30  AS dur UNION ALL
+  SELECT 2,'Se lever',                    'Mettre les pieds par terre',      30  UNION ALL
+  SELECT 3,'Se laver le visage',          'Aller a la salle de bain',        120 UNION ALL
+  SELECT 4,'S habiller',                  'Choisir et mettre ses vetements', 180 UNION ALL
+  SELECT 5,'Petit dejeuner',              'Manger et boire',                 600
 ) v ON 1=1
 WHERE s.title = 'Routine du matin'
   AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
 
-INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.n, v.t, v.d, v.e, v.dur FROM guided_sequences s
+INSERT INTO sequence_steps (sequence_id, step_number, title, description, duration_seconds)
+SELECT s.id, v.n, v.t, v.d, v.dur FROM guided_sequences s
 JOIN (
-  SELECT 1 AS n,'Ouvrir le robinet' AS t,'Tourner le robinet'           AS d,'?' AS e,10 AS dur UNION ALL
-  SELECT 2,'Mouiller',                  'Mettre les mains sous l eau',    '?',10 UNION ALL
-  SELECT 3,'Savonner',                  'Prendre du savon et frotter',    '?',20 UNION ALL
-  SELECT 4,'Rincer',                    'Enlever tout le savon',          '?',15 UNION ALL
-  SELECT 5,'Secher',                    'Utiliser une serviette propre',  '?',10
+  SELECT 1 AS n,'Ouvrir le robinet' AS t,'Tourner le robinet'           AS d,10 AS dur UNION ALL
+  SELECT 2,'Mouiller',                  'Mettre les mains sous l eau',    10 UNION ALL
+  SELECT 3,'Savonner',                  'Prendre du savon et frotter',    20 UNION ALL
+  SELECT 4,'Rincer',                    'Enlever tout le savon',          15 UNION ALL
+  SELECT 5,'Secher',                    'Utiliser une serviette propre',  10
 ) v ON 1=1
 WHERE s.title = 'Lavage des mains'
   AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
 
-INSERT INTO sequence_steps (sequence_id, step_number, title, description, emoji, duration_seconds)
-SELECT s.id, v.n, v.t, v.d, v.e, v.dur FROM guided_sequences s
+INSERT INTO sequence_steps (sequence_id, step_number, title, description, duration_seconds)
+SELECT s.id, v.n, v.t, v.d, v.dur FROM guided_sequences s
 JOIN (
-  SELECT 1 AS n,'Reconnaitre la situation' AS t,'Identifier l emotion ressentie'    AS d,'?' AS e,30  AS dur UNION ALL
-  SELECT 2,'Respirer profondement',             'Inspirer 4s retenir 4s expirer 4s', '?',60  UNION ALL
-  SELECT 3,'Nommer l emotion',                  'Dire ou ecrire ce que l on ressent', '?',30  UNION ALL
-  SELECT 4,'Choisir une strategie',             'Calme dessin marche...',             '?',60  UNION ALL
-  SELECT 5,'Se calmer',                         'Appliquer la strategie choisie',     '?',120
+  SELECT 1 AS n,'Reconnaitre la situation' AS t,'Identifier l emotion ressentie'    AS d,30  AS dur UNION ALL
+  SELECT 2,'Respirer profondement',             'Inspirer 4s retenir 4s expirer 4s', 60  UNION ALL
+  SELECT 3,'Nommer l emotion',                  'Dire ou ecrire ce que l on ressent', 30  UNION ALL
+  SELECT 4,'Choisir une strategie',             'Calme dessin marche...',             60  UNION ALL
+  SELECT 5,'Se calmer',                         'Appliquer la strategie choisie',     120
 ) v ON 1=1
 WHERE s.title = 'Gestion des emotions'
   AND NOT EXISTS (SELECT 1 FROM sequence_steps ss WHERE ss.sequence_id = s.id);
@@ -570,26 +587,26 @@ WHERE s.title = 'Gestion des emotions'
 -- ============================================================================
 
 INSERT INTO aac_symbols (label, emoji, category, participant_category, color, sort_order) VALUES
-('Manger',    '?', 'Besoins',       'tous',   '#ef4444', 1),
-('Boire',     '?', 'Besoins',       'tous',   '#3b82f6', 2),
-('Toilettes', '?', 'Besoins',       'tous',   '#8b5cf6', 3),
-('Dormir',    '?', 'Besoins',       'tous',   '#6366f1', 4),
-('Aide',      '?', 'Communication', 'tous',   '#f59e0b', 5),
-('Oui',       '?', 'Communication', 'tous',   '#22c55e', 6),
-('Non',       '?', 'Communication', 'tous',   '#ef4444', 7),
-('Content',   '?', 'Emotions',      'tous',   '#eab308', 8),
-('Triste',    '?', 'Emotions',      'tous',   '#3b82f6', 9),
-('En colere', '?', 'Emotions',      'tous',   '#ef4444', 10),
-('Peur',      '?', 'Emotions',      'tous',   '#8b5cf6', 11),
-('Jouer',     '?', 'Activites',     'enfant', '#f97316', 12),
-('Ecole',     '?', 'Activites',     'enfant', '#0ea5e9', 13),
-('Maison',    '?', 'Lieux',         'tous',   '#84cc16', 14),
-('Bus',       '?', 'Transports',    'jeune',  '#f59e0b', 15),
-('Medecin',   '?', 'Lieux',         'tous',   '#06b6d4', 16),
-('Musique',   '?', 'Activites',     'tous',   '#a855f7', 17),
-('Repos',     '?', 'Besoins',       'adulte', '#6b7280', 18),
-('Travail',   '?', 'Activites',     'adulte', '#78716c', 19),
-('Voiture',   '?', 'Transports',    'tous',   '#64748b', 20)
+('Manger',    'manger',    'Besoins',       'tous',   '#ef4444', 1),
+('Boire',     'boire',     'Besoins',       'tous',   '#3b82f6', 2),
+('Toilettes', 'toilettes', 'Besoins',       'tous',   '#8b5cf6', 3),
+('Dormir',    'dormir',    'Besoins',       'tous',   '#6366f1', 4),
+('Aide',      'aide',      'Communication', 'tous',   '#f59e0b', 5),
+('Oui',       'oui',       'Communication', 'tous',   '#22c55e', 6),
+('Non',       'non',       'Communication', 'tous',   '#ef4444', 7),
+('Content',   'content',   'Emotions',      'tous',   '#eab308', 8),
+('Triste',    'triste',    'Emotions',      'tous',   '#3b82f6', 9),
+('En colere', 'colere',    'Emotions',      'tous',   '#ef4444', 10),
+('Peur',      'peur',      'Emotions',      'tous',   '#8b5cf6', 11),
+('Jouer',     'jouer',     'Activites',     'enfant', '#f97316', 12),
+('Ecole',     'ecole',     'Activites',     'enfant', '#0ea5e9', 13),
+('Maison',    'maison',    'Lieux',         'tous',   '#84cc16', 14),
+('Bus',       'bus',       'Transports',    'jeune',  '#f59e0b', 15),
+('Medecin',   'medecin',   'Lieux',         'tous',   '#06b6d4', 16),
+('Musique',   'musique',   'Activites',     'tous',   '#a855f7', 17),
+('Repos',     'repos',     'Besoins',       'adulte', '#6b7280', 18),
+('Travail',   'travail',   'Activites',     'adulte', '#78716c', 19),
+('Voiture',   'voiture',   'Transports',    'tous',   '#64748b', 20)
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================
@@ -597,16 +614,16 @@ ON DUPLICATE KEY UPDATE id = id;
 -- ============================================================================
 
 INSERT INTO badges (name, description, emoji, condition_type, condition_value, color) VALUES
-('Premier pas',    'Completez votre 1ere activite', '?', 'activities', 1,   '#f59e0b'),
-('En route !',     'Completez 5 activites',          '?', 'activities', 5,   '#3b82f6'),
-('Regulier',       'Completez 10 activites',         '?', 'activities', 10,  '#22c55e'),
-('Champion',       'Completez 25 activites',         '?', 'activities', 25,  '#ef4444'),
-('Super champion', 'Completez 50 activites',         '?', 'activities', 50,  '#a855f7'),
-('100 points',     'Atteignez 100 points au total',  '?', 'points',     100, '#f97316'),
-('500 points',     'Atteignez 500 points au total',  '?', 'points',     500, '#eab308'),
-('Premier jeu',    'Jouez a votre 1er jeu',          '?', 'games',      1,   '#06b6d4'),
-('Joueur assidu',  'Jouez a 5 jeux',                 '?', 'games',      5,   '#8b5cf6'),
-('Grand joueur',   'Jouez a 10 jeux',                '?', 'games',      10,  '#ec4899')
+('Premier pas',    'Completez votre 1ere activite', '*',  'activities', 1,   '#f59e0b'),
+('En route !',     'Completez 5 activites',          '**', 'activities', 5,   '#3b82f6'),
+('Regulier',       'Completez 10 activites',         '**', 'activities', 10,  '#22c55e'),
+('Champion',       'Completez 25 activites',         '**', 'activities', 25,  '#ef4444'),
+('Super champion', 'Completez 50 activites',         '**', 'activities', 50,  '#a855f7'),
+('100 points',     'Atteignez 100 points au total',  '**', 'points',     100, '#f97316'),
+('500 points',     'Atteignez 500 points au total',  '**', 'points',     500, '#eab308'),
+('Premier jeu',    'Jouez a votre 1er jeu',          '**', 'games',      1,   '#06b6d4'),
+('Joueur assidu',  'Jouez a 5 jeux',                 '**', 'games',      5,   '#8b5cf6'),
+('Grand joueur',   'Jouez a 10 jeux',                '**', 'games',      10,  '#ec4899')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- ============================================================================
