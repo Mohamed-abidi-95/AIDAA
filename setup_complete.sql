@@ -1,7 +1,7 @@
 -- ============================================================================
--- AIDAA setup_complete.sql (VERSION COMPLETE)
+-- AIDAA setup_complete.sql (VERSION COMPLETE — PFE 2026)
 -- ============================================================================
--- COMPTES :
+-- COMPTES DE TEST :
 --   admin@aidaa.com            / admin123
 --   parent@aidaa.com           / parent123
 --   sarah.johnson@aidaa.com    / parent123
@@ -108,7 +108,9 @@ CREATE TABLE IF NOT EXISTS teleconsultations (
   date_time DATETIME NOT NULL,
   meeting_link VARCHAR(500),
   notes TEXT,
-  status VARCHAR(50) DEFAULT 'scheduled',
+  status ENUM('scheduled','in_progress','completed','cancelled') NOT NULL DEFAULT 'scheduled',
+  room_id VARCHAR(120) NULL,
+  reminder_sent TINYINT NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (parent_id) REFERENCES users(id),
   FOREIGN KEY (professional_id) REFERENCES users(id)
@@ -243,6 +245,25 @@ CREATE TABLE IF NOT EXISTS faq_entries (
   category VARCHAR(100) DEFAULT 'General',
   language VARCHAR(10) DEFAULT 'fr'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- TABLE : Notifications (système email + cloche dashboard parent)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT NOT NULL,
+  type       VARCHAR(50) DEFAULT 'info',
+  title      VARCHAR(255) NOT NULL,
+  message    TEXT NOT NULL,
+  link       VARCHAR(500) DEFAULT NULL,
+  is_read    TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
 SET FOREIGN_KEY_CHECKS = 1;
 
