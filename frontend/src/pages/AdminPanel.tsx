@@ -3,6 +3,8 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
+
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import { ContentItem, ContentFormData, User } from '../features/content/types/content.types';
@@ -10,6 +12,7 @@ import { ContentCard } from '../features/admin/components/ContentCard';
 import { EditContentModal } from '../features/admin/components/EditContentModal';
 import { DeleteContentModal } from '../features/admin/components/DeleteContentModal';
 import { StatCard, Section, useToast, ToastStack } from '../components';
+import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type ViewType = 'content' | 'upload' | 'users' | 'registrations' | 'relations' | 'messages' | 'notes';
@@ -36,14 +39,14 @@ interface NoteRow {
 
 
 // ── Nav config ─────────────────────────────────────────────────────────────
-const NAV = [
-  { id: 'content',       fa: 'fa-solid fa-swatchbook',          label: 'Bibliothèque'     },
-  { id: 'upload',        fa: 'fa-solid fa-cloud-arrow-up',       label: 'Importer contenu' },
-  { id: 'users',         fa: 'fa-solid fa-users',                label: 'Utilisateurs'     },
-  { id: 'registrations', fa: 'fa-solid fa-bell',                 label: 'Demandes'         },
-  { id: 'relations',     fa: 'fa-solid fa-link',                 label: 'Relations'        },
-  { id: 'messages',      fa: 'fa-solid fa-comments',             label: 'Messages'         },
-  { id: 'notes',         fa: 'fa-solid fa-notes-medical',        label: 'Notes cliniques'  },
+const NAV_IDS = [
+  { id: 'content',       fa: 'fa-solid fa-swatchbook',          key: 'navLibrary'       },
+  { id: 'upload',        fa: 'fa-solid fa-cloud-arrow-up',       key: 'navUpload'        },
+  { id: 'users',         fa: 'fa-solid fa-users',                key: 'navUsers'         },
+  { id: 'registrations', fa: 'fa-solid fa-bell',                 key: 'navRegistrations' },
+  { id: 'relations',     fa: 'fa-solid fa-link',                 key: 'navRelations'     },
+  { id: 'messages',      fa: 'fa-solid fa-comments',             key: 'navMessages'      },
+  { id: 'notes',         fa: 'fa-solid fa-notes-medical',        key: 'navNotes'         },
 ] as const;
 
 const ROLE_FA: Record<string, string> = {
@@ -67,6 +70,7 @@ const labelCls = 'block text-sm font-semibold text-slate-800 mb-2';
 export const AdminPanel = (): JSX.Element => {
   const { logout, user } = useAuth();
   const { toasts, add: toast, remove: removeToast } = useToast();
+  const { t } = useTranslation();
 
   const [view,     setView]     = useState<ViewType>('content');
   const [content,  setContent]  = useState<ContentItem[]>([]);
@@ -196,15 +200,23 @@ export const AdminPanel = (): JSX.Element => {
 
   const activeUsers    = users.filter(u => !!u.is_active).length;
   const adminInitial   = user?.name?.charAt(0).toUpperCase() || 'A';
-  const currentNavItem = NAV.find(n => n.id === view);
+  const currentNavItem = NAV_IDS.find(n => n.id === view);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="font-sans antialiased flex h-screen overflow-hidden bg-slate-50 animate-page-in">
 
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={closeSidebar} />
+      )}
+
       {/* ══════════════ SIDEBAR ══════════════ */}
       <aside
-        className="w-[280px] relative flex flex-col z-10 shrink-0"
+        className={`fixed inset-y-0 left-0 md:relative md:translate-x-0 w-[280px] relative flex flex-col z-30 md:z-10 shrink-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
         style={{
           background: '#F97316',
           backgroundImage: 'linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px)',
@@ -219,7 +231,7 @@ export const AdminPanel = (): JSX.Element => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
-            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Administration</span>
+            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">{t('adminDash.title')}</span>
           </div>
         </div>
 
@@ -231,23 +243,23 @@ export const AdminPanel = (): JSX.Element => {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white truncate">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-white/80">Administrateur</p>
+              <p className="text-xs text-white/80">{t('adminDash.administrator')}</p>
             </div>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 px-5 flex flex-col gap-2">
-          {NAV.map(n => (
+          {NAV_IDS.map(n => (
             <button key={n.id}
               className={`flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border transition-all
                 ${view === n.id
                   ? 'bg-white text-brand-orange shadow-md border-transparent'
                   : 'text-white border-transparent hover:bg-white/15 hover:border-white/20'}`}
-              onClick={() => setView(n.id as ViewType)}
+              onClick={() => { setView(n.id as ViewType); closeSidebar(); }}
             >
               <i className={`${n.fa} w-6 mr-3 text-lg ${view === n.id ? 'text-brand-orange opacity-100' : 'opacity-80'}`} />
-              {n.label}
+              {t(`adminDash.${n.key}`)}
               {n.id === 'registrations' && notifCount > 0 && (
                 <span className="ml-auto w-5 h-5 rounded-full bg-white text-brand-orange text-[11px] font-bold flex items-center justify-center">
                   {notifCount}
@@ -258,10 +270,13 @@ export const AdminPanel = (): JSX.Element => {
         </nav>
 
         {/* Footer — logout only */}
-        <div className="px-5 pb-5">
+        <div className="px-5 pb-5 flex flex-col gap-2">
+          <div className="flex justify-center">
+            <LanguageSwitcher dropDirection="up" />
+          </div>
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
-            Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
+            {t('adminDash.disconnect')} <i className="fa-solid fa-arrow-right-from-bracket" />
           </button>
         </div>
       </aside>
@@ -270,10 +285,20 @@ export const AdminPanel = (): JSX.Element => {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top header */}
-        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-500 font-medium">Administration /</span>
-            <span className="text-xl font-bold text-slate-900">{currentNavItem?.label}</span>
+        <header className="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50 transition"
+              onClick={() => setSidebarOpen(v => !v)}
+              aria-label="Menu"
+            >
+              <i className="fa-solid fa-bars" />
+            </button>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm text-slate-500 font-medium hidden sm:inline">{t('adminDash.breadcrumb')}</span>
+              <span className="text-lg md:text-xl font-bold text-slate-900">{currentNavItem ? t(`adminDash.${currentNavItem.key}`) : ''}</span>
+            </div>
           </div>
           <button
             className="relative w-11 h-11 rounded-full border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50 transition text-lg"
@@ -290,14 +315,14 @@ export const AdminPanel = (): JSX.Element => {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
 
           {/* ── KPI Cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
-            <StatCard icon="fa-solid fa-layer-group"      color="orange" value={content.length} label="Contenus publiés" />
-            <StatCard icon="fa-solid fa-user-group"       color="blue"   value={users.length}   label="Utilisateurs inscrits" />
-            <StatCard icon="fa-solid fa-circle-check"     color="green"  value={activeUsers}    label="Comptes actifs" />
-            <StatCard icon="fa-regular fa-hourglass-half" color="gray"   value={notifCount}     label="Demandes en attente" onClick={() => setView('registrations')} />
+            <StatCard icon="fa-solid fa-layer-group"      color="orange" value={content.length} label={t('adminDash.kpiContents')} />
+            <StatCard icon="fa-solid fa-user-group"       color="blue"   value={users.length}   label={t('adminDash.kpiUsers')} />
+            <StatCard icon="fa-solid fa-circle-check"     color="green"  value={activeUsers}    label={t('adminDash.kpiActive')} />
+            <StatCard icon="fa-regular fa-hourglass-half" color="gray"   value={notifCount}     label={t('adminDash.kpiPending')} onClick={() => setView('registrations')} />
           </div>
 
           {/* ══ VIEW : BIBLIOTHÈQUE ══ */}

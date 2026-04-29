@@ -3,9 +3,10 @@
 // ============================================================================
 // Handles virtual consultation scheduling and management
 
-const teleconsultModel = require('../models/teleconsult.model');
-const userModel        = require('../models/user.model');
-const { query }        = require('../config/db');
+const teleconsultModel              = require('../models/teleconsult.model');
+const userModel                     = require('../models/user.model');
+const { query }                     = require('../config/db');
+const { sendConsultationEmail }     = require('../config/mailer');
 
 // ============================================================================
 // Get all teleconsultations for authenticated user
@@ -120,7 +121,7 @@ const getRoomDetails = async (req, res) => {
 // Note: Parent can only create for themselves
 const create = async (req, res) => {
   try {
-    const { parentId, professionalId, date_time, meeting_link, notes } = req.body;
+    const { parentId, professionalId, childId, date_time, meeting_link, notes } = req.body;
 
     // Validate input
     if (!parentId || !professionalId || !date_time) {
@@ -178,6 +179,51 @@ const create = async (req, res) => {
       meeting_link,
       notes
     );
+
+    // ── Envoi email réel au parent ──────────────────────────────────────────
+    try {
+      // Récupérer le nom du patient (enfant) si fourni
+      let childName = null;
+      if (childId) {
+        const childRows = await query('SELECT name FROM children WHERE id = ?', [childId]);
+        if (childRows.length > 0) childName = childRows[0].name;
+      }
+
+      const { previewUrl } = await sendConsultationEmail({
+        parentEmail:      parent.email,
+        parentName:       parent.name || parent.email,
+        professionalName: professional.name || professional.email,
+        professionalSpecialite: professional.specialite || null,
+        childName,
+        date_time,
+        duration:   notes && notes.match(/(\d+) min/) ? notes.match(/(\d+) min/)[1] : null,
+        jitsiLink:  result.jitsiLink,
+        notes,
+      });
+      console.log(`[Mailer] ✅ Email consultation envoyé à ${parent.email}${previewUrl ? ' → ' + previewUrl : ''}`);
+    } catch (emailErr) {
+      console.error('[Mailer] ⚠️  Erreur email (non bloquant):', emailErr.message);
+    }
+
+    // ── Notification en BDD pour le parent ─────────────────────────────────
+    try {
+      const dateLabel = new Date(date_time).toLocaleString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+      await query(
+        `INSERT INTO notifications (user_id, type, title, message, link)
+         VALUES (?, 'consultation', ?, ?, ?)`,
+        [
+          parentId,
+          '🗓️ Nouvelle consultation planifiée',
+          `Consultation avec ${professional.name || professional.email} prévue le ${dateLabel}`,
+          result.jitsiLink,
+        ]
+      );
+    } catch (notifErr) {
+      console.error('[Notif] ⚠️  Erreur notification:', notifErr.message);
+    }
 
     res.status(201).json({
       success: true,

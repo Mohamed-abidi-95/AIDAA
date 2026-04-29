@@ -3,6 +3,7 @@
 // ============================================================================
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import { Video, Activity } from '../features/content/types/content.types';
 import { MemoryGame } from '../features/games/MemoryGame';
@@ -14,6 +15,7 @@ import { PatternGame } from '../features/games/PatternGame';
 import { PuzzleWordGame } from '../features/games/PuzzleWordGame';
 import { SoundGame } from '../features/games/SoundGame';
 import api from '../lib/api';
+import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 
 const BACKEND_BASE = 'http://localhost:5000';
 
@@ -61,6 +63,7 @@ function SequenceViewer({ sequence, onClose, onComplete }: {
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const startRef = useRef(Date.now());
+  const { t } = useTranslation();
   const steps = sequence.steps ?? [];
   const totalSteps = steps.length;
   const current = steps[step];
@@ -96,10 +99,10 @@ function SequenceViewer({ sequence, onClose, onComplete }: {
             </div>
             <div className="flex gap-3 mt-6">
               {step > 0 && (
-                <button onClick={() => setStep(s => s - 1)} className="flex-1 py-3.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition">← Précédent</button>
+                <button onClick={() => setStep(s => s - 1)} className="flex-1 py-3.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition">← {t('childDash.prevStep')}</button>
               )}
               <button onClick={handleNext} className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-bold shadow-lg hover:opacity-90 transition">
-                {step < totalSteps - 1 ? 'Suivant →' : '✅ Terminer !'}
+                {step < totalSteps - 1 ? `${t('childDash.nextStep')} →` : `✅ ${t('childDash.finish')} !`}
               </button>
             </div>
           </>
@@ -111,7 +114,7 @@ function SequenceViewer({ sequence, onClose, onComplete }: {
             <button onClick={onClose} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-brand-green to-emerald-400 text-white font-bold hover:opacity-90 transition">Retour 🏠</button>
           </div>
         ) : (
-          <p className="text-center text-slate-400">Aucune étape disponible</p>
+          <p className="text-center text-slate-400">{t('childDash.noSequences')}</p>
         )}
       </div>
     </div>
@@ -124,6 +127,7 @@ function SequenceViewer({ sequence, onClose, onComplete }: {
 export const ChildDashboard = (): JSX.Element => {
   const { logout } = useAuth();
   const navigate   = useNavigate();
+  const { t }      = useTranslation();
 
   const childId   = parseInt(localStorage.getItem('selected_child_id') ?? '0', 10);
   const childName = localStorage.getItem('selected_child_name') ?? 'Participant';
@@ -242,9 +246,9 @@ export const ChildDashboard = (): JSX.Element => {
   };
 
   // Active tab classes — exact match with child.html
-  const tabCls = (t: string) => t === activeTab
-    ? 'flex items-center gap-3 px-6 h-full bg-orange-100 text-brand-orange font-semibold border-b-2 border-brand-orange rounded-t-xl transition'
-    : 'flex items-center gap-3 px-6 h-full text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 rounded-t-xl transition';
+  const tabCls = (tab: string) => tab === activeTab
+    ? 'flex items-center gap-2 px-4 sm:px-6 h-full bg-orange-100 text-brand-orange font-semibold border-b-2 border-brand-orange rounded-t-xl transition shrink-0'
+    : 'flex items-center gap-2 px-4 sm:px-6 h-full text-slate-600 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 rounded-t-xl transition shrink-0';
 
   // Difficulty badge
   const diffCls = (d: string) => d === 'facile'
@@ -257,76 +261,97 @@ export const ChildDashboard = (): JSX.Element => {
     <div className="bg-brand-bg text-brand-blue font-sans antialiased h-screen flex flex-col overflow-hidden">
 
       {/* ═══════════════════════════════ HEADER ═══════════════════════════════ */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-8 shadow-sm shrink-0 z-20 relative">
-        {/* Left: avatar + greeting */}
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full border-4 border-emerald-400 p-1 flex items-center justify-center bg-emerald-50 shadow-inner overflow-hidden text-3xl">
-            {catCfg.emoji}
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 shrink-0 z-20 relative shadow-sm">
+        {/* Row 1 : avatar + greeting + actions */}
+        <div className="flex items-center justify-between px-4 sm:px-8 h-16 sm:h-20">
+          {/* Left: avatar + greeting */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-4 border-emerald-400 p-0.5 sm:p-1 flex items-center justify-center bg-emerald-50 shadow-inner overflow-hidden text-2xl sm:text-3xl shrink-0">
+              {catCfg.emoji}
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-3xl font-bold tracking-tight text-slate-900">
+                {t('childDash.greeting')} <span className="text-brand-green">{childName}</span> ! 👋
+              </h1>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">
+                {t('childDash.catSpace')} {catCfg.label} <i className="fa-solid fa-child-reaching" style={{ color: catCfg.color }}></i>
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Bonjour <span className="text-brand-green">{childName}</span> ! 👋
-            </h1>
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mt-1">
-              Espace {catCfg.label} <i className="fa-solid fa-child-reaching" style={{ color: catCfg.color }}></i>
-            </p>
+
+          {/* Right: stats (hidden on xs) + buttons */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Points — masqué sur très petit écran */}
+            <div className="hidden sm:flex bg-slate-50 border border-slate-100 rounded-2xl p-3 sm:p-4 items-center gap-2 sm:gap-3 shadow-sm">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-inner">
+                <i className="fa-solid fa-star text-base sm:text-lg"></i>
+              </div>
+              <div>
+                <p className="text-lg sm:text-2xl font-bold text-slate-800">{stats.total_points} <span className="text-xs sm:text-sm text-slate-400">{t('childDash.ptsUnit')}</span></p>
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t('childDash.totalLabel')}</p>
+              </div>
+            </div>
+            {/* Badges — masqué sur très petit écran */}
+            <div className="hidden sm:flex bg-slate-50 border border-slate-100 rounded-2xl p-3 sm:p-4 items-center gap-2 sm:gap-3 shadow-sm">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shadow-inner">
+                <i className="fa-solid fa-medal text-base sm:text-lg"></i>
+              </div>
+              <div>
+                <p className="text-lg sm:text-2xl font-bold text-slate-800">{badges.length} <span className="text-xs sm:text-sm text-slate-400">{t('childDash.badgesUnit')}</span></p>
+                <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t('childDash.earnedLabel')}</p>
+              </div>
+            </div>
+            {/* Action buttons */}
+            <div className="flex gap-1.5 sm:gap-2 items-center">
+              <LanguageSwitcher variant="light" compact />
+              <button onClick={() => navigate('/child-selection')} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2.5 shadow-sm transition text-sm">
+                <i className="fa-solid fa-arrow-left text-xs"></i> <span className="hidden sm:inline">{t('common.back')}</span>
+              </button>
+              <button onClick={logout} className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2.5 shadow-sm transition text-sm">
+                <i className="fa-solid fa-power-off text-sm"></i> <span className="hidden sm:inline">{t('childDash.disconnect')}</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right: stats + buttons */}
-        <div className="flex items-center gap-4">
-          {/* Points */}
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center shadow-inner">
-              <i className="fa-solid fa-star text-lg"></i>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.total_points} <span className="text-sm text-slate-400">pts</span></p>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Total</p>
-            </div>
-          </div>
-          {/* Badges */}
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shadow-inner">
-              <i className="fa-solid fa-medal text-lg"></i>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-800">{badges.length} <span className="text-sm text-slate-400">badges</span></p>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Gagnés</p>
-            </div>
-          </div>
-          {/* Action buttons */}
-          <div className="flex gap-2 ml-4">
-            <button onClick={() => navigate('/child-selection')} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 rounded-xl px-5 py-2.5 flex items-center gap-2.5 shadow-sm transition">
-              <i className="fa-solid fa-arrow-left text-xs"></i> Retour
-            </button>
-            <button onClick={logout} className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl px-5 py-2.5 flex items-center gap-2.5 shadow-sm transition">
-              <i className="fa-solid fa-power-off text-sm"></i> Déconnexion
-            </button>
-          </div>
+        {/* Row 2 mobile: stats mini-bar */}
+        <div className="flex sm:hidden items-center gap-3 px-4 pb-2">
+          <span className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+            <i className="fa-solid fa-star text-yellow-500 text-xs"></i>
+            {stats.total_points} {t('childDash.ptsUnit')}
+          </span>
+          <span className="text-slate-300">|</span>
+          <span className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+            <i className="fa-solid fa-medal text-brand-green text-xs"></i>
+            {badges.length} {t('childDash.badgesUnit')}
+          </span>
         </div>
       </header>
 
       {/* ═══════════════════════════════ NAV TABS ═════════════════════════════ */}
-      <nav className="bg-white border-b border-slate-200 h-16 flex items-center px-10 shrink-0 z-10 relative">
-        <div className="flex gap-2 h-full pt-2">
+      <nav className="bg-white border-b border-slate-200 shrink-0 z-10 relative">
+        <div className="flex h-14 overflow-x-auto scrollbar-none px-2 sm:px-6 gap-1">
           <button onClick={() => setActiveTab('library')} className={tabCls('library')}>
-            <i className="fa-solid fa-book-open w-5 text-center"></i> Bibliothèque
+            <i className="fa-solid fa-book-open w-5 text-center"></i>
+            <span className="hidden xs:inline sm:inline">{t('childDash.navVideos')}</span>
           </button>
           <button onClick={() => setActiveTab('sequences')} className={tabCls('sequences')}>
-            <i className="fa-solid fa-list-ol w-5 text-center"></i> Séquences
+            <i className="fa-solid fa-list-ol w-5 text-center"></i>
+            <span className="hidden xs:inline sm:inline">{t('childDash.navSequences')}</span>
           </button>
           <button onClick={() => setActiveTab('aac')} className={tabCls('aac')}>
-            <i className="fa-regular fa-comment-dots w-5 text-center"></i> AAC
+            <i className="fa-regular fa-comment-dots w-5 text-center"></i>
+            <span className="hidden xs:inline sm:inline">{t('childDash.navAAC')}</span>
           </button>
           <button onClick={() => setActiveTab('games')} className={tabCls('games')}>
-            <i className="fa-solid fa-gamepad w-5 text-center"></i> Jeux
+            <i className="fa-solid fa-gamepad w-5 text-center"></i>
+            <span className="hidden xs:inline sm:inline">{t('childDash.navGames')}</span>
           </button>
         </div>
       </nav>
 
       {/* ═══════════════════════════════ MAIN CONTENT ════════════════════════ */}
-      <main className="flex-1 overflow-y-auto p-10 pb-20 relative">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 pb-20 relative">
 
         {/* ══════════════ MODULE A — BIBLIOTHÈQUE ══════════════════════════ */}
         {activeTab === 'library' && (
@@ -334,7 +359,7 @@ export const ChildDashboard = (): JSX.Element => {
             {loadingLib ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-400">
                 <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin mb-4"></div>
-                <p className="font-semibold">Chargement…</p>
+                <p className="font-semibold">{t('childDash.loading')}</p>
               </div>
             ) : (
               <>
@@ -375,8 +400,8 @@ export const ChildDashboard = (): JSX.Element => {
                                   <i className="fa-solid fa-stopwatch"></i> {v.duration || '–'}
                                 </span>
                               </div>
-                              <button className="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md transition">
-                                <i className="fa-solid fa-play text-xs"></i> Regarder
+                                <button className="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-md transition">
+                                <i className="fa-solid fa-play text-xs"></i> {t('childDash.watch')}
                               </button>
                             </div>
                           </div>
@@ -451,7 +476,7 @@ export const ChildDashboard = (): JSX.Element => {
             ) : sequences.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="text-7xl mb-5">📭</div>
-                <p className="text-xl font-bold text-slate-600">Aucune séquence disponible</p>
+                <p className="text-xl font-bold text-slate-600">{t('childDash.noSequences')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -515,11 +540,11 @@ export const ChildDashboard = (): JSX.Element => {
                   <div className="flex flex-col gap-2 shrink-0">
                     <button onClick={() => speak(aacPhrase.map(s => s.label).join('. '))}
                       className="bg-brand-green hover:bg-emerald-600 text-white rounded-xl px-6 py-3 flex items-center gap-2 shadow-lg transition font-bold">
-                      <i className="fa-solid fa-paper-plane text-sm"></i> Parler !
+                      <i className="fa-solid fa-paper-plane text-sm"></i> {t('childDash.speak')} !
                     </button>
                     <button onClick={() => setAACPhrase([])}
                       className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl px-6 py-2.5 flex items-center gap-2 transition text-sm font-semibold">
-                      <i className="fa-solid fa-trash-can text-xs"></i> Effacer
+                      <i className="fa-solid fa-trash-can text-xs"></i> {t('childDash.clear')}
                     </button>
                   </div>
                 )}
@@ -589,7 +614,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('memory')}
                     className="w-full bg-brand-green hover:bg-emerald-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-brand-green/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -608,7 +633,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('color')}
                     className="w-full bg-brand-orange hover:bg-orange-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-brand-orange/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -627,7 +652,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('emotion')}
                     className="w-full bg-purple-500 hover:bg-purple-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-purple-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -646,7 +671,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('sorting')}
                     className="w-full bg-teal-500 hover:bg-teal-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-teal-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -665,7 +690,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('counting')}
                     className="w-full bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -684,7 +709,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('pattern')}
                     className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -703,7 +728,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('puzzle_word')}
                     className="w-full bg-rose-500 hover:bg-rose-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-rose-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
 
@@ -722,7 +747,7 @@ export const ChildDashboard = (): JSX.Element => {
                   </div>
                   <button onClick={() => setActiveGame('sound')}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3.5 flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20 transition">
-                    <i className="fa-solid fa-play text-sm"></i> Jouer !
+                    {t('childDash.play')} <i className="fa-solid fa-play text-sm"></i>
                   </button>
                 </div>
               </div>
@@ -806,4 +831,5 @@ export const ChildDashboard = (): JSX.Element => {
     </div>
   );
 };
+
 

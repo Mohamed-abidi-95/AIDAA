@@ -4,11 +4,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import api from '../lib/api';
 import AnalytiquesProfessionnel from './AnalytiquesProfessionnel';
 import { MessagerieView } from './MessagerieView';
 import { StatCard, Section, ScoreBadge, useToast, ToastStack, inputCls } from '../components';
+import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type ViewType = 'patients' | 'activities' | 'notes' | 'invitations' | 'analytics' | 'messages';
@@ -22,34 +24,44 @@ interface ParentRecord {
   status: 'pending' | 'active' | 'revoked';
 }
 interface Activity {
-  id: number; content_title: string; score: number; duration_seconds: number; date: string;
+  id: number; content_title: string; activity_name?: string; score: number; duration_seconds: number; date: string;
 }
 interface Note {
   id: number; content: string; date: string; professional_name: string;
 }
 interface ApiResult<T> { success: boolean; data: T; message?: string; }
 
-// ── Nav config ─────────────────────────────────────────────────────────────
-const NAV = [
-  { id: 'patients',    fa: 'fa-solid fa-hospital-user',      label: 'Mes patients'    },
-  { id: 'activities',  fa: 'fa-solid fa-chart-column',        label: 'Activités'       },
-  { id: 'notes',       fa: 'fa-solid fa-notes-medical',       label: 'Notes cliniques' },
-  { id: 'analytics',   fa: 'fa-solid fa-chart-line',          label: 'Analytiques'     },
-  { id: 'invitations', fa: 'fa-solid fa-envelope-open-text',  label: 'Invitations'     },
-  { id: 'messages',    fa: 'fa-solid fa-comments',            label: 'Messagerie'      },
+// ── Nav config (labels resolved inside component via t()) ──────────────────
+const NAV_IDS = [
+  { id: 'patients',    fa: 'fa-solid fa-hospital-user',      key: 'navPatients'    },
+  { id: 'activities',  fa: 'fa-solid fa-chart-column',        key: 'navActivities'  },
+  { id: 'notes',       fa: 'fa-solid fa-notes-medical',       key: 'navNotes'       },
+  { id: 'analytics',   fa: 'fa-solid fa-chart-line',          key: 'navAnalytics'   },
+  { id: 'invitations', fa: 'fa-solid fa-envelope-open-text',  key: 'navInvitations' },
+  { id: 'messages',    fa: 'fa-solid fa-comments',            key: 'navMessages'    },
 ] as const;
 
+// ── Helper durée ───────────────────────────────────────────────────────────
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return '—';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  if (s === 0) return `${m}min`;
+  return `${m}min ${s}s`;
+}
+
 // ── Helper groupBy ──────────────────────────────────────────────────────────
-function groupActivities(acts: Activity[], by: string): Record<string, Activity[]> {
+function groupActivities(acts: Activity[], by: string, labels: Record<string,string>): Record<string, Activity[]> {
   if (by === 'none') return { '_': acts };
   const groups: Record<string, Activity[]> = {};
   acts.forEach(a => {
     let key = '';
-    if (by === 'activity') key = a.content_title || 'Sans titre';
+    if (by === 'activity') key = a.content_title || labels.withoutTitle;
     else if (by === 'date')  key = new Date(a.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     else if (by === 'score') {
       const s = a.score;
-      key = s >= 80 ? '🏆 Excellent (≥ 80)' : s >= 60 ? '✅ Bien (60–79)' : s >= 40 ? '⚠️ Moyen (40–59)' : '🔴 Faible (< 40)';
+      key = s >= 80 ? labels.excellent : s >= 60 ? labels.good : s >= 40 ? labels.average : labels.poor;
     }
     if (!groups[key]) groups[key] = [];
     groups[key].push(a);
@@ -61,7 +73,11 @@ function groupActivities(acts: Activity[], by: string): Record<string, Activity[
 export const ProfessionalPage = (): JSX.Element => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { toasts, add: toast, remove: removeToast } = useToast();
+
+  // Build NAV with translated labels
+  const NAV = NAV_IDS.map(n => ({ ...n, label: t(`profDash.${n.key}`) }));
 
   const [view, setView]                         = useState<ViewType>('patients');
   const [patients, setPatients]                 = useState<Child[]>([]);
@@ -94,7 +110,7 @@ export const ProfessionalPage = (): JSX.Element => {
           setPatients(data.data);
           if (data.data.length > 0) setSelectedPatient(data.data[0]);
         }
-      } catch { toast('Erreur lors du chargement des patients', 'error'); }
+      } catch { toast(t('profDash.loadingPatients') || 'Erreur lors du chargement des patients', 'error'); }
       finally { setLoading(false); }
     };
     fetchPatients();
@@ -118,6 +134,13 @@ export const ProfessionalPage = (): JSX.Element => {
   // ── Fetch activities + notes ─────────────────────────────────────────────
   useEffect(() => {
     if (!selectedPatient) return;
+    // Réinitialiser les filtres à chaque changement de patient
+    setActSearch('');
+    setScoreMin('');
+    setScoreMax('');
+    setDateFrom('');
+    setDateTo('');
+    setGroupBy('none');
     const fetch = async () => {
       try {
         const [{ data: a }, { data: n }] = await Promise.all([
@@ -133,17 +156,17 @@ export const ProfessionalPage = (): JSX.Element => {
 
   // ── Add note ─────────────────────────────────────────────────────────────
   const handleAddNote = async () => {
-    if (!selectedPatient || !newNote.trim()) { toast('Saisissez une note avant de valider', 'error'); return; }
+    if (!selectedPatient || !newNote.trim()) { toast(t('profDash.enterNoteFirst') || 'Saisissez une note avant de valider', 'error'); return; }
     try {
       setNoteLoading(true);
       const { data } = await api.post<ApiResult<Note>>('/api/note', { childId: selectedPatient.id, content: newNote.trim() });
       if (data.success) {
         setNewNote('');
-        toast('Note clinique ajoutée ✓');
+        toast(t('profDash.noteAdded') || 'Note clinique ajoutée ✓');
         const { data: nd } = await api.get<ApiResult<Note[]>>(`/api/note/child/${selectedPatient.id}`);
         if (nd.success) setNotes(nd.data);
-      } else toast(data.message || "Erreur lors de l'ajout", 'error');
-    } catch { toast("Erreur lors de l'ajout de la note", 'error'); }
+      } else toast(data.message || t('common.error'), 'error');
+    } catch { toast(t('profDash.noteError') || "Erreur lors de l'ajout de la note", 'error'); }
     finally { setNoteLoading(false); }
   };
 
@@ -153,24 +176,23 @@ export const ProfessionalPage = (): JSX.Element => {
       setInvActionLoading(true);
       const { data } = await api.put<ApiResult<null>>(`/api/professional/invitation/${parentId}/accept`);
       if (data.success) {
-        toast('Invitation acceptée ✓');
+        toast(t('profDash.invitationAccepted') || 'Invitation acceptée ✓');
         await fetchInvitations();
-        // Reload patients
         const { data: pd } = await api.get<ApiResult<Child[]>>('/api/professional/my-children');
         if (pd.success) { setPatients(pd.data); if (pd.data.length > 0 && !selectedPatient) setSelectedPatient(pd.data[0]); }
-      } else toast(data.message || 'Erreur', 'error');
-    } catch { toast('Erreur réseau', 'error'); }
+      } else toast(data.message || t('common.error'), 'error');
+    } catch { toast(t('profDash.networkError') || 'Erreur réseau', 'error'); }
     finally { setInvActionLoading(false); }
   };
 
   const handleReject = async (parentId: number, parentName: string) => {
-    if (!window.confirm(`Refuser l'invitation de ${parentName} ?`)) return;
+    if (!window.confirm(t('profDash.rejectConfirm', { name: parentName }) || `Refuser l'invitation de ${parentName} ?`)) return;
     try {
       setInvActionLoading(true);
       const { data } = await api.put<ApiResult<null>>(`/api/professional/invitation/${parentId}/reject`);
-      if (data.success) { toast('Invitation refusée.'); await fetchInvitations(); }
-      else toast(data.message || 'Erreur', 'error');
-    } catch { toast('Erreur réseau', 'error'); }
+      if (data.success) { toast(t('profDash.invitationRejected') || 'Invitation refusée.'); await fetchInvitations(); }
+      else toast(data.message || t('common.error'), 'error');
+    } catch { toast(t('profDash.networkError') || 'Erreur réseau', 'error'); }
     finally { setInvActionLoading(false); }
   };
 
@@ -183,6 +205,14 @@ export const ProfessionalPage = (): JSX.Element => {
   })();
 
   // ── Filtered + grouped activities ────────────────────────────────────────
+  const groupLabels = {
+    withoutTitle: t('profDash.groupNone'),
+    excellent: t('profDash.excellent'),
+    good: t('profDash.good'),
+    average: t('profDash.average'),
+    poor: t('profDash.poor'),
+  };
+
   const filteredActivities = useMemo(() => {
     return activities.filter(a => {
       if (actSearch && !a.content_title.toLowerCase().includes(actSearch.toLowerCase())) return false;
@@ -194,7 +224,7 @@ export const ProfessionalPage = (): JSX.Element => {
     });
   }, [activities, actSearch, scoreMin, scoreMax, dateFrom, dateTo]);
 
-  const groupedActivities = useMemo(() => groupActivities(filteredActivities, groupBy), [filteredActivities, groupBy]);
+  const groupedActivities = useMemo(() => groupActivities(filteredActivities, groupBy, groupLabels), [filteredActivities, groupBy, t]);
 
   const pendingInvitations = invitations.filter(i => i.status === 'pending');
   const activeInvitations  = invitations.filter(i => i.status === 'active');
@@ -203,13 +233,21 @@ export const ProfessionalPage = (): JSX.Element => {
   const profInitial      = user?.name?.charAt(0).toUpperCase() || 'P';
   const currentNav       = NAV.find(n => n.id === view);
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
+
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="font-sans antialiased flex h-screen overflow-hidden bg-slate-50 animate-page-in">
 
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={closeSidebar} />
+      )}
+
       {/* ══════════════ SIDEBAR ══════════════ */}
       <aside
-        className="w-[280px] flex flex-col z-10 shrink-0 overflow-y-auto"
+        className={`fixed inset-y-0 left-0 md:relative md:translate-x-0 w-[280px] flex flex-col z-30 md:z-10 shrink-0 overflow-y-auto transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
         style={{
           background: '#F97316',
           backgroundImage: 'linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px)',
@@ -224,7 +262,7 @@ export const ProfessionalPage = (): JSX.Element => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight leading-none">AIDAA</h2>
-            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">Espace Professionnel</span>
+            <span className="text-[11px] text-white/80 font-medium uppercase tracking-widest">{t('profDash.espaceProfessionnel')}</span>
           </div>
         </div>
 
@@ -236,7 +274,7 @@ export const ProfessionalPage = (): JSX.Element => {
                 ${view === n.id
                   ? 'bg-white text-brand-orange shadow-md border-transparent'
                   : 'text-white border-transparent hover:bg-white/15 hover:border-white/20'}`}
-              onClick={() => setView(n.id as ViewType)}
+              onClick={() => { setView(n.id as ViewType); closeSidebar(); }}
             >
               <i className={`${n.fa} w-6 mr-3 text-lg ${view === n.id ? 'text-brand-orange' : 'opacity-80'}`} />
               {n.label}
@@ -248,22 +286,22 @@ export const ProfessionalPage = (): JSX.Element => {
           {/* Téléconsultation link */}
           <button
             className="flex items-center w-full px-5 py-3.5 rounded-xl font-semibold text-[15px] border text-white border-transparent hover:bg-white/15 hover:border-white/20 transition-all"
-            onClick={() => navigate('/professionnel/teleconsultation')}
+            onClick={() => { navigate('/professionnel/teleconsultation'); closeSidebar(); }}
           >
             <i className="fa-solid fa-video w-6 mr-3 text-lg opacity-80" />
-            Téléconsultation
+            {t('profDash.navTeleconsultation')}
           </button>
         </nav>
 
         {/* Patients list */}
         <div className="px-5 pb-4 flex flex-col gap-2 shrink-0">
           <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest px-1 pt-3 pb-1">
-            Patients ({patients.length})
+            {t('profDash.patientCount', { count: patients.length })}
           </p>
           <div className="relative">
             <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher…"
+              placeholder={t('profDash.searchPlaceholder')}
               className="w-full pl-8 pr-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 transition"
             />
           </div>
@@ -284,7 +322,7 @@ export const ProfessionalPage = (): JSX.Element => {
                 </div>
               </button>
             ))}
-            {filteredPatients.length === 0 && <p className="text-white/40 text-xs text-center py-3">Aucun résultat</p>}
+            {filteredPatients.length === 0 && <p className="text-white/40 text-xs text-center py-3">{t('profDash.noResult')}</p>}
           </div>
         </div>
 
@@ -295,17 +333,20 @@ export const ProfessionalPage = (): JSX.Element => {
               {profInitial}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name || 'Professionnel'}</p>
-              <p className="text-xs text-white/70">Professionnel de santé</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name || t('profDash.healthProfessional')}</p>
+              <p className="text-xs text-white/70">{t('profDash.healthProfessional')}</p>
             </div>
           </div>
           <button onClick={() => navigate('/profile')}
             className="w-full flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold py-2.5 rounded-lg transition-all text-sm mb-2">
-            <i className="fa-solid fa-user-pen" /> Mon profil
+            <i className="fa-solid fa-user-pen" /> {t('profDash.myProfile')}
           </button>
+          <div className="flex justify-center mb-2">
+            <LanguageSwitcher dropDirection="up" />
+          </div>
           <button onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-black/15 hover:bg-black/25 text-white font-semibold py-3 rounded-lg transition-all text-sm">
-            Se déconnecter <i className="fa-solid fa-arrow-right-from-bracket" />
+            {t('profDash.disconnect')} <i className="fa-solid fa-arrow-right-from-bracket" />
           </button>
         </div>
       </aside>
@@ -314,17 +355,27 @@ export const ProfessionalPage = (): JSX.Element => {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top header */}
-        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-10 shrink-0">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-500 font-medium">Professionnel /</span>
-            <span className="text-xl font-bold text-slate-900">{currentNav?.label ?? 'Téléconsultation'}</span>
+        <header className="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-10 shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50 transition"
+              onClick={() => setSidebarOpen(v => !v)}
+              aria-label="Menu"
+            >
+              <i className="fa-solid fa-bars" />
+            </button>
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm text-slate-500 font-medium hidden sm:inline">{t('profDash.breadcrumb')}</span>
+              <span className="text-lg md:text-xl font-bold text-slate-900">{currentNav?.label ?? t('profDash.navTeleconsultation')}</span>
+            </div>
           </div>
           {patients.length > 0 && view !== 'messages' && view !== 'invitations' && (
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-500 font-medium">Patient :</label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs sm:text-sm text-slate-500 font-medium hidden sm:inline">{t('profDash.patientLabel')}</label>
               <select value={selectedPatient?.id || ''}
                 onChange={e => setSelectedPatient(patients.find(p => p.id === +e.target.value) || null)}
-                className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition max-w-[140px] sm:max-w-none"
               >
                 {patients.map(p => <option key={p.id} value={p.id}>{p.name} ({p.age} ans)</option>)}
               </select>
@@ -333,12 +384,14 @@ export const ProfessionalPage = (): JSX.Element => {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-10">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-10">
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
               <span className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-brand-orange animate-spin" />
-              <p>Chargement des patients…</p>
+              <p>
+                {t('profDash.loadingPatients')}
+              </p>
             </div>
           )}
 
@@ -346,8 +399,8 @@ export const ProfessionalPage = (): JSX.Element => {
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 gap-4">
               <i className="fa-solid fa-hospital-user text-5xl" />
               <div className="text-center">
-                <p className="font-semibold text-slate-600">Aucun patient assigné</p>
-                <p className="text-sm mt-1">Acceptez les invitations des parents dans l'onglet <strong>Invitations</strong>.</p>
+                <p className="font-semibold text-slate-600">{t('profDash.noPatientAssigned')}</p>
+                <p className="text-sm mt-1">{t('profDash.noPatientHint')}</p>
               </div>
             </div>
           )}
@@ -368,8 +421,8 @@ export const ProfessionalPage = (): JSX.Element => {
               {/* Invitations en attente */}
               {pendingInvitations.length > 0 && (
                 <Section
-                  title="Invitations en attente de votre réponse"
-                  badge={<span className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full text-sm font-semibold">{pendingInvitations.length} nouvelle(s)</span>}
+                  title={t('profDash.pendingInvitationsTitle')}
+                  badge={<span className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full text-sm font-semibold">{t('profDash.newInvitations', { count: pendingInvitations.length })}</span>}
                 >
                   {invitationsLoading ? (
                     <div className="flex items-center justify-center py-8 text-slate-400 gap-3">
@@ -387,24 +440,24 @@ export const ProfessionalPage = (): JSX.Element => {
                               <p className="font-bold text-slate-900">{inv.name}</p>
                               <p className="text-sm text-slate-500">{inv.email}</p>
                               <p className="text-xs text-amber-600 mt-0.5">
-                                <i className="fa-solid fa-clock mr-1" />
-                                Invitation reçue le {new Date(inv.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                {inv.child_count > 0 && ` · ${inv.child_count} enfant${inv.child_count > 1 ? 's' : ''}`}
-                              </p>
-                            </div>
-                            <span className="shrink-0 inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold">
-                              <i className="fa-solid fa-hourglass-half text-[10px]" /> En attente
-                            </span>
-                          </div>
-                          <div className="px-5 pb-5 flex gap-3">
-                            <button onClick={() => handleAccept(inv.id)} disabled={invActionLoading}
-                              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md transition-all disabled:opacity-60">
-                              <i className="fa-solid fa-check" /> Accepter
-                            </button>
-                            <button onClick={() => handleReject(inv.id, inv.name)} disabled={invActionLoading}
-                              className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 font-semibold px-5 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60">
-                              <i className="fa-solid fa-xmark" /> Refuser
-                            </button>
+                               <i className="fa-solid fa-clock mr-1" />
+                                 {t('profDash.invitationReceived')} {new Date(inv.invited_at).toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' })}
+                                 {inv.child_count > 0 && ` · ${t('profDash.childrenCount', { count: inv.child_count })}`}
+                               </p>
+                             </div>
+                             <span className="shrink-0 inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold">
+                               <i className="fa-solid fa-hourglass-half text-[10px]" /> {t('profDash.pending')}
+                             </span>
+                           </div>
+                           <div className="px-5 pb-5 flex gap-3">
+                             <button onClick={() => handleAccept(inv.id)} disabled={invActionLoading}
+                               className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md transition-all disabled:opacity-60">
+                               <i className="fa-solid fa-check" /> {t('profDash.accept')}
+                             </button>
+                             <button onClick={() => handleReject(inv.id, inv.name)} disabled={invActionLoading}
+                               className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 font-semibold px-5 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60">
+                               <i className="fa-solid fa-xmark" /> {t('profDash.reject')}
+                             </button>
                           </div>
                         </div>
                       ))}
@@ -415,8 +468,8 @@ export const ProfessionalPage = (): JSX.Element => {
 
               {/* Invitations actives */}
               <Section
-                title="Familles actives"
-                badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{activeInvitations.length} famille(s)</span>}
+                title={t('profDash.activeFamilies')}
+                badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{t('profDash.familyCount', { count: activeInvitations.length })}</span>}
               >
                 {invitationsLoading ? (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
@@ -425,8 +478,8 @@ export const ProfessionalPage = (): JSX.Element => {
                 ) : activeInvitations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
                     <i className="fa-solid fa-envelope text-4xl" />
-                    <p className="font-medium">Aucune famille active pour le moment.</p>
-                    <p className="text-sm text-center max-w-sm">Les parents peuvent vous inviter depuis leur tableau de bord.</p>
+                    <p className="font-medium">{t('profDash.noActiveFamilies')}</p>
+                    <p className="text-sm text-center max-w-sm">{t('profDash.noActiveFamiliesHint')}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
@@ -442,17 +495,17 @@ export const ProfessionalPage = (): JSX.Element => {
                           </div>
                           <div className="text-right shrink-0">
                             <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">
-                              <i className="fa-solid fa-circle-check text-[10px]" /> Actif
+                              <i className="fa-solid fa-circle-check text-[10px]" /> {t('profDash.active')}
                             </span>
                             <p className="text-xs text-slate-400 mt-1">
-                              {inv.child_count} enfant{inv.child_count !== 1 ? 's' : ''} · depuis le {new Date(inv.invited_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              {t('profDash.childrenCount', { count: inv.child_count })} · {t('profDash.since')} {new Date(inv.invited_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
                         <div className="px-5 py-4">
                           <button onClick={() => { const fc = patients.find(p => p.parent_id === inv.id); if (fc) { setSelectedPatient(fc); setView('patients'); } }}
                             className="flex items-center gap-2 bg-brand-orange hover:bg-orange-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-brand-orange/20 transition-all">
-                            <i className="fa-solid fa-eye" /> Voir les patients
+                            <i className="fa-solid fa-eye" /> {t('profDash.viewPatients')}
                           </button>
                         </div>
                       </div>
@@ -467,16 +520,16 @@ export const ProfessionalPage = (): JSX.Element => {
             <>
               {/* KPIs */}
               <div className="grid grid-cols-2 xl:grid-cols-5 gap-5 mb-8">
-                <StatCard icon="fa-solid fa-user"         value={selectedPatient.age}  label="Âge (ans)"      />
-                <StatCard icon="fa-solid fa-gamepad"      value={stats.sessions}        label="Sessions"       />
-                <StatCard icon="fa-regular fa-clock"      value={stats.time}            label="Minutes total"  />
-                <StatCard icon="fa-solid fa-star"         value={stats.avgScore}        label="Score moyen"    />
-                <StatCard icon="fa-solid fa-notes-medical" value={notes.length}         label="Notes cliniques"/>
+                <StatCard icon="fa-solid fa-user"         value={selectedPatient.age}  label={t('profDash.ageYears')}      />
+                <StatCard icon="fa-solid fa-gamepad"      value={stats.sessions}        label={t('profDash.sessions')}       />
+                <StatCard icon="fa-regular fa-clock"      value={stats.time}            label={t('profDash.minutesTotal')}  />
+                <StatCard icon="fa-solid fa-star"         value={stats.avgScore}        label={t('profDash.avgScore')}    />
+                <StatCard icon="fa-solid fa-notes-medical" value={notes.length}         label={t('profDash.clinicalNotes')}/>
               </div>
 
               {/* ── Fiche patient ── */}
               {view === 'patients' && (
-                <Section title={`Fiche patient — ${selectedPatient.name}`}
+                <Section title={t('profDash.patientFile', { name: selectedPatient.name })}
                   badge={selectedPatient.parent_name ? (
                     <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">
                       <i className="fa-solid fa-house-user text-xs" /> {selectedPatient.parent_name}
@@ -491,14 +544,14 @@ export const ProfessionalPage = (): JSX.Element => {
                       <h2 className="text-2xl font-bold text-slate-900 mb-4">{selectedPatient.name}</h2>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[
-                          { label: 'Identifiant',     val: `#${selectedPatient.id}` },
-                          { label: 'Âge',             val: `${selectedPatient.age} ans` },
-                          { label: 'Catégorie',       val: selectedPatient.participant_category || 'Enfant' },
-                          { label: 'Famille',         val: selectedPatient.parent_name || '—' },
-                          { label: 'Sessions',        val: String(stats.sessions) },
-                          { label: 'Temps total',     val: `${stats.time} min` },
-                          { label: 'Score moyen',     val: `${stats.avgScore} / 100` },
-                          { label: 'Notes cliniques', val: String(notes.length) },
+                          { label: t('profDash.identifier'),     val: `#${selectedPatient.id}` },
+                          { label: t('profDash.ageField'),        val: `${selectedPatient.age} ${t('profDash.ageYears').replace('(','').replace(')','').trim()}` },
+                          { label: t('profDash.category'),        val: selectedPatient.participant_category || t('profDash.childLabel') },
+                          { label: t('profDash.family'),          val: selectedPatient.parent_name || '—' },
+                          { label: t('profDash.sessions'),        val: String(stats.sessions) },
+                          { label: t('profDash.totalTime'),       val: `${stats.time} ${t('profDash.minUnit')}` },
+                          { label: t('profDash.avgScore'),        val: `${stats.avgScore} / 100` },
+                          { label: t('profDash.clinicalNotes'),   val: String(notes.length) },
                         ].map(item => (
                           <div key={item.label} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{item.label}</p>
@@ -513,42 +566,39 @@ export const ProfessionalPage = (): JSX.Element => {
 
               {/* ── Activités ── */}
               {view === 'activities' && (
-                <Section title={`Journal d'activités — ${selectedPatient.name}`}
-                  badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{filteredActivities.length} / {activities.length} session(s)</span>}
+                <Section title={t('profDash.activityJournal', { name: selectedPatient.name })}
+                  badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{t('profDash.sessionCount', { filtered: filteredActivities.length, total: activities.length })}</span>}
                 >
                   {activities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
                       <i className="fa-solid fa-inbox text-5xl" />
-                      <p className="font-medium">Aucune activité enregistrée pour ce patient.</p>
+                      <p className="font-medium">{t('profDash.noActivity')}</p>
                     </div>
                   ) : (
                     <>
                       {/* ── Barre de filtres ── */}
                       <div className="flex flex-wrap items-center gap-3 mb-5 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
-                        {/* Recherche activité */}
                         <div className="relative min-w-[180px] flex-1">
                           <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
                           <input type="text" value={actSearch} onChange={e => setActSearch(e.target.value)}
-                            placeholder="Nom de l'activité…"
+                            placeholder={t('profDash.activitySearchPlaceholder')}
                             className="w-full pl-8 pr-3 py-2 rounded-xl border border-orange-200 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange"
                           />
                         </div>
-                        {/* Score min / max */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Score :</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('profDash.scoreLabel')}</span>
                           <input type="number" value={scoreMin} onChange={e => setScoreMin(e.target.value)}
-                            placeholder="Min" min={0} max={100}
+                            placeholder={t('profDash.scoreMin')} min={0} max={100}
                             className="w-16 px-2 py-2 rounded-xl border border-orange-200 text-sm text-center text-slate-700 bg-white focus:outline-none focus:border-brand-orange"
                           />
                           <span className="text-slate-400 text-xs">–</span>
                           <input type="number" value={scoreMax} onChange={e => setScoreMax(e.target.value)}
-                            placeholder="Max" min={0} max={100}
+                            placeholder={t('profDash.scoreMax')} min={0} max={100}
                             className="w-16 px-2 py-2 rounded-xl border border-orange-200 text-sm text-center text-slate-700 bg-white focus:outline-none focus:border-brand-orange"
                           />
                         </div>
-                        {/* Date range */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Date :</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('profDash.dateLabel')}</span>
                           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                             className="px-2 py-2 rounded-xl border border-orange-200 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-orange"
                           />
@@ -557,23 +607,21 @@ export const ProfessionalPage = (): JSX.Element => {
                             className="px-2 py-2 rounded-xl border border-orange-200 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-orange"
                           />
                         </div>
-                        {/* Grouper par */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Grouper par :</span>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('profDash.groupBy')}</span>
                           <select value={groupBy} onChange={e => setGroupBy(e.target.value)}
                             className="px-3 py-2 rounded-xl border border-orange-200 text-sm text-orange-700 bg-orange-50 focus:outline-none focus:border-brand-orange cursor-pointer"
                           >
-                            <option value="none">Aucun</option>
-                            <option value="activity">Par activité</option>
-                            <option value="date">Par date</option>
-                            <option value="score">Par score</option>
+                            <option value="none">{t('profDash.groupNone')}</option>
+                            <option value="activity">{t('profDash.groupByActivity')}</option>
+                            <option value="date">{t('profDash.groupByDate')}</option>
+                            <option value="score">{t('profDash.groupByScore')}</option>
                           </select>
                         </div>
-                        {/* Reset */}
                         {(actSearch || scoreMin || scoreMax || dateFrom || dateTo || groupBy !== 'none') && (
                           <button onClick={() => { setActSearch(''); setScoreMin(''); setScoreMax(''); setDateFrom(''); setDateTo(''); setGroupBy('none'); }}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-slate-500 hover:bg-white hover:text-red-500 border border-transparent hover:border-red-200 transition-all font-medium">
-                            <i className="fa-solid fa-rotate-left text-xs" /> Réinitialiser
+                            <i className="fa-solid fa-rotate-left text-xs" /> {t('profDash.reset')}
                           </button>
                         )}
                       </div>
@@ -581,7 +629,7 @@ export const ProfessionalPage = (): JSX.Element => {
                       {filteredActivities.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
                           <i className="fa-solid fa-filter-circle-xmark text-3xl" />
-                          <p className="font-medium">Aucune activité ne correspond aux filtres.</p>
+                          <p className="font-medium">{t('profDash.noActivityFilter')}</p>
                         </div>
                       ) : (
                         <div className="overflow-x-auto -mx-7 -mb-7">
@@ -596,7 +644,7 @@ export const ProfessionalPage = (): JSX.Element => {
                                 {groupBy === 'none' && (
                                   <thead>
                                     <tr className="border-b border-slate-100">
-                                      {['#', 'Activité', 'Score', 'Durée', 'Date'].map(h => (
+                                      {[t('profDash.tableNum'), t('profDash.tableActivity'), t('profDash.tableScore'), t('profDash.tableDuration'), t('profDash.tableDate')].map(h => (
                                         <th key={h} className="text-left px-7 py-4 text-xs uppercase tracking-wider text-slate-500 font-bold">{h}</th>
                                       ))}
                                     </tr>
@@ -606,10 +654,10 @@ export const ProfessionalPage = (): JSX.Element => {
                                   {(items as Activity[]).map((act, i) => (
                                     <tr key={act.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                       <td className="px-7 py-4 text-brand-orange font-bold text-sm">{i + 1}</td>
-                                      <td className="px-7 py-4 font-semibold text-slate-800">{act.content_title}</td>
+                                      <td className="px-7 py-4 font-semibold text-slate-800">{act.content_title || act.activity_name || '—'}</td>
                                       <td className="px-7 py-4"><ScoreBadge score={act.score} /></td>
-                                      <td className="px-7 py-4 text-slate-500 text-sm">{Math.round((act.duration_seconds || 0) / 60)} min</td>
-                                      <td className="px-7 py-4 text-slate-500 text-sm">{new Date(act.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                       <td className="px-7 py-4 text-slate-500 text-sm">{formatDuration(act.duration_seconds || 0)}</td>
+                                      <td className="px-7 py-4 text-slate-500 text-sm">{new Date(act.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -626,29 +674,29 @@ export const ProfessionalPage = (): JSX.Element => {
               {/* ── Notes cliniques ── */}
               {view === 'notes' && (
                 <>
-                  <Section title="Nouvelle note clinique">
+                  <Section title={t('profDash.newClinicalNote')}>
                     <div className="flex flex-col gap-4">
                       <textarea value={newNote} onChange={e => setNewNote(e.target.value)}
-                        placeholder={`Saisissez vos observations cliniques pour ${selectedPatient.name}…`}
+                        placeholder={t('profDash.notePlaceholder', { name: selectedPatient.name })}
                         rows={4} className={inputCls}
                       />
                       <button onClick={handleAddNote} disabled={noteLoading || !newNote.trim()}
                         className="self-start flex items-center gap-2 bg-brand-orange hover:bg-orange-700 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-brand-orange/20 transition-all">
                         {noteLoading
-                          ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Enregistrement…</>
-                          : <><i className="fa-solid fa-floppy-disk" /> Enregistrer la note</>
+                          ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {t('profDash.saving')}</>
+                          : <><i className="fa-solid fa-floppy-disk" /> {t('profDash.saveNote')}</>
                         }
                       </button>
                     </div>
                   </Section>
 
-                  <Section title={`Historique — ${selectedPatient.name}`}
-                    badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{notes.length} note(s)</span>}
+                  <Section title={t('profDash.notesHistory', { name: selectedPatient.name })}
+                    badge={<span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-sm font-semibold">{t('profDash.noteCount', { count: notes.length })}</span>}
                   >
                     {notes.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
                         <i className="fa-solid fa-notes-medical text-4xl" />
-                        <p className="font-medium">Aucune note clinique pour ce patient.</p>
+                        <p className="font-medium">{t('profDash.noNotes')}</p>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">

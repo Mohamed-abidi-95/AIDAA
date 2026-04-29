@@ -1,0 +1,207 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage[margin=0.6in]{geometry}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{fontawesome}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+\urlstyle{same}
+
+% Couleurs
+\definecolor{mainblue}{RGB}{0,102,204}
+\definecolor{lightgray}{RGB}{200,200,200}
+\definecolor{darkgray}{RGB}{80,80,80}
+\definecolor{sectiongray}{RGB}{240,240,240}
+
+\newcolumntype{L}{>{\raggedleft}p{0.14\textwidth}}
+\newcolumntype{R}{p{0.8\textwidth}}
+
+\newcommand{\cvsection}[1]{
+    \vspace{0.3cm}
+    \noindent\colorbox{sectiongray}{%
+        \parbox{\dimexpr\textwidth-2\fboxsep\relax}{%
+            \textcolor{mainblue}{\large\textbf{#1}}%
+        }%
+    }
+    \vspace{0.15cm}
+}
+
+\newcommand{\cventry}[3]{
+    \noindent\textbf{\textcolor{mainblue}{#1}} - \textit{#2} \hfill \textcolor{darkgray}{#3}
+}
+
+\setlist[itemize]{nosep,leftmargin=15pt,topsep=2pt,itemsep=1pt}
+
+\begin{document}
+\pagestyle{empty}
+
+% ================= HEADER =================
+\begin{center}
+{\Huge\textbf{\textcolor{mainblue}{Mohamed ABIDI}}}\\[0.3cm]
+{\large\textcolor{darkgray}{Étudiant Ingénieur – Data Science, KPIs \& Intelligence Artificielle}}\\[0.2cm]
+\textcolor{darkgray}{2\textsuperscript{e} année Cycle Ingénieur – ESPRIM}\\[0.3cm]
+
+\begin{tabular}{c c c}
+\textcolor{mainblue}{\faMapMarker} Tozeur, Nefta – Tunisie &
+\textcolor{mainblue}{\faPhone} +216 21 790 381 &
+\textcolor{mainblue}{\faEnvelope}
+\href{mailto:Mohamed.abidi@esprim.tn}{Mohamed.abidi@esprim.tn}
+\end{tabular}
+\end{center}
+
+\vspace{0.2cm}
+\noindent\rule{\textwidth}{0.5pt}
+
+% ================= PROFIL =================
+\cvsection{Profil}
+
+Étudiant en \textbf{2\textsuperscript{e} année du cycle ingénieur}, spécialisé en \textbf{data science et intelligence artificielle}.
+Fort intérêt pour l’\textbf{analyse de données orientée pilotage de la performance, suivi de KPIs et aide à la décision stratégique}.
+À l’aise avec Python, SQL, la visualisation de données et les environnements transverses à impact.
+
+% ================= FORMATION =================
+\cvsection{Formation Académique}
+
+\begin{tabular}{@{}L!{\color{lightgray}\vrule width 1.5pt}R@{}}
+\textbf{2024–Présent} &
+\textbf{ESPRIM} – École Supérieure Privée d’Ingénieurs de Monastir\\
+& \textit{Cycle Ingénieur – Data Science et Intelligence Artificielle}\\[0.3cm]
+
+\textbf{2019–2023} &
+\textbf{ESPRIT School of Business} – Ariana\\
+& \textit{Diplôme en Business Computing – Business Information Systems}\\[0.3cm]
+
+\textbf{2018–2019} &
+\textbf{Lycée de Nefta}\\
+& \textit{Baccalauréat Scientifique – Sciences Expérimentales}
+\end{tabular}
+
+% ================= COMPETENCES =================
+\cvsection{Compétences Techniques}
+
+\begin{tabular}{@{}L!{\color{lightgray}\vrule width 1.5pt}R@{}}
+\textbf{Langages} &
+Python, SQL, PHP, JavaScript, C\\[0.2cm]
+
+\textbf{Data \& Analyse} &
+Analyse exploratoire (EDA), structuration des données, suivi d’indicateurs clés (KPIs),
+reporting analytique, visualisation, pipelines data\\[0.2cm]
+
+\textbf{Machine Learning} &
+Régression, Random Forest, validation croisée, optimisation d’hyperparamètres,
+interprétabilité des modèles\\[0.2cm]
+
+\textbf{Frameworks \& Libs} &
+FastAPI, scikit-learn, pandas, matplotlib, seaborn, React, Symfony 6.4\\[0.2cm]
+
+\textbf{Bases de données} &
+MySQL, SQLite, Redis\\[0.2cm]
+
+\textbf{Cybersécurité} &
+Analyse de logs, détection d’anomalies, MITRE ATT\&CK,
+enrichissement des données (GeoIP, réputation IP)\\[0.2cm]
+
+\textbf{Outils \& Méthodes} &
+Git/GitHub, Agile/Scrum, APIs REST, Docker\\[0.2cm]
+
+\textbf{Langues} &
+Français : courant (TCF B2) \textbullet{}
+Anglais : courant (B2) \textbullet{}
+Arabe : langue maternelle
+\end{tabular}
+
+% ================= EXPERIENCES =================
+\cvsection{Expérience Professionnelle \& Projets Académiques}
+
+\cventry{AutiConnect – Plateforme d'accompagnement pour enfants autistes}{Développeur Full-Stack \& IA}{2025–2026}
+\begin{itemize}
+\item Conception et développement d'une plateforme web complète dédiée à l'accompagnement des enfants autistes et de leurs familles
+\item Implémentation d'un \textbf{chatbot IA multilingue} (FR/AR) avec pipeline de traitement NLP : détection d'urgence, matching FAQ, intégration Gemini 1.5 Flash et recommandation de contenu
+\item Développement d'un module de \textbf{téléconsultation} en temps réel avec gestion des sessions, ordonnances et comptes-rendus médicaux
+\item Système de \textbf{recommandation de contenus} personnalisés (vidéos, exercices, activités) basé sur le profil de l'enfant (catégorie, âge, niveau)
+\item Architecture REST API Node.js/Express avec authentification JWT, gestion des rôles (parent, professionnel, admin) et conformité RGPD
+\item Base de données MySQL relationnelle, gestion des uploads média et système d'audit des activités
+\end{itemize}
+
+\cventry{OMNutrition – Système de recommandation nutritionnelle}{Data Scientist \& Développeur Full-Stack}{Janvier 2026}
+\begin{itemize}
+\item Analyse de données nutritionnelles pour soutenir la prise de décision et la recommandation personnalisée
+\item Modélisation ML avec \textbf{RandomForestRegressor} (R² = 0.993)
+\item Construction d’un pipeline complet : prétraitement, fusion de 5 datasets, encodage et validation croisée
+\item Suivi de métriques de performance et comparaison de modèles
+\item Création de dashboards analytiques (heatmaps, distributions, corrélations)
+\end{itemize}
+
+\cventry{CyberHunter – Plateforme d’analyse de sécurité}{Développeur Full-Stack}{Janvier 2026}
+\begin{itemize}
+\item Analyse de grands volumes de logs pour identifier tendances et anomalies
+\item Création de tableaux de bord décisionnels avec visualisations avancées
+\item Enrichissement des données (GeoIP, réputation IP) pour améliorer l’analyse
+\end{itemize}
+
+\cventry{Cabinet Médical – Application de gestion}{Développeur Full-Stack}{Juin 2025}
+\begin{itemize}
+\item Application de gestion de cabinet médical (patients, rendez-vous, consultations)
+\item Tableau de bord avec statistiques temps réel pour le pilotage de l’activité
+\end{itemize}
+
+\cventry{ESPRIM Career – Plateforme de gestion de carrière}{Développeur Full-Stack}{2024–2025}
+\begin{itemize}
+\item Plateforme web de gestion de CV, candidatures et matching emploi
+\item Dashboard BI pour le suivi et l’analyse des données utilisateurs
+\end{itemize}
+
+\cventry{Hôtel « Le Khalife » – Stage de Développement Web}{Stagiaire Développeur}{2023}
+\begin{itemize}
+\item Développement d’un site web de gestion interne
+\item Collaboration avec l’équipe commerciale et opérationnelle
+\end{itemize}
+
+% ================= CERTIFICATIONS =================
+\cvsection{Certifications \& Références}
+
+\begin{multicols}{2}
+\textbf{Certifications linguistiques}
+\begin{itemize}
+\item TCF Français – B2
+\item Anglais – B2
+\item Arabe – Langue maternelle
+\end{itemize}
+
+\columnbreak
+
+\textbf{Compétences transversales}
+\begin{itemize}
+\item Analyse et résolution de problèmes complexes
+\item Organisation, rigueur, autonomie
+\item Travail en équipe et communication
+\item Curiosité et esprit critique
+\end{itemize}
+\end{multicols}
+
+% ================= REALISATIONS =================
+\cvsection{Réalisations Techniques Clés}
+
+\begin{itemize}
+\item \textbf{Machine Learning :} systèmes de recommandation, pipelines ML complets, analyse de performance
+\item \textbf{Business Intelligence :} dashboards interactifs, suivi de KPIs, visualisations avancées
+\item \textbf{Data Engineering :} structuration, nettoyage et fusion de datasets
+\item \textbf{Développement Full-Stack :} APIs REST, architectures MVC, interfaces responsives
+\end{itemize}
+
+\vspace{0.3cm}
+\begin{center}
+\textcolor{darkgray}{\small GitHub : \href{https://github.com/Mohamed-Abidi-95}{github.com/Mohamed-Abidi-95}}
+\end{center}
+
+\end{document}

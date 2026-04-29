@@ -29,7 +29,8 @@ const sequenceRoutes     = require('./routes/sequence.routes');
 const aacRoutes          = require('./routes/aac.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
 const analyticsRoutes    = require('./routes/analyticsRoutes');
-const chatbotRoutes      = require('./routes/chatbot.routes');
+const chatbotRoutes          = require('./routes/chatbot.routes');
+const notificationRoutes     = require('./routes/notification.routes');
 
 // ============================================================================
 // Import middlewares
@@ -149,6 +150,21 @@ const autoMigrate = async () => {
   await run('teleconsultations.status', `ALTER TABLE teleconsultations ADD COLUMN status ENUM('scheduled','in_progress','completed','cancelled') NOT NULL DEFAULT 'scheduled'`);
   await run('teleconsultations.room_id', `ALTER TABLE teleconsultations ADD COLUMN room_id VARCHAR(120) NULL`);
   await run('teleconsultations.reminder_sent', `ALTER TABLE teleconsultations ADD COLUMN reminder_sent TINYINT NOT NULL DEFAULT 0`);
+
+  // ── notifications ─────────────────────────────────────────────────────────
+  await run('notifications table', `
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         INT AUTO_INCREMENT PRIMARY KEY,
+      user_id    INT NOT NULL,
+      type       VARCHAR(50) DEFAULT 'info',
+      title      VARCHAR(255) NOT NULL,
+      message    TEXT NOT NULL,
+      link       VARCHAR(500) DEFAULT NULL,
+      is_read    TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
 
   // ── messages — colonne is_read pour le compteur de non-lus ───────────────
   await run('messages.is_read', `ALTER TABLE messages ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0`);
@@ -317,6 +333,7 @@ app.use('/api/aac',            aacRoutes);
 app.use('/api/gamification',   gamificationRoutes);
 app.use('/api/analytics',      analyticsRoutes);
 app.use('/api/chatbot',        chatbotRoutes);
+app.use('/api/notifications',  notificationRoutes);
 
 // ============================================================================
 // 404 Error Handler

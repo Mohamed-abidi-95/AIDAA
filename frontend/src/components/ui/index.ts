@@ -30,3 +30,6 @@ export type { BadgeProps, BadgeVariant, BadgeSize } from './badge/badge.types';
 
 export { Avatar } from './avatar';
 export type { AvatarProps, AvatarSize, AvatarColor } from './avatar/avatar.types';
+
+export { default as LanguageSwitcher } from './LanguageSwitcher';
+

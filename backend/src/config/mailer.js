@@ -257,4 +257,153 @@ const sendInviteEmail = async (to, name, inviterName, link) => {
   return { previewUrl };
 };
 
-module.exports = { sendResetEmail, sendInviteEmail };
+/**
+ * Send a teleconsultation confirmation email to the parent.
+ */
+const sendConsultationEmail = async ({
+  parentEmail,
+  parentName,
+  professionalName,
+  professionalSpecialite = null,
+  childName = null,
+  date_time,
+  duration = null,
+  jitsiLink,
+  notes,
+}) => {
+  const transporter = await getTransporter();
+
+  const dateFormatted = new Date(date_time).toLocaleString('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Africa/Tunis',
+  });
+
+  // Extraire la durée depuis les notes si pas fournie explicitement
+  if (!duration && notes) {
+    const m = notes.match(/(\d+)\s*min/);
+    if (m) duration = m[1];
+  }
+
+  const rows = [
+    { icon: '👨‍⚕️', label: 'Professionnel',  value: professionalName + (professionalSpecialite ? ` <span style="color:#6b7280;font-weight:400">(${professionalSpecialite})</span>` : '') },
+    childName ? { icon: '👶', label: 'Patient',        value: childName } : null,
+    { icon: '📅', label: 'Date & Heure',   value: `<strong>${dateFormatted}</strong>` },
+    duration  ? { icon: '⏱️', label: 'Durée',          value: `${duration} minutes` } : null,
+    notes && !notes.startsWith('Session de') ? { icon: '📝', label: 'Notes',          value: notes } : null,
+  ].filter(Boolean);
+
+  const rowsHtml = rows.map(r => `
+    <tr>
+      <td style="padding:8px 0;font-size:14px;color:#374151;vertical-align:top;white-space:nowrap;padding-right:16px;">
+        ${r.icon} <strong style="color:#007A3A;">${r.label}</strong>
+      </td>
+      <td style="padding:8px 0;font-size:14px;color:#374151;">${r.value}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <title>Consultation planifiée – AIDAA</title>
+    </head>
+    <body style="margin:0;padding:0;background:#f4faf7;font-family:'Segoe UI',Arial,sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4faf7;padding:40px 0;">
+        <tr><td align="center">
+          <table width="560" cellpadding="0" cellspacing="0"
+                 style="background:#ffffff;border-radius:16px;overflow:hidden;
+                        box-shadow:0 4px 24px rgba(0,87,42,.10);">
+
+            <!-- Header -->
+            <tr>
+              <td style="background:linear-gradient(135deg,#007A3A,#00A651);
+                         padding:32px 40px;text-align:center;">
+                <h1 style="margin:0;color:#fff;font-size:28px;font-weight:800;
+                           letter-spacing:-0.5px;">🗓️ AIDAA</h1>
+                <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px;">
+                  Nouvelle téléconsultation planifiée
+                </p>
+              </td>
+            </tr>
+
+            <!-- Corps -->
+            <tr>
+              <td style="padding:36px 40px;">
+                <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0f2318;">
+                  Bonjour ${parentName} 👋
+                </p>
+                <p style="margin:0 0 24px;font-size:14px;color:#7a9485;line-height:1.6;">
+                  Une téléconsultation a été planifiée pour vous sur la plateforme <strong>AIDAA</strong>.
+                  Voici le récapitulatif :
+                </p>
+
+                <!-- Détails -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    ${rowsHtml}
+                  </table>
+                </div>
+
+                <!-- Bouton rejoindre -->
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr><td align="center" style="padding:0 0 28px;">
+                    <a href="${jitsiLink}"
+                       style="display:inline-block;
+                              background:linear-gradient(90deg,#007A3A,#00A651);
+                              color:#fff;text-decoration:none;
+                              font-size:15px;font-weight:700;
+                              padding:14px 36px;border-radius:10px;
+                              box-shadow:0 4px 14px rgba(0,166,81,.35);">
+                      🎥 Rejoindre la séance
+                    </a>
+                  </td></tr>
+                </table>
+
+                <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;
+                            padding:14px 18px;font-size:13px;color:#7a4f00;line-height:1.55;">
+                  ⚠️ <strong>Rappel :</strong> Connectez-vous quelques minutes avant l'heure prévue.
+                  Le lien sera actif le jour de la séance.
+                </div>
+
+                <p style="margin:24px 0 0;font-size:12px;color:#b0c4ba;word-break:break-all;">
+                  Lien direct : <a href="${jitsiLink}" style="color:#007A3A;">${jitsiLink}</a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="background:#f4faf7;padding:20px 40px;
+                         text-align:center;border-top:1px solid #e6f0ea;">
+                <p style="margin:0;font-size:11px;color:#a0b8aa;">
+                  © 2026 AIDAA — Plateforme de suivi pour enfants autistes · Ne pas répondre à cet e-mail.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const info = await transporter.sendMail({
+    from:    process.env.EMAIL_FROM || 'AIDAA <noreply@aidaa.com>',
+    to:      parentEmail,
+    subject: `🗓️ Consultation AIDAA — ${dateFormatted}${childName ? ' · ' + childName : ''}`,
+    html,
+  });
+
+  const previewUrl = _isEthereal ? nodemailer.getTestMessageUrl(info) : null;
+  if (previewUrl) console.log('[Mailer] 📧 Consultation email preview:', previewUrl);
+  return { previewUrl };
+};
+
+module.exports = { sendResetEmail, sendInviteEmail, sendConsultationEmail };

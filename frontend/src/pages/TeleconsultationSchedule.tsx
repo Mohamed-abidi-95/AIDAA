@@ -87,6 +87,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
       const { data } = await api.post<ApiResult<{ id: number }>>('/api/teleconsult', {
         parentId,
         professionalId,
+        childId:  Number(form.patientId),
         date_time,
         // meeting_link omis → le backend génère automatiquement un lien Jitsi Meet
         notes: form.notes || `Session de ${form.duration} min`,
@@ -135,8 +136,9 @@ export const TeleconsultationSchedule = (): JSX.Element => {
 
           {/* Success banner */}
           {success && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-emerald-700 font-semibold text-sm">
-              <i className="fa-solid fa-circle-check" /> Session planifiée avec succès ! Redirection…
+            <div className="flex flex-col gap-1 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-emerald-700 text-sm">
+              <span className="font-bold flex items-center gap-2"><i className="fa-solid fa-circle-check" /> Session planifiée avec succès !</span>
+              <span className="text-emerald-600 text-xs flex items-center gap-1"><i className="fa-solid fa-envelope" /> Un email de confirmation a été envoyé au parent. Redirection…</span>
             </div>
           )}
 
