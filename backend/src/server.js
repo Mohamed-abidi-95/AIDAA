@@ -6,6 +6,15 @@
 const app = require('./app');
 require('dotenv').config();
 
+// Fallback JWT_SECRET si .env manquant (évite crash en dev)
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'aidaa_super_secret_pfe_2026_fallback';
+  console.warn('[Config] ⚠️  JWT_SECRET non défini — utilisation du fallback. Créez le fichier .env !');
+}
+if (!process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN = '*';
+}
+
 // ============================================================================
 // Get port from environment or use default
 // ============================================================================

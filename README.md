@@ -37,33 +37,18 @@ cd AIDAA
 cd backend
 ```
 
-Créer le fichier **`.env`** dans `backend/` avec ce contenu :
+**Copier le fichier `.env.example` en `.env` :**
 
-```env
-PORT=5000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_DATABASE=aidaa_db
-JWT_SECRET=aidaa_secret_pfe_2026
-JWT_EXPIRES_IN=7d
-CORS_ORIGIN=*
-FRONTEND_URL=http://localhost:5173
+```bash
+# Windows
+copy .env.example .env
 
-# Email (optionnel — laisser vide pour mode test)
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=resend
-SMTP_PASS=
-EMAIL_FROM=AIDAA <noreply@aidaa.com>
-
-# Gemini AI (optionnel)
-GEMINI_API_KEY=
+# Mac / Linux
+cp .env.example .env
 ```
 
-> 💡 **Sans SMTP_PASS** : les emails fonctionnent en mode fictif (Ethereal), le lien s'affiche dans la console.
+> ✅ Les valeurs par défaut fonctionnent directement avec XAMPP (root sans mot de passe).  
+> 💡 **Aucune modification nécessaire** si vous utilisez XAMPP avec la config par défaut.
 
 Installer les dépendances et démarrer :
 
@@ -163,21 +148,30 @@ AIDAA/
 
 ## 🔧 En cas de problème
 
-### MySQL ne démarre pas
-→ Vérifier que le port 3306 n'est pas utilisé par autre chose.
+### ❌ Erreur 500 au login
+**Cause la plus fréquente : base de données non importée ou `.env` manquant.**
 
-### Erreur `Cannot connect to database`
-→ Vérifier que XAMPP MySQL est bien démarré et que `.env` contient les bons paramètres.
+Checklist à vérifier dans l'ordre :
+1. ✅ XAMPP → MySQL est **démarré** (bouton vert)
+2. ✅ `setup_complete.sql` a bien été **importé** dans phpMyAdmin
+3. ✅ Le fichier `backend/.env` **existe** (`copy .env.example .env`)
+4. ✅ Redémarrer le backend après création du `.env` : `npm run dev`
 
-### Port 5000 déjà utilisé
+### ❌ MySQL ne démarre pas
+→ Le port 3306 est peut-être occupé. Dans XAMPP → Config → my.ini → changer le port.
+
+### ❌ Erreur `Cannot connect to database`
+→ XAMPP MySQL non démarré **ou** mauvais mot de passe dans `.env` (`DB_PASSWORD=`).
+
+### ❌ Port 5000 déjà utilisé
 ```powershell
 # Windows — trouver et tuer le process
 netstat -ano | findstr :5000
 taskkill /PID <le_pid> /F
 ```
 
-### Frontend ne se connecte pas au backend
-→ Vérifier que le backend tourne sur le port 5000 et que `CORS_ORIGIN=*` est dans le `.env`.
+### ❌ Frontend ne se connecte pas au backend
+→ Backend doit tourner sur le port 5000. Vérifier `CORS_ORIGIN=*` dans `.env`.
 
 ---
 
