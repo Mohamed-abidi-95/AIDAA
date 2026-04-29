@@ -384,7 +384,7 @@ export const ProfessionalPage = (): JSX.Element => {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-10">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">

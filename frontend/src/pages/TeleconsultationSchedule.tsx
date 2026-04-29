@@ -113,7 +113,7 @@ export const TeleconsultationSchedule = (): JSX.Element => {
   const durations: FormState['duration'][] = ['30', '45', '60'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 font-sans flex items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-50 font-sans flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-2xl border border-orange-100 w-full max-w-xl overflow-hidden">
 
         {/* ── Card header ── */}
